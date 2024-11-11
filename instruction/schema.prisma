@@ -1,0 +1,218 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+// Make sure this file exists in the prisma directory
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL") // pooling URL with pgbouncer=true
+  directUrl = env("DIRECT_URL")   // direct connection URL
+}
+
+// Add this to support test environment
+generator testClient {
+  provider = "prisma-client-js"
+  output   = "./generated/testClient"
+}
+
+model User {
+  id                  String             @id @default(uuid())
+  email               String             @unique
+  nickname            String?            @unique
+  invite_code         String             @unique
+  referrer            User?              @relation("UserReferrals", fields: [referrer_id], references: [id])
+  referrer_id         String?
+  referrals           User[]             @relation("UserReferrals")
+  role                Role               @default(REGULAR)
+  subscription_status SubscriptionStatus @default(INACTIVE)
+  stripe_customer_id  String?            @unique
+  trial_end_date      DateTime?
+  subscription_renewal_date DateTime?
+  account_credits     Int                @default(0)
+  successful_invites  Int                @default(0)
+  created_at          DateTime           @default(now())
+  updated_at          DateTime           @updatedAt
+  sent_invites        Invite[]           @relation("SentInvites")
+  received_invites    Invite[]           @relation("ReceivedInvites")
+  accounts            Account[]
+  sessions            Session[]
+  created_tester_codes TesterCode[]      @relation("CreatedTesterCodes")
+  used_tester_code     TesterCode?       @relation("UsedTesterCodes")
+  math_star_rating    Int                @default(0)
+  games_played        Int                @default(0)
+  current_streak      Int                @default(0)
+  highest_streak      Int                @default(0)
+  last_played_at      DateTime?
+  game_records        GameRecord[]       // Add this line
+  rewardLogs          RewardLog[]
+  payments            Payment[]
+  ip_address          String?            // Add this field
+  gameStats          UserGameStats?
+  agreements          UserAgreement[]
+}
+
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String?  @db.Text
+  access_token       String?  @db.Text
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String?  @db.Text
+  session_state      String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Invite {
+  id         String       @id @default(uuid())
+  inviter    User         @relation("SentInvites", fields: [inviter_id], references: [id])
+  inviter_id String
+  invitee    User?        @relation("ReceivedInvites", fields: [invitee_id], references: [id])
+  invitee_id String?
+  status     InviteStatus
+  created_at DateTime     @default(now())
+}
+
+model TesterCode {
+  id         String           @id @default(uuid())
+  code       String           @unique
+  created_by String
+  used_by    String?          @unique
+  status     TesterCodeStatus
+  note       String?          // Add this field
+  created_at DateTime         @default(now())
+  used_at    DateTime?
+  creator    User             @relation("CreatedTesterCodes", fields: [created_by], references: [id])
+  user       User?            @relation("UsedTesterCodes", fields: [used_by], references: [id])
+}
+
+model GameRecord {
+  id                 String   @id @default(uuid())
+  userId             String
+  user               User     @relation(fields: [userId], references: [id])
+  gameType           String
+  score              Int
+  accuracy           Float
+  averageTime        Float
+  questionsAnswered  Int
+  startedAt          DateTime @default(now())
+  createdAt          DateTime @default(now())
+  questionDetails    QuestionDetail[]
+
+  @@index([userId])
+}
+
+model QuestionDetail {
+  id           String     @id @default(uuid())
+  gameRecordId String
+  gameRecord   GameRecord @relation(fields: [gameRecordId], references: [id])
+  question     String
+  userAnswer   String
+  correctAnswer String
+  timeTaken    Float
+  isCorrect    Boolean
+  metadata     Json?      // This will store game-specific data
+
+  @@index([gameRecordId])
+}
+
+model RewardLog {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  type        String    // e.g., "INVITE_REWARD", "CREDIT_APPLIED"
+  amount      Int
+  status      String    // "PENDING", "PROCESSED", "FAILED"
+  details     Json?     // Additional details about the reward
+  createdAt   DateTime  @default(now())
+  processedAt DateTime?
+
+  @@index([userId])
+  @@index([status])
+}
+
+// Add this model to your existing schema
+model Payment {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  stripePaymentId String   @unique
+  amount          Int
+  status          String
+  createdAt       DateTime @default(now())
+
+  @@index([userId])
+}
+
+model UserAgreement {
+  id                String   @id @default(uuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id])
+  agreementType     String   
+  agreementVersion  String
+  ip_address        String?
+  user_agent        String?
+  metadata          Json?    // Add this field for additional tracking data
+  agreed_at         DateTime @default(now())
+
+  @@index([userId])
+  @@unique([userId, agreementType, agreementVersion])
+}
+
+model UserGameStats {
+  id                  String    @id @default(uuid())
+  userId              String    @unique
+  user                User      @relation(fields: [userId], references: [id])
+  totalGamesPlayed    Int       @default(0)
+  averageSpeedCorrect Float     @default(0)
+  highestDayStreak   Int       @default(0)
+  mathStarRating     Int       @default(0)
+  lastUpdated        DateTime   @updatedAt
+  earnedBadges       Json?     // Stores array of earned badge IDs
+  createdAt          DateTime   @default(now())
+}
+
+enum Role {
+  REGULAR
+  ADMIN
+  TESTER
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  INACTIVE
+  TRIALING
+}
+
+enum InviteStatus {
+  PENDING
+  SUCCESSFUL
+}
+
+enum TesterCodeStatus {
+  ACTIVE
+  USED
+  EXPIRED
+}
