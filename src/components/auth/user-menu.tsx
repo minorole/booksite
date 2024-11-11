@@ -12,27 +12,30 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { createClient } from "@/lib/supabase"
 import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useAuth } from "@/contexts/AuthContext"
+import Link from "next/link"
+import { LogOut, User as UserIcon, Package, Settings } from "lucide-react"
 
 export function UserMenu() {
   const router = useRouter()
   const supabase = createClient()
-  const [email, setEmail] = useState<string | null>(null)
+  const { user, isAdmin } = useAuth()
 
-  useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      setEmail(user?.email ?? null)
-    }
-    getUser()
-  }, [supabase.auth])
+  if (!user?.email) {
+    return (
+      <Button asChild variant="outline">
+        <Link href="/auth/signin">
+          Sign In
+        </Link>
+      </Button>
+    )
+  }
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
+    router.push('/')
     router.refresh()
   }
-
-  if (!email) return null
 
   return (
     <DropdownMenu>
@@ -40,7 +43,7 @@ export function UserMenu() {
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
           <Avatar className="h-8 w-8">
             <AvatarFallback>
-              {email.charAt(0).toUpperCase()}
+              {user.email.charAt(0).toUpperCase()}
             </AvatarFallback>
           </Avatar>
         </Button>
@@ -50,15 +53,37 @@ export function UserMenu() {
           <div className="flex flex-col space-y-1">
             <p className="text-sm font-medium leading-none">Account</p>
             <p className="text-xs leading-none text-muted-foreground">
-              {email}
+              {user.email}
             </p>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem
-          className="cursor-pointer"
+        <DropdownMenuItem asChild>
+          <Link href="/profile" className="cursor-pointer flex items-center">
+            <UserIcon className="mr-2 h-4 w-4" />
+            Profile
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/orders" className="cursor-pointer flex items-center">
+            <Package className="mr-2 h-4 w-4" />
+            My Orders
+          </Link>
+        </DropdownMenuItem>
+        {isAdmin && (
+          <DropdownMenuItem asChild>
+            <Link href="/admin" className="cursor-pointer flex items-center">
+              <Settings className="mr-2 h-4 w-4" />
+              Admin Panel
+            </Link>
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem 
+          className="cursor-pointer flex items-center text-destructive focus:text-destructive"
           onClick={handleSignOut}
         >
+          <LogOut className="mr-2 h-4 w-4" />
           Sign out
         </DropdownMenuItem>
       </DropdownMenuContent>

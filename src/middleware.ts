@@ -32,6 +32,14 @@ export async function middleware(req: NextRequest) {
     return res
   }
 
+  // Admin-only routes
+  const adminPaths = ['/admin', '/dashboard/admin']
+  if (adminPaths.some(path => req.nextUrl.pathname.startsWith(path))) {
+    if (!session || session.user.email !== process.env.NEXT_PUBLIC_ADMIN_EMAIL) {
+      return NextResponse.redirect(new URL('/', req.url))
+    }
+  }
+
   // Protected pages
   const protectedPaths = ['/dashboard', '/profile', '/orders']
   if (protectedPaths.some(path => req.nextUrl.pathname.startsWith(path))) {
@@ -45,13 +53,6 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder
-     */
     '/((?!_next/static|_next/image|favicon.ico|public/).*)',
   ],
 } 

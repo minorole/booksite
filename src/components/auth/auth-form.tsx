@@ -5,37 +5,49 @@ import { Input } from "@/components/ui/input"
 import { useState } from "react"
 import { createClient } from "@/lib/supabase"
 import { useToast } from "@/hooks/use-toast"
+import { useRouter } from "next/navigation"
 
 export function AuthForm() {
   const [email, setEmail] = useState("")
   const [loading, setLoading] = useState(false)
   const { toast } = useToast()
+  const router = useRouter()
   const supabase = createClient()
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
 
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: `${location.origin}/auth/callback`,
-      },
-    })
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: `${location.origin}/auth/callback`,
+        },
+      })
 
-    if (error) {
+      if (error) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: error.message,
+        })
+      } else {
+        toast({
+          title: "Check your email",
+          description: "We sent you a login link. Be sure to check your spam too.",
+        })
+        router.push('/auth/verify')
+      }
+    } catch (error) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message,
+        description: "An unexpected error occurred. Please try again.",
       })
-    } else {
-      toast({
-        title: "Check your email",
-        description: "We sent you a login link. Be sure to check your spam too.",
-      })
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   return (
