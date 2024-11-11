@@ -25,15 +25,16 @@ Create a revolutionary free marketplace platform that leverages AI to streamline
 ### 2.2 Backend Infrastructure
 - **Hosting**: Vercel (Production & Preview environments)
 - **Database**: PostgreSQL with Prisma ORM + pgvector extension
+- **Authentication**: 
+  - Supabase Auth with Magic Link Email
+  - Role-based access control
+  - Protected routes and API endpoints
 - **File Storage**: Cloudinary
 - **Caching**: 
   - Next.js built-in cache
   - Vercel Edge Cache
   - Upstash Redis (API/Session caching)
-- **Real-time**: Socket.io for WebSocket support
-- **Authentication**: 
-  - Magic Link Email authentication
-
+- **Real-time**: Supabase Realtime
 
 ### 2.3 AI Integration
 - **Image Processing**: OpenAI Vision API / Claude

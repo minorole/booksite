@@ -1,0 +1,106 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+  extensions = [pgvector(map: "vector")]
+}
+
+model User {
+  id            String    @id
+  email         String    @unique
+  name          String?
+  role          Role      @default(USER)
+  created_at    DateTime  @default(now())
+  orders        Order[]
+  products      Product[] @relation("DonorProducts")
+}
+
+model Product {
+  id          String      @id @default(uuid())
+  name        String
+  description String
+  category    String
+  quantity    Int         @default(0)
+  image_urls  String[]    @default([])
+  metadata    Json        @default("{}")
+  created_at  DateTime    @default(now())
+  updated_at  DateTime    @updatedAt
+  order_items OrderItem[]
+  donor       User?       @relation("DonorProducts", fields: [donor_id], references: [id])
+  donor_id    String?     
+  location    String?     // Physical location for pickup
+  condition   String?     // Item condition
+  tags        String[]    // For better searchability
+  ai_metadata Json?       // Store AI-generated insights
+  views       Int         @default(0)  // Track popularity
+  category_id String?
+  category_rel Category?  @relation(fields: [category_id], references: [id])
+  location_id String?
+  location_rel Location?  @relation(fields: [location_id], references: [id])
+  embedding   Unsupported("vector(384)")?  // Vector embedding for similarity search
+
+  @@index([donor_id])
+  @@index([category_id])
+  @@index([location_id])
+}
+
+model Order {
+  id          String      @id @default(uuid())
+  user_id     String
+  user        User        @relation(fields: [user_id], references: [id])
+  status      OrderStatus @default(PENDING)
+  pickup_date DateTime
+  created_at  DateTime    @default(now())
+  order_items OrderItem[]
+
+  @@index([user_id])
+}
+
+model OrderItem {
+  order_id    String
+  product_id  String
+  quantity    Int
+  order       Order    @relation(fields: [order_id], references: [id])
+  product     Product  @relation(fields: [product_id], references: [id])
+
+  @@id([order_id, product_id])
+}
+
+model Location {
+  id          String    @id @default(uuid())
+  name        String
+  address     String
+  coordinates Json      // Store lat/long
+  products    Product[]
+}
+
+model Category {
+  id          String     @id @default(uuid())
+  name        String
+  parent_id   String?
+  parent      Category?  @relation("CategoryHierarchy", fields: [parent_id], references: [id])
+  children    Category[] @relation("CategoryHierarchy")
+  products    Product[]
+
+  @@index([parent_id])
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
