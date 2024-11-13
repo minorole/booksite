@@ -67,19 +67,9 @@ export async function processBookImage(
         },
         {
           role: "user",
-          content: [
-            {
-              type: "text",
-              text: `Analyze this book image and extract visible text. Return a pure JSON object.
-              ${existingBooks ? `Check for duplicates against: ${JSON.stringify(existingBooks)}` : ''}`
-            },
-            {
-              type: "image_url",
-              image_url: {
-                url: imageUrl
-              }
-            }
-          ]
+          content: `Analyze this book image and extract visible text. Return a pure JSON object.
+          Image URL: ${imageUrl}
+          ${existingBooks ? `Check for duplicates against: ${JSON.stringify(existingBooks)}` : ''}`
         }
       ],
       max_tokens: 4096,
