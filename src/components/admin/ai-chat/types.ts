@@ -8,7 +8,7 @@ export interface BookAnalysis {
   extracted_text: string;
   confidence_score: number;
   possible_duplicate: boolean;
-  duplicate_reasons: string[];
+  duplicate_reasons?: string[];
   search_tags: string[];
   category_suggestions: string[];
 }
@@ -21,19 +21,14 @@ export interface ChatMessage {
   imageUrl?: string;
 }
 
-export interface FileUpload {
-  file: File;
-  previewUrl: string;
-}
-
 export interface ChatState {
   messages: ChatMessage[];
   isProcessing: boolean;
-  currentUpload: FileUpload | null;
+  uploadedImageUrl: string | null;
 }
 
 export type ChatAction = 
   | { type: 'ADD_MESSAGE'; payload: ChatMessage }
   | { type: 'SET_PROCESSING'; payload: boolean }
-  | { type: 'SET_UPLOAD'; payload: FileUpload | null }
+  | { type: 'SET_UPLOADED_IMAGE'; payload: string | null }
   | { type: 'RESET' }; 

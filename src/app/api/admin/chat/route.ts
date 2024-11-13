@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { processBookImage, getChatResponse } from '@/lib/openai';
-import { uploadImage } from '@/lib/cloudinary';
+import { uploadAndOptimizeImage } from '@/lib/cloudinary';
 
 export async function POST(request: Request) {
   try {
@@ -19,13 +19,13 @@ export async function POST(request: Request) {
 
     if (image) {
       try {
-        // First upload to Cloudinary
-        const imageUrl = await uploadImage(image);
-        
-        // Then process with OpenAI using the Cloudinary URL
-        const bookAnalysis = await processBookImage(imageUrl);
-        
-        // Safely construct the response message with null checks
+        // Process image with Cloudinary first
+        const { displayUrl, originalImageData } = await uploadAndOptimizeImage(image);
+
+        // Process with OpenAI using the original image data
+        const bookAnalysis = await processBookImage(originalImageData);
+
+        // Final response
         const analysisMessage = [
           `I've analyzed the book cover. Here's what I found:`,
           ``,
@@ -41,20 +41,15 @@ export async function POST(request: Request) {
           `Tags: ${bookAnalysis?.search_tags?.length ? bookAnalysis.search_tags.join(', ') : 'None'}`,
           `Categories: ${bookAnalysis?.category_suggestions?.length ? bookAnalysis.category_suggestions.join(', ') : 'None'}`,
           ``,
-          `Image has been uploaded to: ${imageUrl}`,
+          `Image has been uploaded to: ${displayUrl}`,
           ``,
           `Would you like me to create a new book listing with this information?`
         ].join('\n');
 
         return NextResponse.json({ 
           message: analysisMessage,
-          analysis: {
-            ...bookAnalysis,
-            search_tags: bookAnalysis?.search_tags || [],
-            category_suggestions: bookAnalysis?.category_suggestions || [],
-            duplicate_reasons: bookAnalysis?.duplicate_reasons || [],
-          },
-          imageUrl
+          analysis: bookAnalysis,
+          imageUrl: displayUrl
         });
       } catch (error) {
         console.error('Processing error:', error);

@@ -10,8 +10,8 @@ interface BookAnalysis {
   title_zh: string | null;
   description_en: string;
   description_zh: string;
-  extracted_text: string;    // Raw text extracted from image
-  confidence_score: number;  // Confidence in text extraction
+  extracted_text: string;    
+  confidence_score: number;  
   possible_duplicate: boolean;
   duplicate_reasons?: string[];
   search_tags: string[];
@@ -24,56 +24,71 @@ interface AssistantResponse {
   needs_review: boolean;
 }
 
-function truncateBase64(base64Image: string): string {
-  // Remove data URL prefix if present
-  const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, '');
-  
-  // If the base64 string is too long (causing token limit issues)
-  // we'll truncate it and add padding if needed
-  const maxLength = 100000; // Adjust based on model token limits
-  if (base64Data.length > maxLength) {
-    const truncated = base64Data.slice(0, maxLength);
-    // Add padding if needed
-    const padding = truncated.length % 4;
-    if (padding) {
-      return truncated + '='.repeat(4 - padding);
-    }
-    return truncated;
-  }
-  
-  return base64Data;
-}
-
 export async function processBookImage(
-  imageUrl: string,
+  imageData: string,
   existingBooks?: Array<{ title_en: string; title_zh: string }>
 ): Promise<BookAnalysis> {
   try {
+    // Ensure the image data is in the correct format
+    let cleanImageData = imageData;
+    
+    // If it's a base64 string without prefix, add it
+    if (!imageData.startsWith('data:image/')) {
+      // Try to detect the image type from the base64 data
+      const buffer = Buffer.from(imageData, 'base64');
+      const type = detectImageType(buffer);
+      cleanImageData = `data:image/${type};base64,${imageData}`;
+    }
+
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
         {
           role: "system",
           content: `You are an AI assistant for Buddhist book inventory management.
-          Your task is to extract only visible text from book images and provide structured analysis.
-          IMPORTANT: Return only a pure JSON object without any markdown formatting or code blocks.
-          - Only extract text you can clearly see
+          Your task is to extract text from book images and provide structured analysis.
+          
+          IMPORTANT GUIDELINES:
+          - Focus on extracting Chinese and English text accurately
+          - Always preserve original Chinese characters exactly as shown
+          - If you see Chinese text, it MUST be included in title_zh
+          - Do not transliterate or translate between languages
           - If text is unclear, mark as null
           - Do not make assumptions or generate content
-          - Do not interpret or explain Buddhist concepts
-          - Check for exact matches with existing titles
-          - Provide accurate descriptions in both languages
-          - Generate relevant search tags and categories`
+          - Do not interpret Buddhist concepts
+          
+          Return response in JSON format with the following structure:
+          {
+            "title_en": string | null,
+            "title_zh": string | null,
+            "description_en": string,
+            "description_zh": string,
+            "extracted_text": string,
+            "confidence_score": number,
+            "possible_duplicate": boolean,
+            "duplicate_reasons": string[],
+            "search_tags": string[],
+            "category_suggestions": string[]
+          }`
         },
         {
           role: "user",
-          content: `Analyze this book image and extract visible text. Return a pure JSON object.
-          Image URL: ${imageUrl}
-          ${existingBooks ? `Check for duplicates against: ${JSON.stringify(existingBooks)}` : ''}`
+          content: [
+            {
+              type: "text",
+              text: "Analyze this book cover and extract all visible text. Pay special attention to Chinese characters."
+            },
+            {
+              type: "image_url",
+              image_url: {
+                url: cleanImageData,
+                detail: "high"
+              }
+            }
+          ]
         }
       ],
       max_tokens: 4096,
-      response_format: { type: "json_object" },
       temperature: 0
     });
 
@@ -81,37 +96,121 @@ export async function processBookImage(
       throw new Error('No response from OpenAI');
     }
 
-    let content = response.choices[0].message.content;
-    
-    // Clean up the response if it contains markdown or code blocks
-    if (content.includes('```')) {
-      // Extract JSON from markdown code block if present
-      const match = content.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/);
-      content = match ? match[1] : content;
+    const content = response.choices[0].message.content.trim();
+    // Clean the response - remove markdown formatting if present
+    const jsonContent = content.replace(/```json\n|\n```/g, '').trim();
+
+    try {
+      const parsedResponse = JSON.parse(jsonContent) as BookAnalysis;
+      
+      return {
+        title_en: parsedResponse.title_en || null,
+        title_zh: parsedResponse.title_zh || null,
+        description_en: parsedResponse.description_en || '',
+        description_zh: parsedResponse.description_zh || '',
+        extracted_text: parsedResponse.extracted_text || '',
+        confidence_score: parsedResponse.confidence_score || 0,
+        possible_duplicate: parsedResponse.possible_duplicate || false,
+        duplicate_reasons: parsedResponse.duplicate_reasons || [],
+        search_tags: parsedResponse.search_tags || [],
+        category_suggestions: parsedResponse.category_suggestions || []
+      };
+    } catch (error) {
+      console.error('Error parsing OpenAI response:', error);
+      throw new Error('Failed to parse OpenAI response: Invalid JSON format');
     }
-
-    // Remove any remaining markdown formatting
-    content = content.replace(/```json|```/g, '').trim();
-
-    // Parse and validate response
-    const parsedResponse = JSON.parse(content) as BookAnalysis;
-    
-    return {
-      title_en: parsedResponse.title_en || null,
-      title_zh: parsedResponse.title_zh || null,
-      description_en: parsedResponse.description_en || '',
-      description_zh: parsedResponse.description_zh || '',
-      extracted_text: parsedResponse.extracted_text || '',
-      confidence_score: parsedResponse.confidence_score || 0,
-      possible_duplicate: parsedResponse.possible_duplicate || false,
-      duplicate_reasons: parsedResponse.duplicate_reasons || [],
-      search_tags: parsedResponse.search_tags || [],
-      category_suggestions: parsedResponse.category_suggestions || []
-    };
 
   } catch (error) {
     console.error('Error processing book image:', error);
     throw new Error('Failed to process book image: ' + (error instanceof Error ? error.message : 'Unknown error'));
+  }
+}
+
+// Helper function to detect image type from buffer
+function detectImageType(buffer: Buffer): string {
+  const header = buffer.toString('hex', 0, 4);
+  
+  // Check magic numbers
+  switch (header) {
+    case 'ffd8ffe0':
+    case 'ffd8ffe1':
+    case 'ffd8ffe2':
+      return 'jpeg';
+    case '89504e47':
+      return 'png';
+    case '47494638':
+      return 'gif';
+    case '52494646':
+      return 'webp';
+    default:
+      return 'jpeg'; // Default to JPEG if unknown
+  }
+}
+
+export async function getChatResponse(
+  message: string,
+  context: {
+    bookData?: any,
+    adminAction?: string,
+    previousMessages: Array<{role: string, content: string}>
+  }
+): Promise<AssistantResponse> {
+  try {
+    const systemMessage = `You are an AI assistant for Buddhist book inventory management.
+    Important guidelines:
+    - Maintain context from previous messages
+    - When users provide Chinese text, use it exactly as given
+    - If a title is provided, update your understanding of the current book
+    - Focus on inventory management tasks
+    - Never interpret Buddhist teachings
+    - Never modify or translate provided Chinese text
+    - Confirm actions before proceeding`;
+
+    const messages = [
+      {
+        role: "system" as const,
+        content: systemMessage
+      },
+      ...context.previousMessages.map(msg => ({
+        role: msg.role as "user" | "assistant" | "system",
+        content: msg.content
+      })),
+      {
+        role: "user" as const,
+        content: message
+      }
+    ];
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: messages as OpenAI.Chat.ChatCompletionMessageParam[],
+      temperature: 0
+    });
+
+    if (!response.choices[0].message.content) {
+      throw new Error('No response from OpenAI');
+    }
+
+    const content = response.choices[0].message.content;
+    const contentLowerCase = content.toLowerCase();
+
+    // Determine certainty and review needs
+    const needsReview = 
+      contentLowerCase.includes('book content') || 
+      contentLowerCase.includes('buddhist teaching') ||
+      contentLowerCase.includes('dharma');
+
+    const certainty = needsReview ? 'low' : 'high';
+
+    return {
+      content,
+      certainty,
+      needs_review: needsReview
+    };
+
+  } catch (error) {
+    console.error('Error getting chat response:', error);
+    throw new Error('Failed to get chat response');
   }
 }
 
@@ -151,91 +250,6 @@ export async function generateBookDescription(
   } catch (error) {
     console.error('Error generating book description:', error);
     throw new Error('Failed to generate book description');
-  }
-}
-
-export async function getChatResponse(
-  message: string,
-  context?: {
-    bookData?: any,
-    adminAction?: string,
-    previousMessages?: Array<{role: string, content: string}>
-  }
-): Promise<AssistantResponse> {
-  try {
-    const systemMessage = `You are an AI assistant for Buddhist book inventory management.
-    Important guidelines:
-    - If uncertain, say so explicitly
-    - Don't make assumptions about book content
-    - Direct Buddhist content questions to AMTBCF staff
-    - Focus only on inventory management
-    - Never interpret or explain Buddhist teachings
-    - Never generate content about Buddhist concepts`;
-
-    const messages = [
-      {
-        role: "system" as const,
-        content: systemMessage
-      },
-      ...(context?.previousMessages || []).map(msg => ({
-        role: msg.role as "user" | "assistant" | "system",
-        content: msg.content
-      })),
-      {
-        role: "user" as const,
-        content: message
-      }
-    ];
-
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",  // Using the specified model from PRD
-      messages: messages as OpenAI.Chat.ChatCompletionMessageParam[],
-      temperature: 0
-    });
-
-    if (!response.choices[0].message.content) {
-      throw new Error('No response from OpenAI');
-    }
-
-    const content = response.choices[0].message.content;
-
-    // Analyze response for uncertainty markers
-    const uncertaintyMarkers = [
-      'not sure', 'might', 'maybe', 'could be', 'possibly',
-      'I think', 'appears to', 'seems like', 'uncertain'
-    ];
-    
-    const contentLowerCase = content.toLowerCase();
-    const hasUncertaintyMarkers = uncertaintyMarkers.some(marker => 
-      contentLowerCase.includes(marker)
-    );
-
-    // Check if response needs human review
-    const needsReview = 
-      contentLowerCase.includes('book content') || 
-      contentLowerCase.includes('buddhist teaching') ||
-      contentLowerCase.includes('dharma') ||
-      hasUncertaintyMarkers;
-
-    // Determine certainty level
-    let certainty: 'high' | 'medium' | 'low' | 'unknown' = 'unknown';
-    if (hasUncertaintyMarkers) {
-      certainty = 'low';
-    } else if (content.length > 500) {
-      certainty = 'medium';
-    } else if (!needsReview) {
-      certainty = 'high';
-    }
-
-    return {
-      content,
-      certainty,
-      needs_review: needsReview
-    };
-
-  } catch (error) {
-    console.error('Error getting chat response:', error);
-    throw new Error('Failed to get chat response');
   }
 }
 

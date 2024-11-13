@@ -1,3 +1,5 @@
+"use client"
+
 import { ChatMessage } from './types';
 import { Avatar } from '@/components/ui/avatar';
 

@@ -1,3 +1,5 @@
+"use client"
+
 import { ChangeEvent, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { FileUpload } from './types';
