@@ -13,11 +13,7 @@ export async function GET(request: Request) {
       throw new Error('No code provided')
     }
 
-    // Create the Supabase client with async cookie handling
-    const cookieStore = cookies()
-    const supabase = createRouteHandlerClient({ 
-      cookies: () => Promise.resolve(cookieStore)
-    })
+    const supabase = createRouteHandlerClient({ cookies })
     
     const { data: { user }, error: authError } = await supabase.auth.exchangeCodeForSession(code)
     

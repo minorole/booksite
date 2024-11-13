@@ -5,7 +5,7 @@ import Link from "next/link"
 
 export default function Home() {
   return (
-    <div className="min-h-screen flex flex-col font-[family-name:var(--font-geist-sans)]">
+    <div className="min-h-screen flex flex-col font-sans">
       <Navbar />
       
       <main className="flex-1 container mx-auto py-8 px-4">

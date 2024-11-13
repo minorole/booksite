@@ -5,12 +5,13 @@ import { FileUploadButton } from './file-upload';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
+import { Loader2 } from 'lucide-react';
 
 const initialState: ChatState = {
   messages: [
     {
       role: 'assistant',
-      content: 'Hello! Would you like to update inventory or add a new book listing?',
+      content: 'Hello! Would you like to add a new book or update existing inventory?',
       timestamp: new Date(),
     },
   ],
@@ -78,38 +79,62 @@ export function ChatBox() {
     dispatch({ type: 'SET_PROCESSING', payload: true });
 
     try {
-      let base64Image: string | undefined;
-      if (state.currentUpload) {
-        base64Image = await convertToBase64(state.currentUpload.file);
-      }
-
-      const response = await fetch('/api/admin/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          message: input,
-          image: base64Image
-        }),
-      });
-
-      if (!response.ok) throw new Error('Failed to send message');
-
-      const data = await response.json();
+      let response;
       
-      // Add AI response with both analysis and image URL
-      let content = data.message;
-      if (data.bookInfo) {
-        content += `\n\n${JSON.stringify(data.bookInfo, null, 2)}`;
-        if (data.imageUrl) {
-          content += `\n\nImage has been uploaded and is available at: ${data.imageUrl}`;
-        }
+      if (state.currentUpload) {
+        // Handle image upload and processing
+        const base64Image = await convertToBase64(state.currentUpload.file);
+        
+        const [bookAnalysis, uploadResult] = await Promise.all([
+          fetch('/api/admin/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              image: base64Image,
+              message: input 
+            }),
+          }).then(res => res.json()),
+          fetch('/api/admin/upload', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image: base64Image }),
+          }).then(res => res.json())
+        ]);
+
+        // Format the response message
+        const analysisMessage = `Book Analysis Results:
+        
+Title (English): ${bookAnalysis.title_en}
+Title (Chinese): ${bookAnalysis.title_zh || 'Not detected'}
+        
+English Description:
+${bookAnalysis.description_en}
+        
+Chinese Description:
+${bookAnalysis.description_zh}
+        
+Tags: ${bookAnalysis.search_tags.join(', ')}
+Suggested Categories: ${bookAnalysis.category_suggestions.join(', ')}
+        
+Image URL: ${uploadResult.imageUrl}
+
+Would you like me to create a new book listing with this information?`;
+
+        response = { message: analysisMessage };
+      } else {
+        // Handle text-only chat
+        response = await fetch('/api/admin/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: input }),
+        }).then(res => res.json());
       }
 
       dispatch({
         type: 'ADD_MESSAGE',
         payload: {
           role: 'assistant',
-          content,
+          content: response.message,
           timestamp: new Date(),
         },
       });
@@ -119,7 +144,7 @@ export function ChatBox() {
         dispatch({ type: 'SET_UPLOAD', payload: null });
       }
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error('Error in chat:', error);
       dispatch({
         type: 'ADD_MESSAGE',
         payload: {
@@ -166,7 +191,11 @@ export function ChatBox() {
             disabled={state.isProcessing}
           />
           <Button type="submit" disabled={state.isProcessing}>
-            Send
+            {state.isProcessing ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              'Send'
+            )}
           </Button>
         </form>
       </div>

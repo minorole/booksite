@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
-import { processBookImage, getChatResponse } from '@/lib/openai';
 import { uploadImage } from '@/lib/cloudinary';
 
 export async function POST(request: Request) {
@@ -15,23 +14,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { message, image } = await request.json();
-
-    if (image) {
-      // Process image with OpenAI
-      const bookAnalysis = await processBookImage(image);
-      
-      return NextResponse.json({ 
-        message: "I've analyzed the book cover. Here's what I found:",
-        ...bookAnalysis
-      });
-    }
-
-    // Handle text-based chat
-    const response = await getChatResponse(message);
-    return NextResponse.json({ message: response });
+    const { image } = await request.json();
+    
+    // Upload image to Cloudinary
+    const imageUrl = await uploadImage(image);
+    
+    return NextResponse.json({ imageUrl });
   } catch (error) {
-    console.error('Chat API Error:', error);
+    console.error('Upload API Error:', error);
     return NextResponse.json(
       { error: 'Internal Server Error' },
       { status: 500 }

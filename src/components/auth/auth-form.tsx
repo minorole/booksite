@@ -38,7 +38,7 @@ export function AuthForm() {
           title: "Magic link sent",
           description: "Check your email for the login link. Be sure to check your spam folder too.",
         })
-        router.push('/auth/verify')
+        router.push(`/auth/verify?email=${encodeURIComponent(email)}`)
       }
     } catch (error) {
       toast({

@@ -61,7 +61,7 @@ Create a platform for Amitabha Buddhist Society of Central Florida (AMTBCF) to e
 ## 3. Technical Architecture
 
 ### 3.1 Frontend Stack
-- **Framework**: Next.js 14+ with App Router
+- **Framework**: Next.js 14 with App Router
 - **Styling**: Tailwind CSS
 - **Key Features**:
   - Server-side rendering for SEO
