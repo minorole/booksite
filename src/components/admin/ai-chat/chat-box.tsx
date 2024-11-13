@@ -85,42 +85,35 @@ export function ChatBox() {
         // Handle image upload and processing
         const base64Image = await convertToBase64(state.currentUpload.file);
         
-        const [bookAnalysis, uploadResult] = await Promise.all([
-          fetch('/api/admin/chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              image: base64Image,
-              message: input 
-            }),
-          }).then(res => res.json()),
-          fetch('/api/admin/upload', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ image: base64Image }),
-          }).then(res => res.json())
-        ]);
+        response = await fetch('/api/admin/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            image: base64Image,
+            message: input 
+          }),
+        }).then(res => res.json());
 
-        // Format the response message
-        const analysisMessage = `Book Analysis Results:
-        
-Title (English): ${bookAnalysis.title_en}
-Title (Chinese): ${bookAnalysis.title_zh || 'Not detected'}
-        
-English Description:
-${bookAnalysis.description_en}
-        
-Chinese Description:
-${bookAnalysis.description_zh}
-        
-Tags: ${bookAnalysis.search_tags.join(', ')}
-Suggested Categories: ${bookAnalysis.category_suggestions.join(', ')}
-        
-Image URL: ${uploadResult.imageUrl}
+        if (response.error) {
+          throw new Error(response.error);
+        }
 
-Would you like me to create a new book listing with this information?`;
-
-        response = { message: analysisMessage };
+        // Add AI response message
+        dispatch({
+          type: 'ADD_MESSAGE',
+          payload: {
+            role: 'assistant',
+            content: response.message || 'No response received',
+            timestamp: new Date(),
+            analysis: response.analysis ? {
+              ...response.analysis,
+              search_tags: response.analysis.search_tags || [],
+              category_suggestions: response.analysis.category_suggestions || [],
+              duplicate_reasons: response.analysis.duplicate_reasons || [],
+            } : undefined,
+            imageUrl: response.imageUrl
+          },
+        });
       } else {
         // Handle text-only chat
         response = await fetch('/api/admin/chat', {
@@ -128,16 +121,20 @@ Would you like me to create a new book listing with this information?`;
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ message: input }),
         }).then(res => res.json());
-      }
 
-      dispatch({
-        type: 'ADD_MESSAGE',
-        payload: {
-          role: 'assistant',
-          content: response.message,
-          timestamp: new Date(),
-        },
-      });
+        if (response.error) {
+          throw new Error(response.error);
+        }
+
+        dispatch({
+          type: 'ADD_MESSAGE',
+          payload: {
+            role: 'assistant',
+            content: response.message || 'No response received',
+            timestamp: new Date(),
+          },
+        });
+      }
 
       // Clear upload after processing
       if (state.currentUpload) {

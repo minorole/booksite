@@ -18,23 +18,77 @@ export async function POST(request: Request) {
     const { message, image } = await request.json();
 
     if (image) {
-      // Process image with OpenAI
-      const bookAnalysis = await processBookImage(image);
-      
-      return NextResponse.json({ 
-        message: "I've analyzed the book cover. Here's what I found:",
-        ...bookAnalysis
-      });
+      try {
+        // First upload to Cloudinary
+        const imageUrl = await uploadImage(image);
+        
+        // Then process with OpenAI using the Cloudinary URL
+        const bookAnalysis = await processBookImage(imageUrl);
+        
+        // Safely construct the response message with null checks
+        const analysisMessage = [
+          `I've analyzed the book cover. Here's what I found:`,
+          ``,
+          `Title (English): ${bookAnalysis?.title_en || 'Not detected'}`,
+          `Title (Chinese): ${bookAnalysis?.title_zh || 'Not detected'}`,
+          ``,
+          `Description (English):`,
+          `${bookAnalysis?.description_en || 'No description available'}`,
+          ``,
+          `Description (Chinese):`,
+          `${bookAnalysis?.description_zh || 'No description available'}`,
+          ``,
+          `Tags: ${bookAnalysis?.search_tags?.length ? bookAnalysis.search_tags.join(', ') : 'None'}`,
+          `Categories: ${bookAnalysis?.category_suggestions?.length ? bookAnalysis.category_suggestions.join(', ') : 'None'}`,
+          ``,
+          `Image has been uploaded to: ${imageUrl}`,
+          ``,
+          `Would you like me to create a new book listing with this information?`
+        ].join('\n');
+
+        return NextResponse.json({ 
+          message: analysisMessage,
+          analysis: {
+            ...bookAnalysis,
+            search_tags: bookAnalysis?.search_tags || [],
+            category_suggestions: bookAnalysis?.category_suggestions || [],
+            duplicate_reasons: bookAnalysis?.duplicate_reasons || [],
+          },
+          imageUrl
+        });
+      } catch (error) {
+        console.error('Processing error:', error);
+        return NextResponse.json({ 
+          error: 'Failed to process image',
+          details: error instanceof Error ? error.message : 'Unknown error'
+        }, { status: 500 });
+      }
     }
 
     // Handle text-based chat
-    const response = await getChatResponse(message);
-    return NextResponse.json({ message: response });
+    try {
+      const chatResponse = await getChatResponse(message, {
+        previousMessages: [], // Initialize with empty array
+        adminAction: 'chat'
+      });
+
+      return NextResponse.json({ 
+        message: chatResponse.content,
+        certainty: chatResponse.certainty,
+        needs_review: chatResponse.needs_review 
+      });
+    } catch (error) {
+      console.error('Chat response error:', error);
+      return NextResponse.json({ 
+        error: 'Failed to get chat response',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      }, { status: 500 });
+    }
   } catch (error) {
     console.error('Chat API Error:', error);
-    return NextResponse.json(
-      { error: 'Internal Server Error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ 
+      error: 'Internal Server Error',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
   }
 } 

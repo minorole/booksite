@@ -1,24 +1,69 @@
 import { v2 as cloudinary } from 'cloudinary';
 
-// Configure Cloudinary
+if (!process.env.CLOUDINARY_URL) {
+  throw new Error('Missing CLOUDINARY_URL');
+}
+
+// Configure Cloudinary using URL
 cloudinary.config({
   secure: true
 });
 
-export const uploadImage = async (file: File): Promise<string> => {
-  // Convert file to base64
-  const base64Data = await new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result);
-    reader.readAsDataURL(file);
-  });
-
+// Dynamically import sharp to handle environments where it might not be available
+const getSharp = async () => {
   try {
-    // Upload to Cloudinary
-    const result = await cloudinary.uploader.upload(base64Data as string, {
-      resource_type: 'image',
-      folder: 'book-covers',
-    });
+    return await import('sharp');
+  } catch (error) {
+    console.warn('Sharp not available, falling back to direct upload');
+    return null;
+  }
+};
+
+export const uploadImage = async (base64Image: string): Promise<string> => {
+  try {
+    // Remove data:image/[type];base64, prefix if present
+    const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, '');
+    
+    let processedBase64 = base64Data;
+    
+    // Try to use sharp for image processing if available
+    const sharp = await getSharp();
+    if (sharp) {
+      try {
+        // Convert base64 to buffer
+        const buffer = Buffer.from(base64Data, 'base64');
+        
+        // Compress and resize image using sharp
+        const processedBuffer = await sharp.default(buffer)
+          .resize(1000, 1000, {
+            fit: 'inside',
+            withoutEnlargement: true
+          })
+          .jpeg({
+            quality: 80,
+            progressive: true
+          })
+          .toBuffer();
+        
+        // Convert back to base64
+        processedBase64 = processedBuffer.toString('base64');
+      } catch (sharpError) {
+        console.warn('Sharp processing failed, using original image:', sharpError);
+      }
+    }
+    
+    // Upload processed image
+    const result = await cloudinary.uploader.upload(
+      `data:image/jpeg;base64,${processedBase64}`, 
+      {
+        resource_type: 'image',
+        folder: 'book-covers',
+        transformation: [
+          { quality: "auto" },
+          { fetch_format: "auto" }
+        ]
+      }
+    );
     
     return result.secure_url;
   } catch (error) {
