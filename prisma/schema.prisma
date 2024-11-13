@@ -1,101 +1,107 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
   previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
-  extensions = [pgvector(map: "vector")]
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
+  extensions = [uuid_ossp(map: "uuid-ossp", schema: "extensions"), vector]
 }
 
 model User {
-  id            String    @id
-  email         String    @unique
-  name          String?
-  role          Role      @default(USER)
-  created_at    DateTime  @default(now())
-  orders        Order[]
-  products      Product[] @relation("DonorProducts")
+  id              String            @id
+  email           String            @unique
+  name            String?
+  role            Role              @default(USER)
+  created_at      DateTime          @default(now())
+  last_order_date DateTime?
+  orders          Order[]
+  addresses       ShippingAddress[]
 }
 
-model Product {
-  id          String      @id @default(uuid())
-  name        String
-  description String
-  category    String
-  quantity    Int         @default(0)
-  image_urls  String[]    @default([])
-  metadata    Json        @default("{}")
-  created_at  DateTime    @default(now())
-  updated_at  DateTime    @updatedAt
-  order_items OrderItem[]
-  donor       User?       @relation("DonorProducts", fields: [donor_id], references: [id])
-  donor_id    String?     
-  location    String?     // Physical location for pickup
-  condition   String?     // Item condition
-  tags        String[]    // For better searchability
-  ai_metadata Json?       // Store AI-generated insights
-  views       Int         @default(0)  // Track popularity
-  category_id String?
-  category_rel Category?  @relation(fields: [category_id], references: [id])
-  location_id String?
-  location_rel Location?  @relation(fields: [location_id], references: [id])
-  embedding   Unsupported("vector(384)")?  // Vector embedding for similarity search
+model Book {
+  id             String                 @id @default(uuid())
+  title_en       String
+  title_zh       String
+  description_en String
+  description_zh String
+  cover_image    String?
+  quantity       Int                    @default(0)
+  category_id    String?
+  created_at     DateTime               @default(now())
+  updated_at     DateTime               @updatedAt
+  search_tags    String[]
+  ai_metadata    Json?
+  views          Int                    @default(0)
+  embedding      Unsupported("vector")?
+  category       Category?              @relation(fields: [category_id], references: [id])
+  order_items    OrderItem[]
 
-  @@index([donor_id])
   @@index([category_id])
-  @@index([location_id])
-}
-
-model Order {
-  id          String      @id @default(uuid())
-  user_id     String
-  user        User        @relation(fields: [user_id], references: [id])
-  status      OrderStatus @default(PENDING)
-  pickup_date DateTime
-  created_at  DateTime    @default(now())
-  order_items OrderItem[]
-
-  @@index([user_id])
-}
-
-model OrderItem {
-  order_id    String
-  product_id  String
-  quantity    Int
-  order       Order    @relation(fields: [order_id], references: [id])
-  product     Product  @relation(fields: [product_id], references: [id])
-
-  @@id([order_id, product_id])
-}
-
-model Location {
-  id          String    @id @default(uuid())
-  name        String
-  address     String
-  coordinates Json      // Store lat/long
-  products    Product[]
 }
 
 model Category {
-  id          String     @id @default(uuid())
-  name        String
-  parent_id   String?
-  parent      Category?  @relation("CategoryHierarchy", fields: [parent_id], references: [id])
-  children    Category[] @relation("CategoryHierarchy")
-  products    Product[]
+  id        String     @id @default(uuid())
+  parent_id String?
+  name_en   String
+  name_zh   String
+  books     Book[]
+  parent    Category?  @relation("CategoryHierarchy", fields: [parent_id], references: [id])
+  children  Category[] @relation("CategoryHierarchy")
 
   @@index([parent_id])
+}
+
+model Order {
+  id                  String          @id @default(uuid())
+  user_id             String
+  status              OrderStatus     @default(PENDING)
+  created_at          DateTime        @default(now())
+  notes               String?
+  override_by         String?
+  override_monthly    Boolean         @default(false)
+  shipping_address_id String
+  total_items         Int
+  address             ShippingAddress @relation(fields: [shipping_address_id], references: [id])
+  user                User            @relation(fields: [user_id], references: [id])
+  order_items         OrderItem[]
+
+  @@index([user_id])
+  @@index([shipping_address_id])
+}
+
+model OrderItem {
+  order_id String
+  quantity Int
+  book_id  String
+  book     Book   @relation(fields: [book_id], references: [id])
+  order    Order  @relation(fields: [order_id], references: [id])
+
+  @@id([order_id, book_id])
+}
+
+model ShippingAddress {
+  id       String  @id @default(uuid())
+  user_id  String
+  address1 String
+  address2 String?
+  city     String
+  state    String
+  zip      String
+  country  String
+  is_valid Boolean @default(false)
+  orders   Order[]
+  user     User    @relation(fields: [user_id], references: [id])
+
+  @@index([user_id])
 }
 
 enum Role {
   USER
   ADMIN
+  SUPER_ADMIN
 }
 
 enum OrderStatus {
@@ -103,4 +109,5 @@ enum OrderStatus {
   CONFIRMED
   COMPLETED
   CANCELLED
+  SHIPPED
 }

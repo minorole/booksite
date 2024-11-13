@@ -6,6 +6,7 @@ import { useState } from "react"
 import { createClient } from "@/lib/supabase"
 import { useToast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
+import { LoadingSpinner } from "@/components/ui/loading-spinner"
 
 export function AuthForm() {
   const [email, setEmail] = useState("")
@@ -14,7 +15,7 @@ export function AuthForm() {
   const router = useRouter()
   const supabase = createClient()
 
-  const handleSignIn = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
 
@@ -22,7 +23,7 @@ export function AuthForm() {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: `${location.origin}/auth/callback`,
+          emailRedirectTo: `${location.origin}/api/auth/callback`,
         },
       })
 
@@ -34,8 +35,8 @@ export function AuthForm() {
         })
       } else {
         toast({
-          title: "Check your email",
-          description: "We sent you a login link. Be sure to check your spam too.",
+          title: "Magic link sent",
+          description: "Check your email for the login link. Be sure to check your spam folder too.",
         })
         router.push('/auth/verify')
       }
@@ -51,17 +52,33 @@ export function AuthForm() {
   }
 
   return (
-    <form onSubmit={handleSignIn} className="flex flex-col gap-4">
-      <Input
-        type="email"
-        placeholder="Your email address"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        required
-      />
-      <Button type="submit" disabled={loading}>
-        {loading ? "Sending magic link..." : "Sign in with Email"}
-      </Button>
-    </form>
+    <div className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <Input
+          type="email"
+          placeholder="Enter your email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          disabled={loading}
+          required
+          className="w-full"
+        />
+        <Button type="submit" disabled={loading} className="w-full">
+          {loading ? (
+            <>
+              <div className="mr-2">
+                <LoadingSpinner />
+              </div>
+              Sending magic link...
+            </>
+          ) : (
+            "Continue with Email"
+          )}
+        </Button>
+      </form>
+      <p className="text-sm text-muted-foreground text-center">
+        By continuing, you agree to our Terms of Service and Privacy Policy.
+      </p>
+    </div>
   )
 } 

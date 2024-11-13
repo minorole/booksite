@@ -3,18 +3,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 
 export default function SignInPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Welcome Back</CardTitle>
-          <CardDescription>
-            Sign in via magic link with your email below
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <AuthForm />
-        </CardContent>
-      </Card>
-    </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>Welcome to Free Marketplace</CardTitle>
+        <CardDescription>
+          New or returning? Simply enter your email below to continue.
+          We'll send you a secure magic link to sign in.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <AuthForm />
+      </CardContent>
+    </Card>
   )
 } 

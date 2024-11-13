@@ -6,21 +6,24 @@ export type Database = {
           id: string
           email: string
           name: string | null
-          role: 'USER' | 'ADMIN'
+          role: 'USER' | 'ADMIN' | 'SUPER_ADMIN'
+          last_order_date: string | null
           created_at: string
         }
         Insert: {
           id: string
           email: string
           name?: string | null
-          role?: 'USER' | 'ADMIN'
+          role?: 'USER' | 'ADMIN' | 'SUPER_ADMIN'
+          last_order_date?: string | null
           created_at?: string
         }
         Update: {
           id?: string
           email?: string
           name?: string | null
-          role?: 'USER' | 'ADMIN'
+          role?: 'USER' | 'ADMIN' | 'SUPER_ADMIN'
+          last_order_date?: string | null
           created_at?: string
         }
       }
@@ -95,8 +98,8 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      role: 'USER' | 'ADMIN'
-      order_status: 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED'
+      role: 'USER' | 'ADMIN' | 'SUPER_ADMIN'
+      order_status: 'PENDING' | 'CONFIRMED' | 'SHIPPED' | 'COMPLETED' | 'CANCELLED'
     }
   }
 } 

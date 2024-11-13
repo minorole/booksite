@@ -14,12 +14,12 @@ import { createClient } from "@/lib/supabase"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/AuthContext"
 import Link from "next/link"
-import { LogOut, User as UserIcon, Package, Settings } from "lucide-react"
+import { LogOut, User as UserIcon, Package, Settings, Shield } from "lucide-react"
 
 export function UserMenu() {
   const router = useRouter()
   const supabase = createClient()
-  const { user, isAdmin } = useAuth()
+  const { user, isAdmin, isSuperAdmin } = useAuth()
 
   if (!user?.email) {
     return (
@@ -70,11 +70,19 @@ export function UserMenu() {
             My Orders
           </Link>
         </DropdownMenuItem>
-        {isAdmin && (
+        {(isAdmin || isSuperAdmin) && (
           <DropdownMenuItem asChild>
             <Link href="/admin" className="cursor-pointer flex items-center">
               <Settings className="mr-2 h-4 w-4" />
               Admin Panel
+            </Link>
+          </DropdownMenuItem>
+        )}
+        {isSuperAdmin && (
+          <DropdownMenuItem asChild>
+            <Link href="/super-admin" className="cursor-pointer flex items-center">
+              <Shield className="mr-2 h-4 w-4" />
+              User Management
             </Link>
           </DropdownMenuItem>
         )}

@@ -7,17 +7,16 @@ export async function middleware(req: NextRequest) {
   const supabase = createMiddlewareClient({ req, res })
   const { data: { session } } = await supabase.auth.getSession()
 
-  // Auth pages are public
-  if (req.nextUrl.pathname.startsWith('/auth')) {
-    // If user is already logged in and tries to access auth pages
-    if (session) {
-      return NextResponse.redirect(new URL('/', req.url))
-    }
+  // Allow auth callback route
+  if (req.nextUrl.pathname.startsWith('/api/auth/callback')) {
     return res
   }
 
-  // API routes that don't require auth
-  if (req.nextUrl.pathname.startsWith('/api/public')) {
+  // Auth pages are public
+  if (req.nextUrl.pathname.startsWith('/auth')) {
+    if (session) {
+      return NextResponse.redirect(new URL('/', req.url))
+    }
     return res
   }
 
@@ -32,10 +31,19 @@ export async function middleware(req: NextRequest) {
     return res
   }
 
-  // Admin-only routes
-  const adminPaths = ['/admin', '/dashboard/admin']
-  if (adminPaths.some(path => req.nextUrl.pathname.startsWith(path))) {
-    if (!session || session.user.email !== process.env.NEXT_PUBLIC_ADMIN_EMAIL) {
+  // Admin routes
+  if (req.nextUrl.pathname.startsWith('/admin')) {
+    const { data: { user } } = await supabase.auth.getUser()
+    const role = user?.user_metadata?.role
+    if (role !== 'ADMIN' && role !== 'SUPER_ADMIN') {
+      return NextResponse.redirect(new URL('/', req.url))
+    }
+  }
+
+  // Super Admin routes
+  if (req.nextUrl.pathname.startsWith('/super-admin')) {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user?.user_metadata?.role !== 'SUPER_ADMIN') {
       return NextResponse.redirect(new URL('/', req.url))
     }
   }

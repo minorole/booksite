@@ -4,47 +4,39 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
-import { LoadingSpinner } from '@/components/ui/loading-spinner'
 
 type AuthContextType = {
   user: User | null
   loading: boolean
   isAdmin: boolean
+  isSuperAdmin: boolean
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
   isAdmin: false,
+  isSuperAdmin: false,
 })
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false)
   const router = useRouter()
   const supabase = createClient()
 
-  const checkIsAdmin = (email: string | undefined) => {
-    return email === process.env.NEXT_PUBLIC_ADMIN_EMAIL
-  }
-
   useEffect(() => {
-    // Get initial session
     const initializeAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession()
-        setUser(session?.user ?? null)
-        setIsAdmin(checkIsAdmin(session?.user?.email))
-
+        
         if (session?.user) {
-          // Sync user with our database
-          await fetch('/api/auth/sync', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            }
-          })
+          setUser(session.user)
+          const role = session.user.user_metadata?.role
+          setIsAdmin(role === 'ADMIN' || role === 'SUPER_ADMIN')
+          setIsSuperAdmin(role === 'SUPER_ADMIN')
         }
       } catch (error) {
         console.error('Auth initialization error:', error)
@@ -55,42 +47,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     initializeAuth()
 
-    // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setUser(session?.user ?? null)
-      setIsAdmin(checkIsAdmin(session?.user?.email))
-      
-      if (session?.user) {
-        // Sync user with our database
-        await fetch('/api/auth/sync', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        })
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_OUT') {
+        setUser(null)
+        setIsAdmin(false)
+        setIsSuperAdmin(false)
+        router.refresh()
+        return
       }
-      
-      router.refresh()
+
+      if (session?.user) {
+        setUser(session.user)
+        const role = session.user.user_metadata?.role
+        setIsAdmin(role === 'ADMIN' || role === 'SUPER_ADMIN')
+        setIsSuperAdmin(role === 'SUPER_ADMIN')
+        router.refresh()
+      }
     })
 
-    return () => subscription.unsubscribe()
+    return () => {
+      subscription.unsubscribe()
+    }
   }, [supabase, router])
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <LoadingSpinner />
-      </div>
-    )
-  }
-
   return (
-    <AuthContext.Provider value={{ user, loading, isAdmin }}>
+    <AuthContext.Provider value={{ user, loading, isAdmin, isSuperAdmin }}>
       {children}
     </AuthContext.Provider>
   )
 }
 
-export const useAuth = () => useContext(AuthContext)
+export const useAuth = () => {
+  const context = useContext(AuthContext)
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider')
+  }
+  return context
+}

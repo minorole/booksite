@@ -3,7 +3,7 @@ import { cookies } from 'next/headers'
 import { prisma } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
 
-export async function POST(request: Request) {
+export async function GET(request: Request) {
   try {
     const cookieStore = cookies()
     const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
@@ -13,27 +13,25 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { user } = session
-    
-    // Check if user exists
-    let dbUser = await prisma.user.findUnique({
-      where: { id: user.id }
-    })
-
-    if (!dbUser) {
-      // Create new user
-      dbUser = await prisma.user.create({
-        data: {
-          id: user.id,
-          email: user.email!,
-          role: user.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL ? 'ADMIN' : 'USER',
-        }
-      })
+    // Only super admin can list users
+    if (session.user.email !== process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    return NextResponse.json({ user: dbUser })
+    const users = await prisma.user.findMany({
+      orderBy: { created_at: 'desc' },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        created_at: true,
+      }
+    })
+
+    return NextResponse.json({ users })
   } catch (error) {
-    console.error('Error syncing user:', error)
+    console.error('Error fetching users:', error)
     return NextResponse.json(
       { error: 'Internal Server Error' },
       { status: 500 }
