@@ -25,10 +25,12 @@ export interface ChatState {
   messages: ChatMessage[];
   isProcessing: boolean;
   uploadedImageUrl: string | null;
+  currentBookData?: BookAnalysis;
 }
 
 export type ChatAction = 
   | { type: 'ADD_MESSAGE'; payload: ChatMessage }
   | { type: 'SET_PROCESSING'; payload: boolean }
   | { type: 'SET_UPLOADED_IMAGE'; payload: string | null }
+  | { type: 'SET_BOOK_DATA'; payload: BookAnalysis | undefined }
   | { type: 'RESET' }; 

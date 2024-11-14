@@ -14,8 +14,8 @@ export function AdminNavbar() {
       label: "Dashboard"
     },
     {
-      href: "/admin/manual",
-      label: "Manual Entry"
+      href: "/admin/books",
+      label: "Book Listings"
     },
     {
       href: "/admin/ai-assistant",

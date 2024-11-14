@@ -15,7 +15,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { message, image } = await request.json();
+    const { message, image, previousMessages, currentBookData } = await request.json();
 
     if (image) {
       try {
@@ -63,9 +63,43 @@ export async function POST(request: Request) {
     // Handle text-based chat
     try {
       const chatResponse = await getChatResponse(message, {
-        previousMessages: [], // Initialize with empty array
+        bookData: currentBookData,
+        previousMessages: previousMessages || [],
         adminAction: 'chat'
       });
+
+      // If the message indicates book creation, attempt to create the book
+      if (message.toLowerCase() === 'yes create it' && currentBookData) {
+        try {
+          const bookResponse = await fetch('/api/admin/books', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              ...currentBookData,
+              cover_image: currentBookData.imageUrl
+            })
+          });
+
+          const bookResult = await bookResponse.json();
+          
+          if (bookResult.error) {
+            return NextResponse.json({ 
+              message: `Failed to create book: ${bookResult.error}. Would you like to try again?`,
+              error: bookResult.error 
+            });
+          }
+
+          return NextResponse.json({ 
+            message: 'Book has been successfully created! Would you like to add another book?',
+            book: bookResult.book
+          });
+        } catch (error) {
+          return NextResponse.json({ 
+            message: 'Failed to create book. Would you like to try again?',
+            error: error instanceof Error ? error.message : 'Unknown error'
+          });
+        }
+      }
 
       return NextResponse.json({ 
         message: chatResponse.content,

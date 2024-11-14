@@ -24,22 +24,39 @@ const initialState: ChatState = {
 function chatReducer(state: ChatState, action: ChatAction): ChatState {
   switch (action.type) {
     case 'ADD_MESSAGE':
+      if (action.payload.analysis) {
+        return {
+          ...state,
+          messages: [...state.messages, action.payload],
+          currentBookData: action.payload.analysis,
+        };
+      }
       return {
         ...state,
         messages: [...state.messages, action.payload],
       };
+    
     case 'SET_PROCESSING':
       return {
         ...state,
         isProcessing: action.payload,
       };
+    
     case 'SET_UPLOADED_IMAGE':
       return {
         ...state,
         uploadedImageUrl: action.payload,
       };
+    
+    case 'SET_BOOK_DATA':
+      return {
+        ...state,
+        currentBookData: action.payload,
+      };
+    
     case 'RESET':
       return initialState;
+    
     default:
       return state;
   }
@@ -140,6 +157,7 @@ export function ChatBox() {
     const input = inputRef.current?.value.trim();
     if (!input) return;
 
+    // Add user message to state
     dispatch({
       type: 'ADD_MESSAGE',
       payload: {
@@ -153,10 +171,20 @@ export function ChatBox() {
     dispatch({ type: 'SET_PROCESSING', payload: true });
 
     try {
+      // Convert messages to the format expected by the API
+      const previousMessages = state.messages.map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }));
+
       const response = await fetch('/api/admin/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: input }),
+        body: JSON.stringify({ 
+          message: input,
+          previousMessages,
+          currentBookData: state.currentBookData // Pass the current book data
+        }),
       });
 
       const data = await response.json();

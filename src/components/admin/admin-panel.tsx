@@ -6,6 +6,7 @@ import { InventoryManagement } from './inventory-management'
 import { OrderManagement } from './order-management'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
+import { BookManagement } from './book-management'
 
 export function AdminPanel() {
   const { isAdmin, isSuperAdmin, loading } = useAuth()
@@ -25,10 +26,14 @@ export function AdminPanel() {
       <Tabs defaultValue="inventory">
         <TabsList>
           <TabsTrigger value="inventory">Inventory Management</TabsTrigger>
+          <TabsTrigger value="books">Book Listings</TabsTrigger>
           <TabsTrigger value="orders">Order Management</TabsTrigger>
         </TabsList>
         <TabsContent value="inventory">
           <InventoryManagement />
+        </TabsContent>
+        <TabsContent value="books">
+          <BookManagement />
         </TabsContent>
         <TabsContent value="orders">
           <OrderManagement />
