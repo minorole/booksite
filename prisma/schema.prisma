@@ -114,3 +114,18 @@ enum OrderStatus {
   CANCELLED
   SHIPPED
 }
+
+model AdminLog {
+  id          String      @id @default(uuid())
+  action      AdminAction
+  book_id     String
+  book_title  String      // Store title for reference even after deletion
+  admin_email String
+  created_at  DateTime    @default(now())
+  metadata    Json?       // For any additional info we might want to store
+}
+
+enum AdminAction {
+  DELETE_BOOK
+  EDIT_BOOK
+}

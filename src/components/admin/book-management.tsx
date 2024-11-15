@@ -15,29 +15,26 @@ import { Card } from "@/components/ui/card";
 import { Search, Edit, Trash2 } from "lucide-react";
 import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
-
-interface Book {
-  id: string;
-  title_en: string;
-  title_zh: string;
-  description_en: string;
-  description_zh: string;
-  cover_image: string | null;
-  quantity: number;
-  category: {
-    name_en: string;
-    name_zh: string;
-    type: string;
-  };
-  search_tags: string[];
-  created_at: string;
-}
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { BookEditSheet } from "./book-edit-sheet"
+import { Book } from "@/types/book"
 
 export function BookManagement() {
   const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
+  const [deleteBookId, setDeleteBookId] = useState<string | null>(null);
+  const [editingBook, setEditingBook] = useState<Book | null>(null);
 
   useEffect(() => {
     fetchBooks();
@@ -71,6 +68,68 @@ export function BookManagement() {
     book.title_zh?.includes(searchTerm) ||
     book.search_tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
   );
+
+  const handleDelete = async (bookId: string) => {
+    try {
+      const response = await fetch(`/api/admin/books/${bookId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete book');
+      }
+
+      // Remove book from local state
+      setBooks(books.filter(book => book.id !== bookId));
+      
+      toast({
+        title: "Success",
+        description: "Book deleted successfully"
+      });
+    } catch (error) {
+      console.error('Error deleting book:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to delete book"
+      });
+    } finally {
+      setDeleteBookId(null);
+    }
+  };
+
+  const handleEdit = (book: Book) => {
+    setEditingBook(book);
+  };
+
+  const handleSave = async (updatedBook: Book) => {
+    try {
+      const response = await fetch(`/api/admin/books/${updatedBook.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updatedBook),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update book');
+      }
+
+      // Update local state
+      setBooks(books.map(book => 
+        book.id === updatedBook.id ? updatedBook : book
+      ));
+      
+      toast({
+        title: "Success",
+        description: "Book updated successfully"
+      });
+    } catch (error) {
+      console.error('Error updating book:', error);
+      throw error;
+    }
+  };
 
   if (loading) return <div>Loading...</div>;
 
@@ -160,14 +219,14 @@ export function BookManagement() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => {/* TODO: Implement edit */}}
+                        onClick={() => handleEdit(book)}
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => {/* TODO: Implement delete */}}
+                        onClick={() => setDeleteBookId(book.id)}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -179,6 +238,33 @@ export function BookManagement() {
           </TableBody>
         </Table>
       </div>
+
+      <AlertDialog open={!!deleteBookId} onOpenChange={() => setDeleteBookId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the book from the database.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteBookId && handleDelete(deleteBookId)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <BookEditSheet
+        book={editingBook}
+        isOpen={!!editingBook}
+        onClose={() => setEditingBook(null)}
+        onSave={handleSave}
+      />
     </Card>
   );
 } 
