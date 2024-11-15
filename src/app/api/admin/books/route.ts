@@ -14,7 +14,9 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Fetch books with categories
+    console.log('Fetching books from database...');
+
+    // Fetch books with categories, removing type from select
     const books = await prisma.book.findMany({
       include: {
         category: {
@@ -28,6 +30,10 @@ export async function GET(request: Request) {
         created_at: 'desc'
       }
     });
+
+    // If we need the type, we can fetch it separately or modify the schema
+    console.log('Found books:', books.length);
+    console.log('Sample book:', books[0]);
 
     return NextResponse.json({ books });
   } catch (error) {

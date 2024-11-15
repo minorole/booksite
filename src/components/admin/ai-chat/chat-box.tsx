@@ -31,6 +31,13 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
           currentBookData: action.payload.analysis,
         };
       }
+      if (action.payload.bookData) {
+        return {
+          ...state,
+          messages: [...state.messages, action.payload],
+          currentBookData: action.payload.bookData,
+        };
+      }
       return {
         ...state,
         messages: [...state.messages, action.payload],
@@ -183,7 +190,7 @@ export function ChatBox() {
         body: JSON.stringify({ 
           message: input,
           previousMessages,
-          currentBookData: state.currentBookData // Pass the current book data
+          currentBookData: state.currentBookData
         }),
       });
 
@@ -197,8 +204,14 @@ export function ChatBox() {
           role: 'assistant',
           content: data.message,
           timestamp: new Date(),
+          ...(data.bookData && { bookData: data.bookData }),
+          ...(data.analysis && { analysis: data.analysis })
         },
       });
+
+      if (data.reset) {
+        dispatch({ type: 'RESET' });
+      }
     } catch (error) {
       console.error('Error in chat:', error);
       dispatch({

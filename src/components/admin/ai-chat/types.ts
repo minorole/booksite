@@ -11,6 +11,8 @@ export interface BookAnalysis {
   duplicate_reasons?: string[];
   search_tags: string[];
   category_suggestions: string[];
+  quantity?: number;
+  imageUrl?: string;
 }
 
 export interface ChatMessage {
@@ -19,13 +21,20 @@ export interface ChatMessage {
   timestamp: Date;
   analysis?: BookAnalysis;
   imageUrl?: string;
+  bookData?: BookAnalysis & {
+    quantity?: number;
+    cover_image?: string;
+  };
 }
 
 export interface ChatState {
   messages: ChatMessage[];
   isProcessing: boolean;
   uploadedImageUrl: string | null;
-  currentBookData?: BookAnalysis;
+  currentBookData?: BookAnalysis & {
+    quantity?: number;
+    cover_image?: string;
+  };
 }
 
 export type ChatAction = 
