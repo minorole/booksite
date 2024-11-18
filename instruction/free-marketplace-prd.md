@@ -57,6 +57,27 @@ Create a platform for Amitabha Buddhist Society of Central Florida (AMTBCF) to e
 - **Inventory Management**:
   - Allows admins to update inventory numbers or add new listings through the chat interface.
   - Once confirmed, the system sends the data to the backend to update the database and store the image for the listing.
+- **Title Update Commands**:
+  - Support natural language title updates (e.g., "should be [title]", "title is [title]")
+  - Immediate validation and confirmation of title changes
+  - Preservation of original Chinese characters
+- **Book Creation Flow**:
+  1. Admin uploads image 
+  2. System extracts/validates information
+  3. Admin confirms or corrects title if needed
+  4. System suggests category from predefined list:
+     - Pure Land Buddhist Books (净土佛书)
+     - Other Buddhist Books (其他佛书)
+     - Dharma Items (法宝)
+     - Buddha Statues (佛像)
+  5. Admin specifies quantity
+  6. System creates book listing on confirmation
+  7. Success/error feedback provided
+  8. Option to add another book
+- **Error Handling**:
+  - Clear error messages for failed operations
+  - Option to retry failed operations
+  - Preservation of entered data on errors
 
 ## 3. Technical Architecture
 

@@ -11,8 +11,8 @@ export interface BookAnalysis {
   duplicate_reasons?: string[];
   search_tags: string[];
   category_suggestions: string[];
-  quantity?: number;
   imageUrl?: string;
+  cover_image?: string;
 }
 
 export interface ChatMessage {

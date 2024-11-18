@@ -1,13 +1,14 @@
 "use client"
 
 import { useReducer, useRef, FormEvent } from 'react';
-import { ChatMessage, ChatState, ChatAction } from './types';
+import { ChatMessage, ChatState, ChatAction, BookAnalysis } from './types';
 import { ChatMessageItem } from './chat-message';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Loader2, Image as ImageIcon, Send } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { createBookListing } from '@/lib/services/book-service';
 
 const initialState: ChatState = {
   messages: [
@@ -178,7 +179,55 @@ export function ChatBox() {
     dispatch({ type: 'SET_PROCESSING', payload: true });
 
     try {
-      // Convert messages to the format expected by the API
+      // If we have quantity and it's a confirmation, proceed with creation
+      if (state.currentBookData && isConfirmationMessage(input)) {
+        try {
+          dispatch({ type: 'SET_PROCESSING', payload: true });
+          
+          const response = await fetch('/api/admin/books', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(state.currentBookData)
+          });
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(data.error || 'Failed to create book listing');
+          }
+
+          // Add success message
+          dispatch({
+            type: 'ADD_MESSAGE',
+            payload: {
+              role: 'assistant',
+              content: `Book listing created successfully!\nTitle: ${data.title_zh || data.title_en}\nQuantity: ${data.quantity}\n\nWould you like to add another book?`,
+              timestamp: new Date(),
+            },
+          });
+
+          // Reset state for next book
+          dispatch({ type: 'RESET' });
+          
+        } catch (error) {
+          console.error('Error creating book:', error);
+          dispatch({
+            type: 'ADD_MESSAGE',
+            payload: {
+              role: 'assistant',
+              content: `Failed to create book listing: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
+              timestamp: new Date(),
+            },
+          });
+        } finally {
+          dispatch({ type: 'SET_PROCESSING', payload: false });
+        }
+        return;
+      }
+
+      // For all other messages, send to AI for interpretation
       const previousMessages = state.messages.map(msg => ({
         role: msg.role,
         content: msg.content
@@ -198,6 +247,7 @@ export function ChatBox() {
 
       if (data.error) throw new Error(data.error);
 
+      // Update state with AI's interpretation
       dispatch({
         type: 'ADD_MESSAGE',
         payload: {
@@ -208,6 +258,14 @@ export function ChatBox() {
           ...(data.analysis && { analysis: data.analysis })
         },
       });
+
+      // If AI provided updated book data, update our state
+      if (data.bookData) {
+        dispatch({
+          type: 'SET_BOOK_DATA',
+          payload: data.bookData
+        });
+      }
 
       if (data.reset) {
         dispatch({ type: 'RESET' });
@@ -228,6 +286,14 @@ export function ChatBox() {
     }
   };
 
+  // Helper function to check confirmation messages
+  const isConfirmationMessage = (message: string): boolean => {
+    const confirmationPhrases = ['yes', 'confirm', 'proceed', 'ok', 'sure'];
+    return confirmationPhrases.some(phrase => 
+      message.toLowerCase().includes(phrase)
+    );
+  };
+
   return (
     <Card className="h-[600px] flex flex-col">
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -245,7 +311,7 @@ export function ChatBox() {
             const file = e.target.files?.[0];
             if (file) handleImageUpload(file);
           }}
-          accept="image/*"
+          accept="image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif"
           className="hidden"
         />
         

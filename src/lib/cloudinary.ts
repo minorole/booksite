@@ -18,7 +18,13 @@ cloudinary.config({
 });
 
 async function convertHeicToJpeg(file: File): Promise<File> {
-  if (file.type === 'image/heic' || file.type === 'image/heif') {
+  // Check both mime type and file extension
+  const isHeic = file.type === 'image/heic' || 
+                 file.type === 'image/heif' ||
+                 file.name.toLowerCase().endsWith('.heic') ||
+                 file.name.toLowerCase().endsWith('.heif');
+                 
+  if (isHeic) {
     try {
       const heicConverter = await heic2any();
       if (!heicConverter) {
@@ -33,12 +39,12 @@ async function convertHeicToJpeg(file: File): Promise<File> {
       
       return new File(
         [Array.isArray(blob) ? blob[0] : blob], 
-        file.name.replace(/\.heic$/, '.jpg'),
+        file.name.replace(/\.(heic|heif)$/i, '.jpg'),
         { type: 'image/jpeg' }
       );
     } catch (error) {
       console.error('HEIC conversion error:', error);
-      throw new Error('Failed to convert HEIC image');
+      throw new Error('Failed to convert HEIC image. Please try uploading a JPEG or PNG instead.');
     }
   }
   return file;

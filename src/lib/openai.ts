@@ -1,5 +1,12 @@
 import OpenAI from 'openai';
 
+// Define our own type if needed
+type ChatCompletionMessageParam = {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+  name?: string;
+};
+
 // Initialize OpenAI with environment variable
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -22,6 +29,12 @@ interface AssistantResponse {
   content: string;
   certainty: 'high' | 'medium' | 'low' | 'unknown';
   needs_review: boolean;
+  action?: 'UPDATE_TITLE' | 'UPDATE_QUANTITY' | 'CREATE_BOOK';
+  data?: {
+    title?: string;
+    quantity?: number;
+    category?: string;
+  };
 }
 
 export async function processBookImage(
@@ -56,6 +69,12 @@ export async function processBookImage(
           - If text is unclear, mark as null
           - Do not make assumptions or generate content
           - Do not interpret Buddhist concepts
+          
+          VALID CATEGORIES (always return exactly these names):
+          - Pure Land Buddhist Books (净土佛书)
+          - Other Buddhist Books (其他佛书)
+          - Dharma Items (法宝)
+          - Buddha Statues (佛像)
           
           Return response in JSON format with the following structure:
           {
@@ -156,93 +175,88 @@ export async function getChatResponse(
   }
 ): Promise<AssistantResponse> {
   try {
-    const systemMessage = `You are an AI assistant for Buddhist book inventory management.
+    const systemPrompt = `You are an AI assistant for Buddhist book inventory management.
     
-    DATABASE SCHEMA:
-    Book {
-      title_en: String (required if no title_zh)
-      title_zh: String (required if no title_en)
-      description_en: String
-      description_zh: String
-      cover_image: String (URL)
-      quantity: Int (default: 0)
-      category_id: String (required)
-      search_tags: String[]
-      ai_metadata: Json
+    Your task is to:
+    1. Understand user intent from natural language
+    2. Extract relevant information
+    3. Return structured response with appropriate action
+
+    IMPORTANT: You must respond with a valid JSON object containing:
+    {
+      "action": "UPDATE_TITLE" | "UPDATE_QUANTITY" | "CREATE_BOOK",
+      "data": {
+        "title"?: string,
+        "quantity"?: number
+      },
+      "message": string,
+      "certainty": "high" | "medium" | "low",
+      "needs_review": boolean
     }
 
-    Category {
-      name_en: String
-      name_zh: String
-      type: CategoryType
+    WORKFLOW:
+    1. If user provides a title or corrects title:
+       Return { "action": "UPDATE_TITLE", "data": { "title": "新标题" } }
+    2. If user mentions quantity (any number):
+       Return { "action": "UPDATE_QUANTITY", "data": { "quantity": 5 } }
+    3. If user confirms and we have title and quantity:
+       Return { "action": "CREATE_BOOK" }
+    4. If user confirms but missing data:
+       Return message asking for missing information
+
+    Example responses:
+    User: "this should be 妙法蓮華經"
+    {
+      "action": "UPDATE_TITLE",
+      "data": { "title": "妙法蓮華經" },
+      "message": "Title updated. How many copies do you have?",
+      "certainty": "high",
+      "needs_review": false
     }
 
-    Available Categories:
-    - Pure Land Buddhist Books (净土佛书)
-    - Other Buddhist Books (其他佛书)
-    - Dharma Items (法宝)
-    - Buddha Statues (佛像)
+    User: "we have 5 copies"
+    {
+      "action": "UPDATE_QUANTITY",
+      "data": { "quantity": 5 },
+      "message": "Quantity set to 5. Please confirm to create the listing.",
+      "certainty": "high",
+      "needs_review": false
+    }
 
-    Important guidelines:
-    - At least one title (English or Chinese) is required
-    - When creating a book listing:
-      1. Verify all required fields are present
-      2. Ensure titles match the original text exactly
-      3. Assign to one of the four main categories listed above
-      4. Search tags should include both English and Chinese terms
-      5. Descriptions should be factual and avoid interpretation
-    
-    - Maintain context from previous messages
-    - When users provide Chinese text, use it exactly as given
-    - Never interpret Buddhist teachings
-    - Never modify or translate provided Chinese text
-    
-    For book creation:
-    - When user confirms, verify all required data is present
-    - Ask for any missing required information
-    - Confirm successful creation with the user
-    - If creation fails, explain the error and ask if they want to try again`;
+    Always preserve exact Chinese characters.
+    Never translate between languages.`;
 
-    const messages = [
+    // Convert messages to proper OpenAI message format
+    const messages: ChatCompletionMessageParam[] = [
       {
-        role: "system" as const,
-        content: systemMessage
+        role: "system",
+        content: systemPrompt
       },
       ...context.previousMessages.map(msg => ({
-        role: msg.role as "user" | "assistant" | "system",
+        role: msg.role as "system" | "user" | "assistant",
         content: msg.content
       })),
       {
-        role: "user" as const,
+        role: "user",
         content: message
       }
     ];
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
-      messages: messages as OpenAI.Chat.ChatCompletionMessageParam[],
+      messages,
+      response_format: { type: "json_object" },
       temperature: 0
     });
 
-    if (!response.choices[0].message.content) {
-      throw new Error('No response from OpenAI');
-    }
-
-    const content = response.choices[0].message.content;
-    const contentLowerCase = content.toLowerCase();
-
-    // Determine certainty and review needs
-    const needsReview = 
-      contentLowerCase.includes('book content') || 
-      contentLowerCase.includes('buddhist teaching') ||
-      contentLowerCase.includes('dharma');
-
-    const certainty = needsReview ? 'low' : 'high';
-
+    const result = JSON.parse(response.choices[0].message.content || '{}');
+    
     return {
-      content,
-      certainty,
-      needs_review: needsReview
+      content: result.message || result.content,
+      action: result.action,
+      data: result.data,
+      certainty: result.certainty || 'high',
+      needs_review: result.needs_review || false
     };
 
   } catch (error) {
