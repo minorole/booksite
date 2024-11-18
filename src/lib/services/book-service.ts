@@ -4,6 +4,7 @@ import { Prisma } from '@prisma/client';
 
 interface BookCreationData extends BookAnalysis {
   cover_image: string;
+  quantity: number;
 }
 
 // Define the type to match schema.prisma exactly

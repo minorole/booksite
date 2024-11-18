@@ -79,6 +79,32 @@ Create a platform for Amitabha Buddhist Society of Central Florida (AMTBCF) to e
   - Option to retry failed operations
   - Preservation of entered data on errors
 
+#### 2.3.2 Duplicate Detection Workflow 
+- **Duplicate Definition**:
+  - Primary match: Exact title match
+  - Secondary indicators:
+    - Similar cover images
+  - Confidence scoring for potential duplicates
+
+- **Duplicate Detection Process**:
+  1. Check for exact title matches first
+  2. If no exact match, perform similarity analysis
+  3. Calculate confidence score for potential duplicates
+  4. Present findings to admin with:
+     - Matching book details
+     - Confidence score
+     - Reason for duplicate flag
+     - Side-by-side comparison
+
+- **Admin Options for Duplicates**:
+  1. Create new listing anyway
+  2. Update existing listing:
+     - Merge descriptions
+     - Update quantity
+     - Add new images
+  3. Cancel operation
+
+
 ## 3. Technical Architecture
 
 ### 3.1 Frontend Stack
