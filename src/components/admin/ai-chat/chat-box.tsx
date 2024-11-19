@@ -1,7 +1,7 @@
 "use client"
 
 import { useReducer, useRef, FormEvent } from 'react';
-import { ChatMessage, ChatState, ChatAction, BookAnalysis } from './types';
+import { ChatMessage, ChatState, ChatAction } from './types';
 import { ChatMessageItem } from './chat-message';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,14 +29,21 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
         return {
           ...state,
           messages: [...state.messages, action.payload],
-          currentBookData: action.payload.analysis,
+          currentBookData: {
+            ...action.payload.analysis,
+            quantity: state.currentBookData?.quantity,
+            search_tags: state.currentBookData?.search_tags || action.payload.analysis.search_tags
+          },
         };
       }
       if (action.payload.bookData) {
         return {
           ...state,
           messages: [...state.messages, action.payload],
-          currentBookData: action.payload.bookData,
+          currentBookData: {
+            ...state.currentBookData,
+            ...action.payload.bookData,
+          },
         };
       }
       return {
@@ -59,7 +66,10 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
     case 'SET_BOOK_DATA':
       return {
         ...state,
-        currentBookData: action.payload,
+        currentBookData: {
+          ...state.currentBookData,
+          ...action.payload,
+        },
       };
     
     case 'RESET':
@@ -140,6 +150,7 @@ export function ChatBox() {
           content: data.message,
           timestamp: new Date(),
           imageUrl: data.imageUrl,
+          images: data.images,
           analysis: data.analysis,
         },
       });
@@ -165,7 +176,7 @@ export function ChatBox() {
     const input = inputRef.current?.value.trim();
     if (!input) return;
 
-    // Add user message to state
+    // Add user message
     dispatch({
       type: 'ADD_MESSAGE',
       payload: {
@@ -179,97 +190,40 @@ export function ChatBox() {
     dispatch({ type: 'SET_PROCESSING', payload: true });
 
     try {
-      // If we have quantity and it's a confirmation, proceed with creation
-      if (state.currentBookData && isConfirmationMessage(input)) {
-        try {
-          dispatch({ type: 'SET_PROCESSING', payload: true });
-          
-          const response = await fetch('/api/admin/books', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(state.currentBookData)
-          });
-
-          const data = await response.json();
-
-          if (!response.ok) {
-            throw new Error(data.error || 'Failed to create book listing');
-          }
-
-          // Add success message
-          dispatch({
-            type: 'ADD_MESSAGE',
-            payload: {
-              role: 'assistant',
-              content: `Book listing created successfully!\nTitle: ${data.title_zh || data.title_en}\nQuantity: ${data.quantity}\n\nWould you like to add another book?`,
-              timestamp: new Date(),
-            },
-          });
-
-          // Reset state for next book
-          dispatch({ type: 'RESET' });
-          
-        } catch (error) {
-          console.error('Error creating book:', error);
-          dispatch({
-            type: 'ADD_MESSAGE',
-            payload: {
-              role: 'assistant',
-              content: `Failed to create book listing: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
-              timestamp: new Date(),
-            },
-          });
-        } finally {
-          dispatch({ type: 'SET_PROCESSING', payload: false });
-        }
-        return;
-      }
-
-      // For all other messages, send to AI for interpretation
-      const previousMessages = state.messages.map(msg => ({
-        role: msg.role,
-        content: msg.content
-      }));
-
       const response = await fetch('/api/admin/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           message: input,
-          previousMessages,
-          currentBookData: state.currentBookData
+          previousMessages: state.messages,
+          currentBookData: state.currentBookData,
+          duplicateBook: state.duplicateBook
         }),
       });
 
       const data = await response.json();
-
       if (data.error) throw new Error(data.error);
 
-      // Update state with AI's interpretation
+      // Update state with AI's response
       dispatch({
         type: 'ADD_MESSAGE',
         payload: {
           role: 'assistant',
           content: data.message,
           timestamp: new Date(),
-          ...(data.bookData && { bookData: data.bookData }),
-          ...(data.analysis && { analysis: data.analysis })
+          ...(data.images && { images: data.images }),
+          ...(data.data?.updatedBook && { bookData: data.data.updatedBook })
         },
       });
 
-      // If AI provided updated book data, update our state
-      if (data.bookData) {
+      // Update book data if provided
+      if (data.data?.updatedBook) {
         dispatch({
           type: 'SET_BOOK_DATA',
-          payload: data.bookData
+          payload: data.data.updatedBook
         });
       }
 
-      if (data.reset) {
-        dispatch({ type: 'RESET' });
-      }
     } catch (error) {
       console.error('Error in chat:', error);
       dispatch({
@@ -293,6 +247,9 @@ export function ChatBox() {
       message.toLowerCase().includes(phrase)
     );
   };
+
+  // Add helper function to check if input is a number
+  const isNumericInput = (input: string) => /^\d+$/.test(input);
 
   return (
     <Card className="h-[600px] flex flex-col">

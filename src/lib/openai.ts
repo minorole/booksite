@@ -175,6 +175,15 @@ export async function getChatResponse(
   }
 ): Promise<AssistantResponse> {
   try {
+    console.log('Getting chat response for:', {
+      message,
+      contextBookData: context.bookData ? {
+        title_zh: context.bookData.title_zh,
+        quantity: context.bookData.quantity
+      } : null,
+      previousMessagesCount: context.previousMessages.length
+    });
+
     const systemPrompt = `You are an AI assistant for Buddhist book inventory management.
     
     Your task is to:
@@ -184,10 +193,15 @@ export async function getChatResponse(
 
     IMPORTANT: You must respond with a valid JSON object containing:
     {
-      "action": "UPDATE_TITLE" | "UPDATE_QUANTITY" | "CREATE_BOOK",
+      "action": "UPDATE_TITLE" | "UPDATE_QUANTITY" | "UPDATE_DESCRIPTION" | "UPDATE_TAGS" | "UPDATE_CATEGORY" | "CREATE_BOOK" | "CONFIRM_QUANTITY",
       "data": {
         "title"?: string,
-        "quantity"?: number
+        "quantity"?: number,
+        "description_en"?: string,
+        "description_zh"?: string,
+        "search_tags"?: string[],
+        "category"?: string,
+        "confirmed"?: boolean
       },
       "message": string,
       "certainty": "high" | "medium" | "low",
@@ -195,36 +209,69 @@ export async function getChatResponse(
     }
 
     WORKFLOW:
-    1. If user provides a title or corrects title:
-       Return { "action": "UPDATE_TITLE", "data": { "title": "新标题" } }
-    2. If user mentions quantity (any number):
-       Return { "action": "UPDATE_QUANTITY", "data": { "quantity": 5 } }
-    3. If user confirms and we have title and quantity:
-       Return { "action": "CREATE_BOOK" }
-    4. If user confirms but missing data:
-       Return message asking for missing information
+    1. For quantity updates:
+       - When user mentions a number or quantity:
+         Return {
+           "action": "CONFIRM_QUANTITY",
+           "data": { "quantity": X },
+           "message": "Would you like to set the quantity to X? Please confirm.",
+           "certainty": "high",
+           "needs_review": true
+         }
+       - Only after user confirms:
+         Return {
+           "action": "UPDATE_QUANTITY",
+           "data": { "quantity": X, "confirmed": true },
+           "message": "Updated quantity to X."
+         }
 
-    Example responses:
-    User: "this should be 妙法蓮華經"
-    {
-      "action": "UPDATE_TITLE",
-      "data": { "title": "妙法蓮華經" },
-      "message": "Title updated. How many copies do you have?",
-      "certainty": "high",
-      "needs_review": false
-    }
+    2. For book creation:
+       - When quantity is not specified:
+         Return {
+           "action": "CONFIRM_QUANTITY",
+           "data": { "quantity": 0 },
+           "message": "What should be the initial quantity for this book?",
+           "certainty": "high",
+           "needs_review": true
+         }
+       - After quantity confirmation:
+         Return {
+           "action": "CREATE_BOOK",
+           "data": { "confirmed": true, "quantity": X },
+           "message": "Creating book listing with quantity X..."
+         }
 
-    User: "we have 5 copies"
-    {
-      "action": "UPDATE_QUANTITY",
-      "data": { "quantity": 5 },
-      "message": "Quantity set to 5. Please confirm to create the listing.",
-      "certainty": "high",
-      "needs_review": false
-    }
+    3. For description updates:
+       - When user provides description:
+         Return {
+           "action": "UPDATE_DESCRIPTION",
+           "data": { 
+             "description_en": "English description",
+             "description_zh": "Chinese description"
+           },
+           "message": "Updated description."
+         }
+       - Support both languages independently
+       - Preserve existing description in other language
 
-    Always preserve exact Chinese characters.
-    Never translate between languages.`;
+    4. For tag updates:
+       - When user says "add tag(s) X" or similar:
+         Return {
+           "action": "UPDATE_TAGS",
+           "data": { "search_tags": ["X"] },
+           "message": "Added tag: X. Would you like to add more tags?"
+         }
+
+    5. For category updates:
+       - When user says "category X" or similar:
+         Return {
+           "action": "UPDATE_CATEGORY",
+           "data": { "category": X },
+           "message": "Updated category to X."
+         }
+
+    Always track the current state and maintain all previous updates.
+    Support both English and Chinese input for all operations.`;
 
     // Convert messages to proper OpenAI message format
     const messages: ChatCompletionMessageParam[] = [
@@ -242,6 +289,11 @@ export async function getChatResponse(
       }
     ];
 
+    console.log('Sending to OpenAI:', {
+      messageCount: messages.length,
+      lastUserMessage: message
+    });
+
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages,
@@ -250,6 +302,11 @@ export async function getChatResponse(
     });
 
     const result = JSON.parse(response.choices[0].message.content || '{}');
+    console.log('OpenAI response:', {
+      action: result.action,
+      data: result.data,
+      messagePreview: result.message?.slice(0, 100)
+    });
     
     return {
       content: result.message || result.content,

@@ -2,6 +2,7 @@
 
 import { ChatMessage } from './types';
 import { Avatar } from '@/components/ui/avatar';
+import Image from 'next/image';
 
 interface ChatMessageProps {
   message: ChatMessage;
@@ -23,7 +24,48 @@ export function ChatMessageItem({ message }: ChatMessageProps) {
           : 'bg-muted'
       }`}>
         <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-        <span className="text-xs opacity-50">
+        
+        {/* Single image preview */}
+        {message.imageUrl && (
+          <div className="mt-2 relative w-48 h-64">
+            <Image
+              src={message.imageUrl}
+              alt="Book cover"
+              fill
+              className="object-contain rounded-md"
+            />
+          </div>
+        )}
+
+        {/* Side by side image comparison */}
+        {message.images && (
+          <div className="mt-2 flex gap-2">
+            <div className="relative w-48 h-64">
+              <Image
+                src={message.images.existing}
+                alt="Existing book cover"
+                fill
+                className="object-contain rounded-md"
+              />
+              <span className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs p-1 text-center rounded-b-md">
+                Existing
+              </span>
+            </div>
+            <div className="relative w-48 h-64">
+              <Image
+                src={message.images.new}
+                alt="New book cover"
+                fill
+                className="object-contain rounded-md"
+              />
+              <span className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs p-1 text-center rounded-b-md">
+                New
+              </span>
+            </div>
+          </div>
+        )}
+
+        <span className="text-xs opacity-50 mt-1 block">
           {new Date(message.timestamp).toLocaleTimeString()}
         </span>
       </div>

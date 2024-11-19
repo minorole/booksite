@@ -46,19 +46,25 @@ Create a platform for Amitabha Buddhist Society of Central Florida (AMTBCF) to e
 - Order management
 - Analytics dashboard
 
-#### 2.3.1 AI-Powered Chatbox for Admin Panel
+#### 2.3.1 AI-Powered Admin Interface (LLM-driven chat interface that focuses on inventory management, absolutely follows the database schema)
 - **Interactive Chat Interface**: 
-  - A chatbox that greets the admin and asks what they would like to do (e.g., change inventory number, add new listing).
-  - Supports text input and file uploads (images) from both desktop and mobile devices.
+  - A chatbox that greets the admin and asks what they would like to do (e.g., 
+  change inventory number, add new listing).
+  - Supports text input and file uploads (images) from both desktop and mobile 
+  devices.
 - **Image Upload and Processing**:
   - Admins can upload book images directly from their devices.
-  - The system uses AI to extract information such as title and subtitle from the image.
+  - The system uses AI to extract information such as title and subtitle from the 
+  image.
   - Generates a draft description for the book, which the admin can edit.
 - **Inventory Management**:
-  - Allows admins to update inventory numbers or add new listings through the chat interface.
-  - Once confirmed, the system sends the data to the backend to update the database and store the image for the listing.
+  - Allows admins to update inventory numbers or add new listings through the 
+  chat interface.
+  - Once confirmed, the system sends the data to the backend to update the 
+  database and store the image for the listing.
 - **Title Update Commands**:
-  - Support natural language title updates (e.g., "should be [title]", "title is [title]")
+  - Support natural language title updates (e.g., "should be [title]", "title is 
+  [title]")
   - Immediate validation and confirmation of title changes
   - Preservation of original Chinese characters
 - **Book Creation Flow**:
@@ -78,6 +84,59 @@ Create a platform for Amitabha Buddhist Society of Central Florida (AMTBCF) to e
   - Clear error messages for failed operations
   - Option to retry failed operations
   - Preservation of entered data on errors
+- **LLM-Driven Interaction**:
+  - LLM acts as intelligent interface between admin and system
+  - No predefined flows or command structures
+  - Natural conversation in admin's preferred language
+  - Contextual understanding of admin's intent
+
+- **Core Capabilities**:
+  - Image Analysis:
+    - Extract text from book covers
+    - Detect language (Chinese/English)
+    - Identify key information
+    - Suggest categories and tags
+
+  - Natural Language Understanding:
+    - Interpret admin's intent from casual conversation
+    - Handle multiple updates in single message
+    - Maintain context across conversation
+    - Support mixed language input
+
+  - Database Integration:
+    - Convert natural language to database operations
+    - Handle complex updates across multiple fields
+    - Manage duplicate detection and resolution
+    - Track changes for audit purposes
+
+- **Example Interactions**:
+  ```
+  Admin: "This looks like a duplicate of the Pure Land book we added yesterday"
+  LLM: *checks database, finds match*
+  LLM: "You're right - I found a similar book [shows comparison]"
+  Admin: "Yeah, just add 10 more copies to that one"
+  LLM: *updates quantity in database*
+  ```
+
+  ```
+  Admin: "上传新书" (Upload new book)
+  LLM: *switches to Chinese, processes image*
+  Admin: "加上净空法师的标签" (Add Venerable Master Chin Kung's tag)
+  LLM: *adds tag while maintaining previous context*
+  ```
+
+- **Error Prevention**:
+  - LLM validates commands before execution
+  - Suggests corrections for potential mistakes
+  - Maintains data consistency
+  - Provides natural error explanations
+
+- **Key Principles**:
+  - Trust LLM to manage conversation flow
+  - Avoid rigid command structures
+  - Let admin work naturally
+  - Maintain context and state
+  - Support bilingual interaction
 
 #### 2.3.2 Duplicate Detection Workflow 
 - **Duplicate Definition**:
@@ -103,6 +162,192 @@ Create a platform for Amitabha Buddhist Society of Central Florida (AMTBCF) to e
      - Update quantity
      - Add new images
   3. Cancel operation
+
+#### 2.3.3 AI Chat Workflow & Data Processing
+
+### 2.3.3.1 Core Data Structure
+```typescript
+interface BookData {
+  title_en: string | null;
+  title_zh: string | null;
+  description_en: string;
+  description_zh: string;
+  cover_image: string | null;
+  quantity: number;
+  category_id: string;
+  search_tags: string[];
+  ai_metadata: Json | null;
+  embedding: vector(384) | null;
+}
+```
+
+### 2.3.3.2 Image Processing Flow
+1. **Image Upload**:
+   - Accept image upload from admin
+   - Support formats: JPEG, PNG, HEIC/HEIF
+   - Size limit: 20MB
+   - Auto-convert HEIC to JPEG
+
+2. **Image Optimization**:
+   - Cloudinary processing:
+     - Generate display version (800px width, auto format)
+     - Generate AI analysis version (512x512, enhanced clarity)
+   - Store original and optimized URLs
+
+3. **Initial Analysis**:
+   - GPT-4o processes optimized image
+   - Extracts:
+     - Visible text (both English and Chinese)
+     - Title candidates
+     - Category hints
+     - Initial tag suggestions
+
+### 2.3.3.3 Duplicate Detection
+1. **Multi-stage Check**:
+   - Exact title match (both languages)
+   - Similar title detection
+   - Tag-based matching
+   - Vector similarity (if embedding exists)
+
+2. **Duplicate Handling**:
+   - Show side-by-side comparison
+   - Present options:
+     - Update existing entry
+     - Force create new entry
+     - Cancel operation
+   - Track duplicate decisions in ai_metadata
+
+### 2.3.3.4 Field Collection Process
+1. **Title Processing**:
+   - Validate extracted titles
+   - Request admin confirmation
+   - Support manual entry/correction
+   - Require at least one language
+
+2. **Description Generation**:
+   - Extract visible text
+   - Generate structured descriptions
+   - Allow admin editing
+   - Support bilingual content
+
+3. **Category Assignment**:
+   - Present category options:
+     ```typescript
+     enum CategoryType {
+       PURE_LAND_BOOKS  // 净土佛书
+       OTHER_BOOKS      // 其他佛书
+       DHARMA_ITEMS     // 法宝
+       BUDDHA_STATUES   // 佛像
+     }
+     ```
+   - AI suggests category based on content
+   - Require admin confirmation
+
+4. **Quantity Management**:
+   - Default to 0
+   - Accept numeric input
+   - Validate non-negative values
+   - Support increment/decrement
+
+5. **Tag Generation**:
+   - Extract keywords from text
+   - Generate relevant tags
+   - Allow admin customization
+   - Store in search_tags array
+
+### 2.3.3.5 Update Operations
+1. **Supported Commands**:
+   ```typescript
+   type UpdateOperation =
+     | 'UPDATE_TITLE_EN'
+     | 'UPDATE_TITLE_ZH'
+     | 'UPDATE_DESCRIPTION_EN'
+     | 'UPDATE_DESCRIPTION_ZH'
+     | 'UPDATE_QUANTITY'
+     | 'UPDATE_CATEGORY'
+     | 'UPDATE_TAGS'
+     | 'UPDATE_COVER'
+   ```
+
+2. **Natural Language Processing**:
+   - Parse admin intent
+   - Map to specific operations
+   - Handle mixed language input
+   - Maintain conversation context
+
+3. **Validation Rules**:
+   - Title: At least one language required
+   - Description: Optional, but structured
+   - Quantity: Non-negative integer
+   - Category: Must match enum
+   - Tags: Array of strings
+   - Cover: Valid URL if present
+
+### 2.3.3.6 AI System Prompts
+1. **Image Analysis Prompt**:
+   ```typescript
+   const imageAnalysisPrompt = `
+   You are an AI assistant for Buddhist book inventory management.
+   Task: Extract visible text and book information.
+   
+   Guidelines:
+   - Extract text in original language (EN/ZH)
+   - Do not translate between languages
+   - Mark unclear text as null
+   - Do not interpret Buddhist concepts
+   - Focus on factual extraction
+   
+   Required fields:
+   - title_en: string | null
+   - title_zh: string | null
+   - extracted_text: string
+   - category_suggestions: string[]
+   - search_tags: string[]
+   `;
+   ```
+
+2. **Chat Assistant Prompt**:
+   ```typescript
+   const chatAssistantPrompt = `
+   You are an AI assistant for Buddhist book inventory management.
+   
+   Guidelines:
+   - Maintain conversation context
+   - Support EN/ZH input
+   - Focus on inventory tasks
+   - No Buddhist interpretation
+   - Clear error communication
+   
+   Response format:
+   {
+     "action": UpdateOperation | null,
+     "data": BookUpdateData | null,
+     "message": string,
+     "certainty": "high" | "medium" | "low",
+     "needs_review": boolean
+   }
+   `;
+   ```
+
+### 2.3.3.7 Error Handling
+1. **Validation Errors**:
+   - Missing required fields
+   - Invalid data types
+   - Category mismatch
+   - Image processing failures
+
+2. **Recovery Steps**:
+   - Clear error messages
+   - Suggested corrections
+   - Data preservation
+   - Retry options
+
+3. **Audit Logging**:
+   - Track all operations
+   - Record error states
+   - Log admin decisions
+   - Store in ai_metadata
+
 
 
 ## 3. Technical Architecture
