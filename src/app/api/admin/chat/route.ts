@@ -4,7 +4,7 @@ import { cookies } from 'next/headers';
 import { processBookImage } from '@/lib/ai/image-analysis';
 import { getChatResponse } from '@/lib/ai/chat';
 import { uploadAndOptimizeImage } from '@/lib/cloudinary';
-import { findPossibleDuplicates } from '@/lib/services/book-service';
+import { findPossibleDuplicates, analyzeDuplicateWithImages } from '@/lib/services/book-service';
 import { BookCreationState } from '@/lib/state/book-creation-state';
 import { CommandFactory } from '@/lib/commands/command-factory';
 import { ChatAPIAction } from '@/lib/ai/types';
@@ -46,35 +46,51 @@ export async function POST(request: Request) {
 
           if (exactMatch || similarMatches.length > 0) {
             const duplicate = exactMatch || similarMatches[0];
+            
+            // Add image analysis for potential duplicates
+            const imageAnalysis = await analyzeDuplicateWithImages(
+              displayUrl,
+              duplicate,
+              duplicate.title_zh || duplicate.title_en
+            );
+
+            // Combine text and image analysis
+            const combinedAnalysis = {
+              ...bookAnalysis,
+              cover_image: displayUrl,
+              imageUrl: displayUrl,
+              possible_duplicate: true,
+              id: duplicate.id,
+              duplicate: {
+                book: duplicate,
+                confidence: exactMatch ? 1 : similarMatches[0].similarity_score,
+                image_confidence: imageAnalysis.confidence,
+                reasons: [
+                  ...(exactMatch ? ['Exact title match'] : ['Similar title found']),
+                  ...imageAnalysis.reasons
+                ],
+                image_analysis: imageAnalysis.analysis,
+                alternatives: similarMatches
+              }
+            };
+
             return NextResponse.json({
               message: [
-                `I found a similar book in our database:`,
+                `I found a similar book in our database and analyzed both covers:`,
                 ``,
                 `Title: ${duplicate.title_zh || duplicate.title_en}`,
                 `Current Quantity: ${duplicate.quantity}`,
                 `Category: ${duplicate.category?.name_zh}`,
-                `Description: ${duplicate.description_zh || duplicate.description_en}`,
+                ``,
+                `Image Analysis:`,
+                imageAnalysis.analysis,
                 ``,
                 `Would you like to:`,
                 `1. Update the existing book`,
                 `2. Create a new listing anyway`,
-                `3. Cancel the operation`,
-                ``,
-                `If updating, just tell me what you want to change.`
+                `3. Cancel the operation`
               ].join('\n'),
-              analysis: {
-                ...bookAnalysis,
-                cover_image: displayUrl,
-                imageUrl: displayUrl,
-                possible_duplicate: true,
-                id: duplicate.id,
-                duplicate: {
-                  book: duplicate,
-                  confidence: exactMatch ? 1 : similarMatches[0].similarity_score,
-                  reasons: [exactMatch ? 'Exact title match' : 'Similar title found'],
-                  alternatives: similarMatches
-                }
-              },
+              analysis: combinedAnalysis,
               images: {
                 existing: duplicate.cover_image,
                 new: displayUrl

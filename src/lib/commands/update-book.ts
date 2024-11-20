@@ -48,20 +48,25 @@ export class UpdateBookCommand extends BaseCommand {
       updateData.quantity = data.quantity;
     }
 
+    // Handle category update
     if (data.category) {
-      // Map the category name to enum value
-      const categoryType = CATEGORY_MAP[data.category] || 'OTHER_BOOKS';
       const category = await prisma.category.findFirst({
-        where: { type: categoryType }
+        where: { type: data.category as CategoryType }
       });
-      if (category) {
-        updateData.category = {
-          connect: { id: category.id }
-        };
+
+      if (!category) {
+        throw new Error(`Category ${data.category} not found`);
       }
+
+      updateData.category = {
+        connect: { id: category.id }
+      };
     }
 
-    console.log('Updating book with data:', updateData); // Add logging
+    console.log('Updating book with data:', {
+      ...updateData,
+      id: currentState.id
+    });
 
     // Perform update
     const updatedBook = await prisma.book.update({

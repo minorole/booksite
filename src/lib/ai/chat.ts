@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 import { AssistantResponse, ChatMessage } from './types';
 import { SYSTEM_PROMPTS } from './prompts';
+import { getBookStats, searchBooks } from '../services/book-service';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -61,8 +62,77 @@ export async function getChatResponse(
       messagePreview: result.message?.slice(0, 100)
     });
     
+    // Add database query handling
+    if (result.action === 'QUERY_DATABASE') {
+      try {
+        let queryResult;
+        
+        switch (result.data?.queryType) {
+          case 'stats':
+            queryResult = await getBookStats();
+            break;
+          case 'search':
+            queryResult = await searchBooks(result.data.searchTerm);
+            break;
+          default:
+            queryResult = null;
+        }
+
+        // Let LLM format the response
+        const formattedResponse = await openai.chat.completions.create({
+          model: "gpt-4o",
+          messages: [
+            ...messages,
+            {
+              role: "assistant",
+              content: JSON.stringify(queryResult)
+            }
+          ],
+          temperature: 0
+        });
+
+        result.message = formattedResponse.choices[0].message.content || result.message;
+      } catch (error) {
+        // Let LLM handle the error naturally
+        result.message = `I encountered an issue while checking that: ${error instanceof Error ? error.message : 'Unknown error'}. Would you like to try a different query?`;
+      }
+    }
+
+    // Add database verification after updates
+    if (result.action === 'UPDATE_BOOK' || result.action === 'CREATE_BOOK') {
+      try {
+        // After the update/create operation succeeds
+        const verificationQuery = await searchBooks(
+          result.data.title_zh || result.data.title_en || ''
+        );
+
+        // Let LLM format the verification response
+        const verificationResponse = await openai.chat.completions.create({
+          model: "gpt-4o",
+          messages: [
+            ...messages,
+            {
+              role: "system",
+              content: "The database has been updated. Here's the current state:"
+            },
+            {
+              role: "assistant",
+              content: JSON.stringify(verificationQuery)
+            }
+          ],
+          temperature: 0
+        });
+
+        // Update the response message to include verification
+        result.message = verificationResponse.choices[0].message.content || result.message;
+      } catch (error) {
+        console.error('Verification error:', error);
+        // Continue with original message if verification fails
+      }
+    }
+
     return {
-      content: result.message || result.content,
+      content: result.message,
       action: result.action,
       data: result.data,
       certainty: result.certainty || 'high',

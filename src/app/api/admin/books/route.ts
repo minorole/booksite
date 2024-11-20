@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
-import { createBookListing } from '@/lib/services/book-service';
+import { createBookListing, findPossibleDuplicates } from '@/lib/services/book-service';
 
 export async function GET(request: Request) {
   try {
@@ -47,28 +47,36 @@ export async function POST(request: Request) {
 
     const bookData = await request.json();
     
-    // Check for duplicates first
-    const existingBook = await prisma.book.findFirst({
-      where: {
-        title_zh: bookData.title_zh
-      },
-      include: {
-        category: true
-      }
-    });
+    // Use the more robust duplicate detection
+    const title = bookData.title_zh || bookData.title_en;
+    if (title) {
+      const { exactMatch, similarMatches } = await findPossibleDuplicates(title);
 
-    if (existingBook) {
-      return NextResponse.json({ 
-        error: 'Duplicate book found',
-        duplicate: existingBook,
-        message: `A book with this title already exists:\nTitle: ${existingBook.title_zh}\nQuantity: ${existingBook.quantity}\nCategory: ${existingBook.category?.name_zh}\n\nWould you like to update this book instead?`
-      }, { status: 409 }); // 409 Conflict
+      if (exactMatch || similarMatches.length > 0) {
+        const duplicate = exactMatch || similarMatches[0];
+        return NextResponse.json({ 
+          error: 'Duplicate book found',
+          duplicate: duplicate,
+          similarMatches: similarMatches,
+          message: [
+            `A similar book already exists:`,
+            `Title: ${duplicate.title_zh || duplicate.title_en}`,
+            `Quantity: ${duplicate.quantity}`,
+            `Category: ${duplicate.category?.name_zh}`,
+            ``,
+            `Would you like to:`,
+            `1. Update the existing book`,
+            `2. Create a new listing anyway`,
+            `3. Cancel the operation`
+          ].join('\n')
+        }, { status: 409 });
+      }
     }
 
     // Create book listing using the service function
     const book = await createBookListing(bookData);
-
     return NextResponse.json(book);
+
   } catch (error) {
     console.error('Error creating book:', error);
     return NextResponse.json({ 
