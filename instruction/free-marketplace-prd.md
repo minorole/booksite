@@ -1,4 +1,4 @@
-# AMTBCF Buddhist Books Distribution Platform - Product Requirements Document
+# AMTBCF Buddhist Books Distribution Platform - Product Requirements Document 
 
 ## 1. Product Overview
 ### 1.1 Product Vision
@@ -47,6 +47,7 @@ Create a platform for Amitabha Buddhist Society of Central Florida (AMTBCF) to e
 - Analytics dashboard
 
 #### 2.3.1 AI-Powered Admin Interface (LLM-driven chat interface that focuses on inventory management, absolutely follows the database schema)
+-  our user base are generally fluent in english, and both type chinese so no need to special set it. 
 - **Interactive Chat Interface**: 
   - A chatbox that greets the admin and asks what they would like to do (e.g., 
   change inventory number, add new listing).

@@ -1,14 +1,17 @@
 "use client"
 
-import { useReducer, useRef, FormEvent } from 'react';
-import { ChatMessage, ChatState, ChatAction } from './types';
-import { ChatMessageItem } from './chat-message';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card } from '@/components/ui/card';
-import { Loader2, Image as ImageIcon, Send } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { createBookListing } from '@/lib/services/book-service';
+import { useReducer, useRef, useEffect } from 'react';
+import { Card } from "@/components/ui/card";
+import { ChatInput } from './ChatInput';
+import { ChatMessages } from './ChatMessages';
+import { ChatState, ChatMessage, BookState } from '@/lib/ai/types';
+import { BookCreationState } from '@/lib/state/book-creation-state';
+
+type ChatAction = 
+  | { type: 'ADD_MESSAGE'; payload: ChatMessage }
+  | { type: 'SET_PROCESSING'; payload: boolean }
+  | { type: 'UPDATE_BOOK_DATA'; payload: Partial<BookState> }
+  | { type: 'RESET' };
 
 const initialState: ChatState = {
   messages: [
@@ -25,51 +28,73 @@ const initialState: ChatState = {
 function chatReducer(state: ChatState, action: ChatAction): ChatState {
   switch (action.type) {
     case 'ADD_MESSAGE':
-      if (action.payload.analysis) {
-        return {
-          ...state,
-          messages: [...state.messages, action.payload],
-          currentBookData: {
-            ...action.payload.analysis,
-            quantity: state.currentBookData?.quantity,
-            search_tags: state.currentBookData?.search_tags || action.payload.analysis.search_tags
-          },
-        };
-      }
-      if (action.payload.bookData) {
-        return {
-          ...state,
-          messages: [...state.messages, action.payload],
-          currentBookData: {
-            ...state.currentBookData,
-            ...action.payload.bookData,
-          },
-        };
-      }
       return {
         ...state,
         messages: [...state.messages, action.payload],
+        currentBookData: action.payload.bookData ? {
+          id: action.payload.bookData.id,
+          title_en: action.payload.bookData.title_en ?? null,
+          title_zh: action.payload.bookData.title_zh ?? null,
+          description_en: action.payload.bookData.description_en ?? '',
+          description_zh: action.payload.bookData.description_zh ?? '',
+          cover_image: action.payload.bookData.cover_image ?? null,
+          quantity: action.payload.bookData.quantity ?? 0,
+          search_tags: action.payload.bookData.search_tags ?? [],
+          category_id: action.payload.bookData.category_id,
+          ai_metadata: action.payload.bookData.ai_metadata,
+          extracted_text: action.payload.bookData.extracted_text,
+          confidence_score: action.payload.bookData.confidence_score,
+          possible_duplicate: action.payload.bookData.possible_duplicate,
+          duplicate_reasons: action.payload.bookData.duplicate_reasons,
+          category_suggestions: action.payload.bookData.category_suggestions
+        } : state.currentBookData
       };
     
     case 'SET_PROCESSING':
       return {
         ...state,
-        isProcessing: action.payload,
+        isProcessing: action.payload
       };
     
-    case 'SET_UPLOADED_IMAGE':
+    case 'UPDATE_BOOK_DATA':
+      if (!action.payload) return state;
+      
       return {
         ...state,
-        uploadedImageUrl: action.payload,
-      };
-    
-    case 'SET_BOOK_DATA':
-      return {
-        ...state,
-        currentBookData: {
+        currentBookData: state.currentBookData ? {
           ...state.currentBookData,
-          ...action.payload,
-        },
+          id: action.payload.id ?? state.currentBookData.id,
+          title_en: action.payload.title_en ?? state.currentBookData.title_en,
+          title_zh: action.payload.title_zh ?? state.currentBookData.title_zh,
+          description_en: action.payload.description_en ?? state.currentBookData.description_en,
+          description_zh: action.payload.description_zh ?? state.currentBookData.description_zh,
+          cover_image: action.payload.cover_image ?? state.currentBookData.cover_image,
+          quantity: action.payload.quantity ?? state.currentBookData.quantity,
+          search_tags: action.payload.search_tags ?? state.currentBookData.search_tags,
+          category_id: action.payload.category_id ?? state.currentBookData.category_id,
+          ai_metadata: action.payload.ai_metadata ?? state.currentBookData.ai_metadata,
+          extracted_text: action.payload.extracted_text ?? state.currentBookData.extracted_text,
+          confidence_score: action.payload.confidence_score ?? state.currentBookData.confidence_score,
+          possible_duplicate: action.payload.possible_duplicate ?? state.currentBookData.possible_duplicate,
+          duplicate_reasons: action.payload.duplicate_reasons ?? state.currentBookData.duplicate_reasons,
+          category_suggestions: action.payload.category_suggestions ?? state.currentBookData.category_suggestions
+        } : {
+          id: action.payload.id,
+          title_en: action.payload.title_en ?? null,
+          title_zh: action.payload.title_zh ?? null,
+          description_en: action.payload.description_en ?? '',
+          description_zh: action.payload.description_zh ?? '',
+          cover_image: action.payload.cover_image ?? null,
+          quantity: action.payload.quantity ?? 0,
+          search_tags: action.payload.search_tags ?? [],
+          category_id: action.payload.category_id,
+          ai_metadata: action.payload.ai_metadata,
+          extracted_text: action.payload.extracted_text,
+          confidence_score: action.payload.confidence_score,
+          possible_duplicate: action.payload.possible_duplicate,
+          duplicate_reasons: action.payload.duplicate_reasons,
+          category_suggestions: action.payload.category_suggestions
+        }
       };
     
     case 'RESET':
@@ -82,144 +107,56 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
 
 export function ChatBox() {
   const [state, dispatch] = useReducer(chatReducer, initialState);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const bookState = new BookCreationState(state.currentBookData);
   
-  const scrollToBottom = () => {
+  useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  }, [state.messages]);
 
-  const handleImageUpload = async (file: File) => {
+  const handleSubmit = async (message: string) => {
+    dispatch({ type: 'SET_PROCESSING', payload: true });
+    
     try {
-      dispatch({ type: 'SET_PROCESSING', payload: true });
-      
-      // Convert HEIC/HEIF to JPEG if needed
-      let processedFile = file;
-      if (file.type === 'image/heic' || file.type === 'image/heif') {
-        try {
-          const heic2any = (await import('heic2any')).default;
-          const blob = await heic2any({
-            blob: file,
-            toType: 'image/jpeg',
-            quality: 0.8
-          });
-          
-          processedFile = new File(
-            [Array.isArray(blob) ? blob[0] : blob], 
-            file.name.replace(/\.(heic|heif)$/i, '.jpg'),
-            { type: 'image/jpeg' }
-          );
-        } catch (error) {
-          console.error('HEIC conversion error:', error);
-          throw new Error('Failed to convert HEIC image');
-        }
-      }
-
-      // Add user message showing image upload
+      // Add user message
       dispatch({
         type: 'ADD_MESSAGE',
         payload: {
           role: 'user',
-          content: 'Uploading book image...',
+          content: message,
           timestamp: new Date(),
-        },
+        }
       });
 
-      // Convert to base64 and send to API
-      const base64Data = await convertToBase64(processedFile);
-      
-      const response = await fetch('/api/admin/chat', {
-        method: 'POST',
-        body: JSON.stringify({
-          image: base64Data
-        }),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      const data = await response.json();
-
-      if (data.error) throw new Error(data.error);
-
-      dispatch({
-        type: 'ADD_MESSAGE',
-        payload: {
-          role: 'assistant',
-          content: data.message,
-          timestamp: new Date(),
-          imageUrl: data.imageUrl,
-          images: data.images,
-          analysis: data.analysis,
-        },
-      });
-
-    } catch (error) {
-      console.error('Error uploading image:', error);
-      dispatch({
-        type: 'ADD_MESSAGE',
-        payload: {
-          role: 'assistant',
-          content: 'Sorry, I encountered an error processing the image. Please try again.',
-          timestamp: new Date(),
-        },
-      });
-    } finally {
-      dispatch({ type: 'SET_PROCESSING', payload: false });
-      scrollToBottom();
-    }
-  };
-
-  const handleChatSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    const input = inputRef.current?.value.trim();
-    if (!input) return;
-
-    // Add user message
-    dispatch({
-      type: 'ADD_MESSAGE',
-      payload: {
-        role: 'user',
-        content: input,
-        timestamp: new Date(),
-      },
-    });
-
-    if (inputRef.current) inputRef.current.value = '';
-    dispatch({ type: 'SET_PROCESSING', payload: true });
-
-    try {
       const response = await fetch('/api/admin/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          message: input,
+          message,
           previousMessages: state.messages,
-          currentBookData: state.currentBookData,
-          duplicateBook: state.duplicateBook
+          currentBookData: state.currentBookData
         }),
       });
 
       const data = await response.json();
       if (data.error) throw new Error(data.error);
 
-      // Update state with AI's response
+      // Add assistant response
       dispatch({
         type: 'ADD_MESSAGE',
         payload: {
           role: 'assistant',
           content: data.message,
           timestamp: new Date(),
-          ...(data.images && { images: data.images }),
-          ...(data.data?.updatedBook && { bookData: data.data.updatedBook })
-        },
+          bookData: data.data?.updatedBook,
+          images: data.images
+        }
       });
 
       // Update book data if provided
       if (data.data?.updatedBook) {
         dispatch({
-          type: 'SET_BOOK_DATA',
+          type: 'UPDATE_BOOK_DATA',
           payload: data.data.updatedBook
         });
       }
@@ -232,72 +169,74 @@ export function ChatBox() {
           role: 'assistant',
           content: 'Sorry, I encountered an error. Please try again.',
           timestamp: new Date(),
-        },
+        }
       });
     } finally {
       dispatch({ type: 'SET_PROCESSING', payload: false });
-      scrollToBottom();
     }
   };
 
-  // Helper function to check confirmation messages
-  const isConfirmationMessage = (message: string): boolean => {
-    const confirmationPhrases = ['yes', 'confirm', 'proceed', 'ok', 'sure'];
-    return confirmationPhrases.some(phrase => 
-      message.toLowerCase().includes(phrase)
-    );
-  };
+  const handleImageUpload = async (file: File) => {
+    dispatch({ type: 'SET_PROCESSING', payload: true });
+    
+    try {
+      const base64Data = await convertToBase64(file);
+      
+      const response = await fetch('/api/admin/chat', {
+        method: 'POST',
+        body: JSON.stringify({
+          image: base64Data,
+          previousMessages: state.messages,
+          currentBookData: state.currentBookData
+        }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
-  // Add helper function to check if input is a number
-  const isNumericInput = (input: string) => /^\d+$/.test(input);
+      const data = await response.json();
+      if (data.error) throw new Error(data.error);
+
+      dispatch({
+        type: 'ADD_MESSAGE',
+        payload: {
+          role: 'assistant',
+          content: data.message,
+          timestamp: new Date(),
+          imageUrl: data.imageUrl,
+          images: data.images,
+          bookData: data.analysis,
+        }
+      });
+
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      dispatch({
+        type: 'ADD_MESSAGE',
+        payload: {
+          role: 'assistant',
+          content: 'Sorry, I encountered an error processing the image. Please try again.',
+          timestamp: new Date(),
+        }
+      });
+    } finally {
+      dispatch({ type: 'SET_PROCESSING', payload: false });
+    }
+  };
 
   return (
     <Card className="h-[600px] flex flex-col">
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {state.messages.map((message, index) => (
-          <ChatMessageItem key={index} message={message} />
-        ))}
+      <div className="flex-1 overflow-y-auto p-4">
+        <ChatMessages messages={state.messages} />
         <div ref={chatEndRef} />
       </div>
 
-      <div className="border-t p-4 space-y-4">
-        <input
-          type="file"
-          ref={fileInputRef}
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) handleImageUpload(file);
-          }}
-          accept="image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif"
-          className="hidden"
+      <div className="border-t p-4">
+        <ChatInput
+          onSubmit={handleSubmit}
+          onImageUpload={handleImageUpload}
+          isProcessing={state.isProcessing}
         />
-        
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={state.isProcessing}
-          >
-            <ImageIcon className="h-4 w-4" />
-          </Button>
-
-          <form onSubmit={handleChatSubmit} className="flex-1 flex gap-2">
-            <Input
-              ref={inputRef}
-              placeholder="Type your message..."
-              disabled={state.isProcessing}
-            />
-            <Button type="submit" disabled={state.isProcessing}>
-              {state.isProcessing ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-            </Button>
-          </form>
-        </div>
       </div>
     </Card>
   );
