@@ -12,6 +12,15 @@ export class UpdateBookCommand extends BaseCommand {
       throw new Error('No book ID found for update');
     }
 
+    // Get current book to merge with existing tags
+    const existingBook = await prisma.book.findUnique({
+      where: { id: currentState.id }
+    });
+
+    if (!existingBook) {
+      throw new Error('Book not found');
+    }
+
     // Prepare update data
     const updateData: Prisma.BookUpdateInput = {};
 
@@ -26,11 +35,13 @@ export class UpdateBookCommand extends BaseCommand {
       if (data.description_zh) updateData.description_zh = data.description_zh;
     }
 
-    if (data.search_tags) {
-      updateData.search_tags = [...new Set([
-        ...(currentState.search_tags || []),
-        ...data.search_tags
-      ])];
+    // Handle tag updates
+    if (data.search_tags && Array.isArray(data.search_tags)) {
+      const newTags = data.search_tags;
+      const existingTags = existingBook.search_tags || [];
+      updateData.search_tags = {
+        set: [...new Set([...existingTags, ...newTags])]
+      };
     }
 
     if (typeof data.quantity === 'number') {
@@ -49,6 +60,8 @@ export class UpdateBookCommand extends BaseCommand {
         };
       }
     }
+
+    console.log('Updating book with data:', updateData); // Add logging
 
     // Perform update
     const updatedBook = await prisma.book.update({

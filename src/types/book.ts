@@ -9,6 +9,7 @@ export interface Book {
   cover_image: string | null
   quantity: number
   category: {
+    id: string
     name_en: string
     name_zh: string
     type: CategoryType

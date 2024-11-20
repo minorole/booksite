@@ -43,18 +43,11 @@ model Book {
 }
 
 model Category {
-  id        String     @id @default(uuid())
-  name_en   String
-  name_zh   String
-  type      CategoryType
-  books     Book[]
-}
-
-enum CategoryType {
-  PURE_LAND_BOOKS  // 净土佛书
-  OTHER_BOOKS      // 其他佛书
-  DHARMA_ITEMS     // 法宝
-  BUDDHA_STATUES   // 佛像
+  id      String       @id @default(uuid())
+  name_en String
+  name_zh String
+  type    CategoryType @unique
+  books   Book[]
 }
 
 model Order {
@@ -101,6 +94,23 @@ model ShippingAddress {
   @@index([user_id])
 }
 
+model AdminLog {
+  id          String      @id @default(uuid())
+  action      AdminAction
+  book_id     String
+  book_title  String
+  admin_email String
+  created_at  DateTime    @default(now())
+  metadata    Json?
+}
+
+enum CategoryType {
+  PURE_LAND_BOOKS
+  OTHER_BOOKS
+  DHARMA_ITEMS
+  BUDDHA_STATUES
+}
+
 enum Role {
   USER
   ADMIN
@@ -113,16 +123,6 @@ enum OrderStatus {
   COMPLETED
   CANCELLED
   SHIPPED
-}
-
-model AdminLog {
-  id          String      @id @default(uuid())
-  action      AdminAction
-  book_id     String
-  book_title  String      // Store title for reference even after deletion
-  admin_email String
-  created_at  DateTime    @default(now())
-  metadata    Json?       // For any additional info we might want to store
 }
 
 enum AdminAction {

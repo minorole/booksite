@@ -3,19 +3,23 @@ import { ChatResponseData, BookState } from '../ai/types';
 import { prisma } from '../prisma';
 import { CategoryType, Prisma } from '@prisma/client';
 
-function mapCategoryToEnum(categoryName: string): CategoryType {
-  const categoryMap: Record<string, CategoryType> = {
-    'Pure Land Buddhist Books (净土佛书)': 'PURE_LAND_BOOKS',
-    'Other Buddhist Books (其他佛书)': 'OTHER_BOOKS',
-    'Dharma Items (法宝)': 'DHARMA_ITEMS',
-    'Buddha Statues (佛像)': 'BUDDHA_STATUES',
-    '净土佛书': 'PURE_LAND_BOOKS',
-    '其他佛书': 'OTHER_BOOKS',
-    '法宝': 'DHARMA_ITEMS',
-    '佛像': 'BUDDHA_STATUES'
-  };
-
-  return categoryMap[categoryName.trim()] || 'OTHER_BOOKS';
+function mapToCategoryToEnum(categoryName: string): CategoryType {
+  switch (categoryName.toUpperCase()) {
+    case 'PURE_LAND_BOOKS':
+    case '净土佛书':
+      return 'PURE_LAND_BOOKS';
+    case 'OTHER_BOOKS':
+    case '其他佛书':
+      return 'OTHER_BOOKS';
+    case 'DHARMA_ITEMS':
+    case '法宝':
+      return 'DHARMA_ITEMS';
+    case 'BUDDHA_STATUES':
+    case '佛像':
+      return 'BUDDHA_STATUES';
+    default:
+      return 'OTHER_BOOKS';
+  }
 }
 
 export class CreateBookCommand extends BaseCommand {
@@ -31,20 +35,19 @@ export class CreateBookCommand extends BaseCommand {
       throw new Error('Cover image is required');
     }
 
-    // Map category suggestion to enum value
-    const categoryType = mapCategoryToEnum(
-      Array.isArray(currentState.category_suggestions) 
-        ? currentState.category_suggestions[0] 
-        : 'Other Buddhist Books (其他佛书)'
+    // Get or create category
+    const categoryType = mapToCategoryToEnum(
+      data.category || 'OTHER_BOOKS'
     );
     
-    // Get category
     const category = await prisma.category.findFirst({
-      where: { type: categoryType }
+      where: {
+        type: categoryType
+      }
     });
 
     if (!category) {
-      throw new Error('Invalid category');
+      throw new Error(`Category ${categoryType} not found. Please run database seeds first.`);
     }
 
     // Create book with all current state data
@@ -54,7 +57,7 @@ export class CreateBookCommand extends BaseCommand {
       description_en: currentState.description_en || '',
       description_zh: currentState.description_zh || '',
       cover_image: currentState.cover_image,
-      quantity: data.confirmed ? (data.quantity || 0) : 0,
+      quantity: data.quantity || 0,
       category: {
         connect: { id: category.id }
       },
@@ -75,7 +78,6 @@ export class CreateBookCommand extends BaseCommand {
       }
     });
 
-    // Update state with created book
     return this.state.updateState(book);
   }
 } 

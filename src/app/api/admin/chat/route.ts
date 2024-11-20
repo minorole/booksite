@@ -8,6 +8,9 @@ import { findPossibleDuplicates } from '@/lib/services/book-service';
 import { BookCreationState } from '@/lib/state/book-creation-state';
 import { CommandFactory } from '@/lib/commands/command-factory';
 import { ChatAPIAction } from '@/lib/ai/types';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 export async function POST(request: Request) {
   try {
@@ -15,14 +18,15 @@ export async function POST(request: Request) {
     const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
     
     const { data: { session }, error: authError } = await supabase.auth.getSession();
-    if (authError || !session?.user) {
+    if (authError || !session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { message, image, previousMessages, currentBookData } = await request.json();
-    console.log('Received request:', { message, currentBookData });
+    // Parse request body
+    const body = await request.json();
+    const { message, image, previousMessages, currentBookData } = body;
 
-    // Initialize state with current book data if it exists
+    // Initialize state
     const state = new BookCreationState(currentBookData);
 
     // Handle image upload
@@ -115,48 +119,48 @@ export async function POST(request: Request) {
       }
     }
 
-    // Handle chat message
-    console.log('Getting chat response for message:', message);
-    const chatResponse = await getChatResponse(message, {
-      previousMessages: previousMessages || [],
-      bookData: currentBookData,
-      adminAction: 'chat'
-    });
+    // Handle text message
+    if (message) {
+      console.log('Getting chat response for message:', message);
+      const chatResponse = await getChatResponse(message, {
+        previousMessages: previousMessages || [],
+        bookData: currentBookData,
+        adminAction: 'chat'
+      });
 
-    console.log('Chat response:', chatResponse);
+      // Execute command if action exists
+      if (chatResponse.action && chatResponse.data) {
+        try {
+          const command = CommandFactory.createCommand(
+            chatResponse.action as ChatAPIAction, 
+            state
+          );
+          const updatedState = await command.execute(chatResponse.data);
 
-    // Execute command if action exists
-    if (chatResponse.action && chatResponse.data) {
-      try {
-        const command = CommandFactory.createCommand(
-          chatResponse.action as ChatAPIAction, 
-          state
-        );
-        const updatedState = await command.execute(chatResponse.data);
-
-        return NextResponse.json({
-          message: chatResponse.content,
-          action: chatResponse.action,
-          data: {
-            ...chatResponse.data,
-            updatedBook: updatedState
-          }
-        });
-      } catch (error) {
-        console.error('Command execution error:', error);
-        return NextResponse.json({ 
-          error: 'Failed to execute command',
-          details: error instanceof Error ? error.message : 'Unknown error'
-        }, { status: 500 });
+          return NextResponse.json({
+            message: chatResponse.content,
+            action: chatResponse.action,
+            data: {
+              ...chatResponse.data,
+              updatedBook: updatedState
+            }
+          });
+        } catch (error) {
+          console.error('Command execution error:', error);
+          return NextResponse.json({ 
+            error: 'Failed to execute command',
+            details: error instanceof Error ? error.message : 'Unknown error'
+          }, { status: 500 });
+        }
       }
+
+      // Return default response
+      return NextResponse.json(chatResponse);
     }
 
-    // Return default response
-    return NextResponse.json({
-      message: chatResponse.content,
-      action: chatResponse.action,
-      data: chatResponse.data
-    });
+    return NextResponse.json({ 
+      error: 'Invalid request - must provide either message or image' 
+    }, { status: 400 });
 
   } catch (error) {
     console.error('Chat API Error:', error);

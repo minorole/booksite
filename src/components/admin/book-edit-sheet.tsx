@@ -57,7 +57,13 @@ export function BookEditSheet({ book, isOpen, onClose, onSave }: BookEditSheetPr
         throw new Error('Category is required');
       }
 
-      await onSave(formData)
+      // Send the category type instead of trying to send the whole category object
+      const dataToSend = {
+        ...formData,
+        category_type: formData.category.type
+      };
+
+      await onSave(dataToSend)
       toast({
         title: "Success",
         description: "Book updated successfully",

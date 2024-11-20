@@ -109,16 +109,26 @@ export function BookManagement() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(updatedBook),
+        body: JSON.stringify({
+          title_en: updatedBook.title_en,
+          title_zh: updatedBook.title_zh,
+          description_en: updatedBook.description_en,
+          description_zh: updatedBook.description_zh,
+          quantity: updatedBook.quantity,
+          category_id: updatedBook.category?.id,
+          search_tags: updatedBook.search_tags
+        }),
       });
 
       if (!response.ok) {
         throw new Error('Failed to update book');
       }
 
+      const data = await response.json();
+      
       // Update local state
       setBooks(books.map(book => 
-        book.id === updatedBook.id ? updatedBook : book
+        book.id === updatedBook.id ? data.book : book
       ));
       
       toast({

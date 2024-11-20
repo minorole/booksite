@@ -4,28 +4,40 @@ import { useReducer, useRef, useEffect } from 'react';
 import { Card } from "@/components/ui/card";
 import { ChatInput } from './ChatInput';
 import { ChatMessages } from './ChatMessages';
-import { ChatState, ChatMessage, BookState } from '@/lib/ai/types';
+import { ChatMessage, BookState } from '@/lib/ai/types';
 import { BookCreationState } from '@/lib/state/book-creation-state';
+import { useAuth } from '@/hooks/useAuth';
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
-type ChatAction = 
-  | { type: 'ADD_MESSAGE'; payload: ChatMessage }
-  | { type: 'SET_PROCESSING'; payload: boolean }
-  | { type: 'UPDATE_BOOK_DATA'; payload: Partial<BookState> }
-  | { type: 'RESET' };
+interface ChatBoxState {
+  messages: ChatMessage[];
+  isProcessing: boolean;
+  currentBookData?: BookState;
+  connectionStatus: 'connected' | 'disconnected';
+  abortController?: AbortController;
+}
 
-const initialState: ChatState = {
+const initialState: ChatBoxState = {
   messages: [
     {
       role: 'assistant',
-      content: 'Hello! I can help you add new books or update existing inventory. You can either send me a message or upload a book image.',
+      content: 'Hello! I can help you add new books or update existing inventory.',
       timestamp: new Date(),
     },
   ],
   isProcessing: false,
-  uploadedImageUrl: null,
+  connectionStatus: 'connected',
 };
 
-function chatReducer(state: ChatState, action: ChatAction): ChatState {
+type ChatAction = 
+  | { type: 'ADD_MESSAGE'; payload: ChatMessage }
+  | { type: 'SET_PROCESSING'; payload: boolean }
+  | { type: 'SET_CONNECTION_STATUS'; payload: 'connected' | 'disconnected' }
+  | { type: 'UPDATE_BOOK_DATA'; payload: Partial<BookState> }
+  | { type: 'ABORT_OPERATION' }
+  | { type: 'RESET' };
+
+function chatReducer(state: ChatBoxState, action: ChatAction): ChatBoxState {
   switch (action.type) {
     case 'ADD_MESSAGE':
       return {
@@ -56,45 +68,45 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
         isProcessing: action.payload
       };
     
+    case 'SET_CONNECTION_STATUS':
+      return {
+        ...state,
+        connectionStatus: action.payload,
+        isProcessing: action.payload === 'disconnected' ? false : state.isProcessing
+      };
+    
     case 'UPDATE_BOOK_DATA':
       if (!action.payload) return state;
       
+      const updatedBookData: BookState = {
+        id: action.payload.id,
+        title_en: action.payload.title_en ?? null,
+        title_zh: action.payload.title_zh ?? null,
+        description_en: action.payload.description_en ?? '',
+        description_zh: action.payload.description_zh ?? '',
+        cover_image: action.payload.cover_image ?? null,
+        quantity: action.payload.quantity ?? 0,
+        search_tags: action.payload.search_tags ?? [],
+        category_id: action.payload.category_id ?? '',
+        ai_metadata: action.payload.ai_metadata ?? null,
+        extracted_text: action.payload.extracted_text ?? '',
+        confidence_score: action.payload.confidence_score ?? 0,
+        possible_duplicate: action.payload.possible_duplicate ?? false,
+        duplicate_reasons: action.payload.duplicate_reasons ?? [],
+        category_suggestions: action.payload.category_suggestions ?? []
+      };
+
       return {
         ...state,
-        currentBookData: state.currentBookData ? {
-          ...state.currentBookData,
-          id: action.payload.id ?? state.currentBookData.id,
-          title_en: action.payload.title_en ?? state.currentBookData.title_en,
-          title_zh: action.payload.title_zh ?? state.currentBookData.title_zh,
-          description_en: action.payload.description_en ?? state.currentBookData.description_en,
-          description_zh: action.payload.description_zh ?? state.currentBookData.description_zh,
-          cover_image: action.payload.cover_image ?? state.currentBookData.cover_image,
-          quantity: action.payload.quantity ?? state.currentBookData.quantity,
-          search_tags: action.payload.search_tags ?? state.currentBookData.search_tags,
-          category_id: action.payload.category_id ?? state.currentBookData.category_id,
-          ai_metadata: action.payload.ai_metadata ?? state.currentBookData.ai_metadata,
-          extracted_text: action.payload.extracted_text ?? state.currentBookData.extracted_text,
-          confidence_score: action.payload.confidence_score ?? state.currentBookData.confidence_score,
-          possible_duplicate: action.payload.possible_duplicate ?? state.currentBookData.possible_duplicate,
-          duplicate_reasons: action.payload.duplicate_reasons ?? state.currentBookData.duplicate_reasons,
-          category_suggestions: action.payload.category_suggestions ?? state.currentBookData.category_suggestions
-        } : {
-          id: action.payload.id,
-          title_en: action.payload.title_en ?? null,
-          title_zh: action.payload.title_zh ?? null,
-          description_en: action.payload.description_en ?? '',
-          description_zh: action.payload.description_zh ?? '',
-          cover_image: action.payload.cover_image ?? null,
-          quantity: action.payload.quantity ?? 0,
-          search_tags: action.payload.search_tags ?? [],
-          category_id: action.payload.category_id,
-          ai_metadata: action.payload.ai_metadata,
-          extracted_text: action.payload.extracted_text,
-          confidence_score: action.payload.confidence_score,
-          possible_duplicate: action.payload.possible_duplicate,
-          duplicate_reasons: action.payload.duplicate_reasons,
-          category_suggestions: action.payload.category_suggestions
-        }
+        currentBookData: updatedBookData
+      };
+    
+    case 'ABORT_OPERATION':
+      state.abortController?.abort();
+      return {
+        ...state,
+        isProcessing: false,
+        connectionStatus: 'connected'
       };
     
     case 'RESET':
@@ -109,16 +121,22 @@ export function ChatBox() {
   const [state, dispatch] = useReducer(chatReducer, initialState);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const bookState = new BookCreationState(state.currentBookData);
+  const { user } = useAuth();
   
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [state.messages]);
 
   const handleSubmit = async (message: string) => {
-    dispatch({ type: 'SET_PROCESSING', payload: true });
-    
+    if (!message?.trim()) {
+      return; // Don't send empty messages
+    }
+
     try {
-      // Add user message
+      const abortController = new AbortController();
+      dispatch({ type: 'SET_PROCESSING', payload: true });
+
+      // Add user message first
       dispatch({
         type: 'ADD_MESSAGE',
         payload: {
@@ -130,23 +148,30 @@ export function ChatBox() {
 
       const response = await fetch('/api/admin/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({ 
           message,
           previousMessages: state.messages,
           currentBookData: state.currentBookData
         }),
+        signal: abortController.signal
       });
 
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Network response was not ok');
+      }
+
       const data = await response.json();
-      if (data.error) throw new Error(data.error);
 
       // Add assistant response
       dispatch({
         type: 'ADD_MESSAGE',
         payload: {
           role: 'assistant',
-          content: data.message,
+          content: data.message || data.content,
           timestamp: new Date(),
           bookData: data.data?.updatedBook,
           images: data.images
@@ -161,7 +186,11 @@ export function ChatBox() {
         });
       }
 
-    } catch (error) {
+    } catch (err) {
+      const error = err as Error;
+      if (error instanceof Error && error.name === 'AbortError') {
+        dispatch({ type: 'SET_CONNECTION_STATUS', payload: 'disconnected' });
+      }
       console.error('Error in chat:', error);
       dispatch({
         type: 'ADD_MESSAGE',
@@ -226,6 +255,14 @@ export function ChatBox() {
 
   return (
     <Card className="h-[600px] flex flex-col">
+      {state.connectionStatus === 'disconnected' && (
+        <Alert variant="destructive" className="m-2">
+          <AlertTitle>Connection Lost</AlertTitle>
+          <AlertDescription>
+            Your session has been disconnected. Please refresh the page to start a new session.
+          </AlertDescription>
+        </Alert>
+      )}
       <div className="flex-1 overflow-y-auto p-4">
         <ChatMessages messages={state.messages} />
         <div ref={chatEndRef} />
