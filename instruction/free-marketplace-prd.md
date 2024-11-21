@@ -627,6 +627,169 @@ interface BookData {
     - Admin correction rate
     - Operation completion rate
 
+### 2.3.4 AI Chat Interface Requirements
+
+#### 2.3.4.1 Chat UI Design
+1. **Message Layout**:
+   - User messages aligned center with primary color background
+   - AI messages aligned center with muted background
+   - Messages have rounded corners (2xl radius)
+   - User messages: rounded except bottom-right corner
+   - AI messages: rounded except bottom-left corner
+   - Maximum width: 85% on mobile, 75% on desktop
+   - Hover effect: slight opacity change on messages
+
+2. **Message Content**:
+   - Support for text and images
+   - Preserve whitespace and line breaks
+   - Show timestamps below each message (using consistent formatting)
+   - Support code block formatting
+   - Support JSON display
+
+3. **Image Handling**:
+   - Single image display: max-width-xs, centered
+   - Side-by-side comparison:
+     - Two-column grid layout
+     - Labels for "Existing" and "New" images
+     - Semi-transparent black background for labels
+
+4. **Input Area**:
+   - Fixed at bottom
+   - Muted background
+   - Image upload button (ghost variant)
+   - Send button (ghost variant)
+   - Disabled state during processing
+   - Support for Enter key submission
+
+5. **Container**:
+   - Responsive height: calc(100vh - 12rem)
+   - Maximum width: 3xl
+   - Smooth scrolling
+   - Auto-scroll to latest message
+
+6. **Message Streaming**:
+   - Character-by-character display
+   - 500ms delay before starting stream
+   - Empty message box appears first
+   - Smooth streaming effect
+   - Proper error handling
+
+7. **Timestamp Display**:
+   - Consistent format using toLocaleTimeString
+   - Hour, minute in 12-hour format
+   - Hydration-safe implementation
+
+#### 2.3.4.2 Chat Interaction Flow
+1. **Message Streaming**:
+   - Real-time character-by-character display
+   - fully utilize natural language processing capabilities of gpt-4o
+   - Proper error handling
+  
+
+2. **State Management**:
+   ```typescript
+   interface ChatState {
+     messages: ChatMessage[];
+     isProcessing: boolean;
+     isTyping: boolean;
+     currentBookData?: BookState;
+     connectionStatus: 'connected' | 'disconnected';
+     progressState: ProgressState | null;
+   }
+   ```
+
+
+3. **Response Handling**:
+   - Support streaming responses
+   - Handle image uploads
+
+#### 2.3.4.3 Chat Message State Management
+
+1. **Message State Structure**:
+   ```typescript
+   interface ChatBoxState {
+     messages: ChatMessage[];
+     isProcessing: boolean;
+     currentBookData?: BookState;
+     connectionStatus: 'connected' | 'disconnected';
+   }
+   ```
+
+2. **Message Handling Flow**:
+   ```typescript
+   // 1. Add user message
+   const userMessage = {
+     role: 'user',
+     content: message,
+     timestamp: new Date(),
+   };
+   
+   // 2. Add empty assistant message
+   const assistantMessage = {
+     role: 'assistant',
+     content: '',
+     timestamp: new Date(),
+   };
+   
+   // 3. Calculate correct index for updates
+   const assistantMessageIndex = state.messages.length + 1;
+   ```
+
+3. **Message Update Rules**:
+   - Only update assistant messages
+   - Preserve user messages unchanged
+   - Maintain message order
+   - Handle streaming updates safely
+
+4. **Reducer Actions**:
+   ```typescript
+   type ChatAction = 
+     | { type: 'ADD_MESSAGE'; payload: ChatMessage }
+     | { type: 'UPDATE_MESSAGE'; payload: { 
+         index: number; 
+         content: string; 
+         bookData?: any; 
+         images?: any 
+       }}
+     | { type: 'SET_PROCESSING'; payload: boolean }
+     | { type: 'UPDATE_BOOK_DATA'; payload: Partial<BookState> }
+     | { type: 'SET_CONNECTION_STATUS'; payload: 'connected' | 'disconnected' }
+     | { type: 'RESET' };
+   ```
+
+5. **Message Update Logic**:
+   ```typescript
+   case 'UPDATE_MESSAGE':
+     return {
+       ...state,
+       messages: state.messages.map((msg, idx) => {
+         if (idx === action.payload.index && msg.role === 'assistant') {
+           return {
+             ...msg,
+             content: action.payload.content,
+             ...(action.payload.bookData && { bookData: action.payload.bookData }),
+             ...(action.payload.images && { images: action.payload.images })
+           };
+         }
+         return msg;
+       })
+     };
+   ```
+
+6. **Message Display Rules**:
+   - User messages: right-aligned, primary color
+   - Assistant messages: left-aligned, muted color
+   - Timestamps below each message
+   - Support for images and comparisons
+   - Preserve whitespace in content
+
+7. **Error Prevention**:
+   - Validate message roles
+   - Check indices before updates
+   - Preserve message metadata
+   - Handle streaming errors gracefully
+   - Maintain message order integrity
+
 ## 3. Technical Architecture
 
 ### 3.1 Frontend Stack

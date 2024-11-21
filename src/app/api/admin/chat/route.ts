@@ -135,43 +135,49 @@ export async function POST(request: Request) {
       }
     }
 
-    // Handle text message
+    // Handle text message with streaming
     if (message) {
-      console.log('Getting chat response for message:', message);
-      const chatResponse = await getChatResponse(message, {
-        previousMessages: previousMessages || [],
-        bookData: currentBookData,
-        adminAction: 'chat'
+      const encoder = new TextEncoder();
+      const stream = new TransformStream();
+      const writer = stream.writable.getWriter();
+      
+      // Start processing in the background
+      getChatResponse(
+        message,
+        {
+          previousMessages: previousMessages || [],
+          bookData: currentBookData,
+          adminAction: 'chat'
+        },
+        async (chunk) => {
+          // Write each chunk to the stream
+          await writer.write(encoder.encode(chunk));
+        }
+      ).then(async (finalResponse) => {
+        // When complete, write the final structured response
+        await writer.write(
+          encoder.encode(
+            `\n__END_RESPONSE__${JSON.stringify(finalResponse)}`
+          )
+        );
+        await writer.close();
+      }).catch(async (error) => {
+        console.error('Streaming error:', error);
+        await writer.write(
+          encoder.encode(
+            `Error: ${error instanceof Error ? error.message : 'Unknown error'}`
+          )
+        );
+        await writer.close();
       });
 
-      // Execute command if action exists
-      if (chatResponse.action && chatResponse.data) {
-        try {
-          const command = CommandFactory.createCommand(
-            chatResponse.action as ChatAPIAction, 
-            state
-          );
-          const updatedState = await command.execute(chatResponse.data);
-
-          return NextResponse.json({
-            message: chatResponse.content,
-            action: chatResponse.action,
-            data: {
-              ...chatResponse.data,
-              updatedBook: updatedState
-            }
-          });
-        } catch (error) {
-          console.error('Command execution error:', error);
-          return NextResponse.json({ 
-            error: 'Failed to execute command',
-            details: error instanceof Error ? error.message : 'Unknown error'
-          }, { status: 500 });
-        }
-      }
-
-      // Return default response
-      return NextResponse.json(chatResponse);
+      return new Response(stream.readable, {
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+        },
+      });
     }
 
     return NextResponse.json({ 

@@ -6,15 +6,16 @@ import { ChatInput } from './ChatInput';
 import { ChatMessages } from './ChatMessages';
 import { ChatMessage, BookState } from '@/lib/ai/types';
 import { BookCreationState } from '@/lib/state/book-creation-state';
-import { useAuth } from '@/hooks/useAuth';
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { ProgressIndicator } from './ProgressIndicator';
+import { toast } from 'sonner';
+import { Toaster } from 'sonner';
 
 interface ChatBoxState {
   messages: ChatMessage[];
   isProcessing: boolean;
   currentBookData?: BookState;
   connectionStatus: 'connected' | 'disconnected';
-  abortController?: AbortController;
+  currentStep: string;
 }
 
 const initialState: ChatBoxState = {
@@ -27,91 +28,85 @@ const initialState: ChatBoxState = {
   ],
   isProcessing: false,
   connectionStatus: 'connected',
+  currentStep: '',
 };
 
 type ChatAction = 
   | { type: 'ADD_MESSAGE'; payload: ChatMessage }
   | { type: 'SET_PROCESSING'; payload: boolean }
-  | { type: 'SET_CONNECTION_STATUS'; payload: 'connected' | 'disconnected' }
+  | { type: 'UPDATE_MESSAGE'; payload: { index: number; content: string; bookData?: any; images?: any } }
   | { type: 'UPDATE_BOOK_DATA'; payload: Partial<BookState> }
-  | { type: 'ABORT_OPERATION' }
-  | { type: 'RESET' };
+  | { type: 'SET_CONNECTION_STATUS'; payload: 'connected' | 'disconnected' }
+  | { type: 'RESET' }
+  | { type: 'SET_CURRENT_STEP'; payload: string };
 
 function chatReducer(state: ChatBoxState, action: ChatAction): ChatBoxState {
   switch (action.type) {
     case 'ADD_MESSAGE':
       return {
         ...state,
-        messages: [...state.messages, action.payload],
-        currentBookData: action.payload.bookData ? {
-          id: action.payload.bookData.id,
-          title_en: action.payload.bookData.title_en ?? null,
-          title_zh: action.payload.bookData.title_zh ?? null,
-          description_en: action.payload.bookData.description_en ?? '',
-          description_zh: action.payload.bookData.description_zh ?? '',
-          cover_image: action.payload.bookData.cover_image ?? null,
-          quantity: action.payload.bookData.quantity ?? 0,
-          search_tags: action.payload.bookData.search_tags ?? [],
-          category_id: action.payload.bookData.category_id,
-          ai_metadata: action.payload.bookData.ai_metadata,
-          extracted_text: action.payload.bookData.extracted_text,
-          confidence_score: action.payload.bookData.confidence_score,
-          possible_duplicate: action.payload.bookData.possible_duplicate,
-          duplicate_reasons: action.payload.bookData.duplicate_reasons,
-          category_suggestions: action.payload.bookData.category_suggestions
-        } : state.currentBookData
+        messages: [...state.messages, action.payload]
       };
-    
+      
+    case 'UPDATE_MESSAGE':
+      return {
+        ...state,
+        messages: state.messages.map((msg, idx) => {
+          if (idx === action.payload.index && msg.role === 'assistant') {
+            return {
+              ...msg,
+              content: action.payload.content,
+              ...(action.payload.bookData && { bookData: action.payload.bookData }),
+              ...(action.payload.images && { images: action.payload.images })
+            };
+          }
+          return msg;
+        })
+      };
+
     case 'SET_PROCESSING':
-      return {
-        ...state,
-        isProcessing: action.payload
-      };
-    
-    case 'SET_CONNECTION_STATUS':
-      return {
-        ...state,
-        connectionStatus: action.payload,
-        isProcessing: action.payload === 'disconnected' ? false : state.isProcessing
-      };
-    
+      return { ...state, isProcessing: action.payload };
+
     case 'UPDATE_BOOK_DATA':
       if (!action.payload) return state;
       
       const updatedBookData: BookState = {
-        id: action.payload.id,
-        title_en: action.payload.title_en ?? null,
-        title_zh: action.payload.title_zh ?? null,
-        description_en: action.payload.description_en ?? '',
-        description_zh: action.payload.description_zh ?? '',
-        cover_image: action.payload.cover_image ?? null,
-        quantity: action.payload.quantity ?? 0,
-        search_tags: action.payload.search_tags ?? [],
-        category_id: action.payload.category_id ?? '',
-        ai_metadata: action.payload.ai_metadata ?? null,
-        extracted_text: action.payload.extracted_text ?? '',
-        confidence_score: action.payload.confidence_score ?? 0,
-        possible_duplicate: action.payload.possible_duplicate ?? false,
-        duplicate_reasons: action.payload.duplicate_reasons ?? [],
-        category_suggestions: action.payload.category_suggestions ?? []
+        id: action.payload.id ?? state.currentBookData?.id,
+        title_en: action.payload.title_en ?? state.currentBookData?.title_en ?? null,
+        title_zh: action.payload.title_zh ?? state.currentBookData?.title_zh ?? null,
+        description_en: action.payload.description_en ?? state.currentBookData?.description_en ?? '',
+        description_zh: action.payload.description_zh ?? state.currentBookData?.description_zh ?? '',
+        cover_image: action.payload.cover_image ?? state.currentBookData?.cover_image ?? null,
+        quantity: action.payload.quantity ?? state.currentBookData?.quantity ?? 0,
+        search_tags: action.payload.search_tags ?? state.currentBookData?.search_tags ?? [],
+        category_suggestions: action.payload.category_suggestions ?? state.currentBookData?.category_suggestions ?? [],
+        extracted_text: action.payload.extracted_text ?? state.currentBookData?.extracted_text ?? '',
+        confidence_score: action.payload.confidence_score ?? state.currentBookData?.confidence_score ?? 0,
+        possible_duplicate: action.payload.possible_duplicate ?? state.currentBookData?.possible_duplicate ?? false,
+        duplicate_reasons: action.payload.duplicate_reasons ?? state.currentBookData?.duplicate_reasons ?? []
       };
 
       return {
         ...state,
         currentBookData: updatedBookData
       };
-    
-    case 'ABORT_OPERATION':
-      state.abortController?.abort();
+
+    case 'SET_CONNECTION_STATUS':
       return {
         ...state,
-        isProcessing: false,
-        connectionStatus: 'connected'
+        connectionStatus: action.payload,
+        isProcessing: action.payload === 'disconnected' ? false : state.isProcessing
       };
-    
+
     case 'RESET':
       return initialState;
-    
+
+    case 'SET_CURRENT_STEP':
+      return {
+        ...state,
+        currentStep: action.payload
+      };
+
     default:
       return state;
   }
@@ -121,77 +116,118 @@ export function ChatBox() {
   const [state, dispatch] = useReducer(chatReducer, initialState);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const bookState = new BookCreationState(state.currentBookData);
-  const { user } = useAuth();
-  
+
+  // Auto-scroll effect
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'end'
+      });
+    }
   }, [state.messages]);
 
   const handleSubmit = async (message: string) => {
-    if (!message?.trim()) {
-      return; // Don't send empty messages
-    }
+    if (!message?.trim()) return;
 
     try {
-      const abortController = new AbortController();
       dispatch({ type: 'SET_PROCESSING', payload: true });
+      dispatch({ type: 'SET_CURRENT_STEP', payload: 'Processing message...' });
 
-      // Add user message first
+      // Add user message
+      const userMessage = {
+        role: 'user' as const,
+        content: message,
+        timestamp: new Date(),
+      };
+      
       dispatch({
         type: 'ADD_MESSAGE',
-        payload: {
-          role: 'user',
-          content: message,
-          timestamp: new Date(),
-        }
+        payload: userMessage
       });
+
+      // Add assistant message placeholder
+      const assistantMessage = {
+        role: 'assistant' as const,
+        content: '',
+        timestamp: new Date(),
+      };
+
+      dispatch({
+        type: 'ADD_MESSAGE',
+        payload: assistantMessage
+      });
+
+      const assistantMessageIndex = state.messages.length + 1;
 
       const response = await fetch('/api/admin/chat', {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           message,
-          previousMessages: state.messages,
+          previousMessages: [...state.messages, userMessage],
           currentBookData: state.currentBookData
         }),
-        signal: abortController.signal
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Network response was not ok');
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data = await response.json();
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error('No reader available');
 
-      // Add assistant response
-      dispatch({
-        type: 'ADD_MESSAGE',
-        payload: {
-          role: 'assistant',
-          content: data.message || data.content,
-          timestamp: new Date(),
-          bookData: data.data?.updatedBook,
-          images: data.images
+      let accumulatedMessage = '';
+      dispatch({ type: 'SET_CURRENT_STEP', payload: 'Receiving response...' });
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        const chunk = new TextDecoder().decode(value);
+        
+        try {
+          if (chunk.includes('__END_RESPONSE__')) {
+            const [content, jsonStr] = chunk.split('__END_RESPONSE__');
+            accumulatedMessage += content;
+            
+            const finalResponse = JSON.parse(jsonStr);
+            
+            dispatch({
+              type: 'UPDATE_MESSAGE',
+              payload: {
+                index: assistantMessageIndex,
+                content: finalResponse.content || accumulatedMessage.trim(),
+                bookData: finalResponse.data?.updatedBook,
+                images: finalResponse.images
+              }
+            });
+
+            if (finalResponse.data?.updatedBook) {
+              dispatch({
+                type: 'UPDATE_BOOK_DATA',
+                payload: finalResponse.data.updatedBook
+              });
+            }
+          } else {
+            accumulatedMessage += chunk;
+            dispatch({
+              type: 'UPDATE_MESSAGE',
+              payload: {
+                index: assistantMessageIndex,
+                content: accumulatedMessage.trim()
+              }
+            });
+          }
+        } catch (error) {
+          console.error('Error processing chunk:', error);
+          continue;
         }
-      });
-
-      // Update book data if provided
-      if (data.data?.updatedBook) {
-        dispatch({
-          type: 'UPDATE_BOOK_DATA',
-          payload: data.data.updatedBook
-        });
       }
 
-    } catch (err) {
-      const error = err as Error;
-      if (error instanceof Error && error.name === 'AbortError') {
-        dispatch({ type: 'SET_CONNECTION_STATUS', payload: 'disconnected' });
-      }
+    } catch (error) {
       console.error('Error in chat:', error);
+      toast.error('Failed to process message. Please try again.');
       dispatch({
         type: 'ADD_MESSAGE',
         payload: {
@@ -202,21 +238,33 @@ export function ChatBox() {
       });
     } finally {
       dispatch({ type: 'SET_PROCESSING', payload: false });
+      dispatch({ type: 'SET_CURRENT_STEP', payload: '' });
     }
   };
 
   const handleImageUpload = async (file: File) => {
+    // Validate file size
+    const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error('File size must be less than 20MB');
+      return;
+    }
+
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'image/heif'];
+    if (!validTypes.includes(file.type)) {
+      toast.error('Invalid file type. Please upload an image file.');
+      return;
+    }
+
     dispatch({ type: 'SET_PROCESSING', payload: true });
+    dispatch({ type: 'SET_CURRENT_STEP', payload: 'Uploading image...' });
     
     try {
-      console.log('Starting image upload for file:', {
-        name: file.name,
-        type: file.type,
-        size: file.size
-      });
-      
       const base64Data = await convertToBase64(file);
-      console.log('Converted to base64, length:', base64Data.length);
+      
+      dispatch({ type: 'SET_CURRENT_STEP', payload: 'Analyzing image...' });
+      console.log('Starting image analysis...'); // Debug log
       
       const response = await fetch('/api/admin/chat', {
         method: 'POST',
@@ -230,26 +278,15 @@ export function ChatBox() {
         },
       });
 
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      dispatch({ type: 'SET_CURRENT_STEP', payload: 'Processing results...' });
       const data = await response.json();
-      console.log('API Response:', {
-        status: response.status,
-        imageUrl: data.imageUrl,
-        hasImages: !!data.images,
-        messageLength: data.message?.length,
-        analysis: !!data.analysis,
-        error: data.error
-      });
+      console.log('Image analysis completed:', data.analysis); // Debug log
 
       if (data.error) throw new Error(data.error);
-
-      // Log the message we're about to dispatch
-      console.log('Dispatching message with:', {
-        imageUrl: data.imageUrl,
-        images: data.images ? {
-          existing: !!data.images.existing,
-          new: !!data.images.new
-        } : null
-      });
 
       dispatch({
         type: 'ADD_MESSAGE',
@@ -265,6 +302,7 @@ export function ChatBox() {
 
     } catch (error) {
       console.error('Error uploading image:', error);
+      toast.error('Failed to process image. Please try again.');
       dispatch({
         type: 'ADD_MESSAGE',
         payload: {
@@ -275,32 +313,33 @@ export function ChatBox() {
       });
     } finally {
       dispatch({ type: 'SET_PROCESSING', payload: false });
+      dispatch({ type: 'SET_CURRENT_STEP', payload: '' });
     }
   };
 
   return (
-    <Card className="h-[600px] flex flex-col">
-      {state.connectionStatus === 'disconnected' && (
-        <Alert variant="destructive" className="m-2">
-          <AlertTitle>Connection Lost</AlertTitle>
-          <AlertDescription>
-            Your session has been disconnected. Please refresh the page to start a new session.
-          </AlertDescription>
-        </Alert>
-      )}
-      <div className="flex-1 overflow-y-auto p-4">
-        <ChatMessages messages={state.messages} />
-        <div ref={chatEndRef} />
-      </div>
+    <>
+      <Toaster position="top-center" />
+      <Card className="flex flex-col h-[calc(100vh-12rem)] mx-auto max-w-3xl relative overflow-hidden">
+        <div className="flex-1 overflow-y-auto scroll-smooth relative">
+          <ChatMessages messages={state.messages} />
+          <div ref={chatEndRef} className="h-4" />
+        </div>
 
-      <div className="border-t p-4">
-        <ChatInput
-          onSubmit={handleSubmit}
-          onImageUpload={handleImageUpload}
+        <ProgressIndicator 
+          currentStep={state.currentStep}
           isProcessing={state.isProcessing}
         />
-      </div>
-    </Card>
+
+        <div className="border-t p-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <ChatInput
+            onSubmit={handleSubmit}
+            onImageUpload={handleImageUpload}
+            isProcessing={state.isProcessing}
+          />
+        </div>
+      </Card>
+    </>
   );
 }
 
