@@ -209,7 +209,14 @@ export function ChatBox() {
     dispatch({ type: 'SET_PROCESSING', payload: true });
     
     try {
+      console.log('Starting image upload for file:', {
+        name: file.name,
+        type: file.type,
+        size: file.size
+      });
+      
       const base64Data = await convertToBase64(file);
+      console.log('Converted to base64, length:', base64Data.length);
       
       const response = await fetch('/api/admin/chat', {
         method: 'POST',
@@ -224,7 +231,25 @@ export function ChatBox() {
       });
 
       const data = await response.json();
+      console.log('API Response:', {
+        status: response.status,
+        imageUrl: data.imageUrl,
+        hasImages: !!data.images,
+        messageLength: data.message?.length,
+        analysis: !!data.analysis,
+        error: data.error
+      });
+
       if (data.error) throw new Error(data.error);
+
+      // Log the message we're about to dispatch
+      console.log('Dispatching message with:', {
+        imageUrl: data.imageUrl,
+        images: data.images ? {
+          existing: !!data.images.existing,
+          new: !!data.images.new
+        } : null
+      });
 
       dispatch({
         type: 'ADD_MESSAGE',

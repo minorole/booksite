@@ -358,7 +358,6 @@ export async function analyzeDuplicateWithImages(
       apiKey: process.env.OPENAI_API_KEY,
     });
 
-    // Send both images to GPT-4V for comparison
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
@@ -372,6 +371,14 @@ export async function analyzeDuplicateWithImages(
           - Edition indicators
           - Publisher marks
           
+          Respond in JSON format with the following structure:
+          {
+            "isDuplicate": boolean,
+            "confidence": number,
+            "reasons": string[],
+            "analysis": string
+          }
+          
           The first image is a new upload, the second is an existing book titled: ${title}`
         },
         {
@@ -379,7 +386,7 @@ export async function analyzeDuplicateWithImages(
           content: [
             {
               type: "text",
-              text: "Compare these two book covers and determine if they are the same book. Explain your reasoning."
+              text: "Compare these two book covers and determine if they are the same book. Provide the analysis in JSON format."
             },
             {
               type: "image_url",
@@ -403,13 +410,7 @@ export async function analyzeDuplicateWithImages(
     });
 
     const result = JSON.parse(response.choices[0].message.content || '{}');
-    
-    return {
-      isDuplicate: result.isDuplicate || false,
-      confidence: result.confidence || 0,
-      reasons: result.reasons || [],
-      analysis: result.analysis || ''
-    };
+    return result;
   } catch (error) {
     console.error('Error analyzing duplicate images:', error);
     return {

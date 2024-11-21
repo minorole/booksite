@@ -1,5 +1,8 @@
 # AMTBCF Buddhist Books Distribution Platform - Product Requirements Document 
 
+- All files especially the LLM service should have detailed logs for debugging and auditing. (when I test the website with run dev command)
+- ALWAYS fully utilize the LLM's capabilities to process natural language and image data, no preset language.
+
 ## 1. Product Overview
 ### 1.1 Product Vision
 Create a platform for Amitabha Buddhist Society of Central Florida (AMTBCF) to efficiently distribute Buddhist books and materials to interested individuals, while serving as an informational hub for the organization.
@@ -46,8 +49,198 @@ Create a platform for Amitabha Buddhist Society of Central Florida (AMTBCF) to e
 - Order management
 - Analytics dashboard
 
-#### 2.3.1 AI-Powered Admin Interface (LLM-driven chat interface that focuses on inventory management, absolutely follows the database schema)
+#### 2.3.1 Core AI Workflow
+**Key Principle**: The AI assistant acts as a natural language interface between admins and the database, with strict data validation and no content generation without evidence.
+
+1. **Book Creation Flow** (Primary Path):
+   ```
+   Admin: [Uploads cover image]
+   AI: Analyzes image and responds with:
+       - Extracted title(s) with confidence scores
+       - Language detection results
+       - Category suggestion
+       - NO description generation
+       - Duplicate check results
+   Admin: Confirms or corrects information
+   AI: Requests quantity
+   Admin: Provides quantity
+   AI: Creates listing or handles duplicates
+   ```
+
+2. **Book Update Flow**:
+   ```
+   Admin: "We received 50 more copies of [book title]"
+   AI: - Searches database
+       - Shows current quantity
+       - Confirms update intention
+   Admin: Confirms
+   AI: Updates database
+   ```
+
+3. **Description Addition Flow**:
+   ```
+   Admin: [Uploads interior pages]
+   AI: - Extracts visible text
+       - Structures into description
+       - Requests verification
+   -- OR --
+   Admin: "Add description: [text]"
+   AI: - Confirms format
+       - Updates database
+   ```
+
+#### 2.3.2 Data Processing Rules
+
+1. **Image Processing**
+   - Input: Book cover image
+   - Output MUST contain:
+     ```typescript
+     {
+       title_en: string | null;       // Only if visible
+       title_zh: string | null;       // Only if visible
+       confidence_scores: {
+         title: number;               // 0.0 to 1.0
+         language_detection: number;   // 0.0 to 1.0
+       };
+       extracted_text: {
+         raw_text: string;            // All visible text
+         positions: {                 // For verification
+           title: string;             // e.g., "top center"
+           other: string[];
+         };
+       };
+     }
+     ```
+
+2. **Description Handling**
+   - NEVER generate from cover image alone
+   - Valid sources:
+     1. Additional book images (interior/back)
+     2. Direct admin input
+     3. Existing database content
+   - Both description_en and description_zh can be null
+
+3. **Duplicate Detection**
+   - Check sequence:
+     1. Exact title match (either language)
+     2. Similar title (Levenshtein distance)
+     3. Visual similarity (if cover exists)
+   - Required response format:
+     ```typescript
+     {
+       isDuplicate: boolean;
+       confidence: number;
+       existingBook?: {
+         id: string;
+         title_en: string | null;
+         title_zh: string | null;
+         quantity: number;
+         category: string;
+       };
+       reasons: string[];
+     }
+     ```
+
+4. **Category Assignment**
+   - MUST be one of:
+     ```typescript
+     type Category = 
+       | 'PURE_LAND_BOOKS'  // 净土佛书
+       | 'OTHER_BOOKS'      // 其他佛书
+       | 'DHARMA_ITEMS'     // 法宝
+       | 'BUDDHA_STATUES'   // 佛像
+     ```
+   - Default: 'OTHER_BOOKS'
+   - Requires explicit admin confirmation
+
+5. **Quantity Validation**
+   - Must be non-negative integer
+   - Requires explicit confirmation for:
+     - Large changes (>100)
+     - Reductions to zero
+     - Updates to duplicates
+
+#### 2.3.3 Error Handling Requirements
+
+1. **Data Validation Errors**
+   ```typescript
+   interface ValidationError {
+     field: string;
+     error: string;
+     suggestedFix?: string;
+   }
+   ```
+
+2. **Required Recovery Paths**
+   - Image upload failure → Retry or manual entry
+   - Title extraction failure → Manual entry
+   - Duplicate detection → Force create or update
+   - Category mismatch → Default to OTHER_BOOKS
+   - Database operation failure → Preserve state for retry
+
+#### 2.3.4 AI Chat Interface Guidelines (fully utilizes the LLM's capabilities to process natural language and image data, no preset language)
+
+1. **Initial Image Upload**
+   ```
+   Admin: [Uploads book cover]
+   AI: I see a book cover. Here's what I found:
+   - Title (Chinese): [extracted]
+   - Title (English): [extracted]
+   
+   Would you like to:
+   1. Add more images for description generation
+   2. Continue with manual description
+   3. Proceed without description
+   ```
+
+2. **Additional Image Processing**
+   ```
+   Admin: [Uploads content pages]
+   AI: Thanks! I can now generate a description based on the content.
+   Here's my suggestion:
+   [Generated description]
+   
+   Is this accurate? Feel free to edit or provide your own.
+   ```
+
+3. **Natural Language Updates**
+   ```
+   Amind: do we have XXXXXX book?
+   AI: yes, we have it in [category], with [quantity] copies available.
+
+   Admin: "Change quantity to 50"
+   AI: Setting quantity to 50. Please confirm.
+   
+   Admin: "Yes"
+   AI: Updated quantity to 50.
+   ```
+
+#### 2.3.3 AI System Constraints
+
+1. **Cover Image Analysis**
+   - ONLY extract visible text
+   - NO description generation from cover alone
+   - Focus on accurate title extraction
+   - Report confidence levels for extracted text
+   - Flag unclear or ambiguous text
+
+2. **Description Generation**
+   - Require additional images or manual input
+   - Never generate descriptions without content
+   - Preserve original language text
+   - No interpretation of Buddhist concepts
+
+3. **Error Prevention**
+   - Explicit confirmation for all updates
+   - Clear confidence scoring
+   - Duplicate detection before creation
+   - Validation of all numeric inputs
+   - Preservation of Chinese characters
+
+#### 2.3.4 AI-Powered Admin Interface (LLM-driven chat interface that focuses on inventory management, absolutely follows the database schema)
 -  our user base are generally fluent in english, and both type chinese so no need to special set it. 
+- we should have a progress tracking system for LLM to keep the admin updated with each step. (no need to be super detailed, just a simple status update)(stop suggesting me to make it more detailed!)
+note: when any image are shown to admin by LLM, it should be able to enlarge just incase is hard to see.(we use shadcn for the entire website)
 - **Interactive Chat Interface**: 
   - A chatbox that greets the admin and asks what they would like to do (e.g., 
   change inventory number, add new listing).
@@ -58,6 +251,7 @@ Create a platform for Amitabha Buddhist Society of Central Florida (AMTBCF) to e
   - The system uses AI to extract information such as title and subtitle from the 
   image.
   - Generates a draft description for the book, which the admin can edit.
+  - image should alwasy be uploaded to cloudinary and the url should be stored in the database for book listings purpose, the cover and description page if provdied. as for LLM, it can use direct image from the user, or if it perform better with a cloudinary enhanced image, then use cloudinary enhanced image (cloudinary api is in the form of CLOUDINARY_URL=cloudinary://my_key:my_secret@my_cloud_name)
 - **Inventory Management**:
   - Allows admins to update inventory numbers or add new listings through the 
   chat interface.
@@ -155,6 +349,8 @@ Create a platform for Amitabha Buddhist Society of Central Florida (AMTBCF) to e
      - Confidence score
      - Reason for duplicate flag
      - Side-by-side comparison
+     example: user upload a image, we get the title from the book, then do a search of the database for similar titled book, if there are title thats similar, doesn't have to be exact, grab the image url from the existing book, send it to LLM for comparison, if similarly score is over 0.5, show it to admin for confirmation. when LLM did not find the duplicates, extract the info as normal and show to admin, if admin corrects the title, use the new title that was given by admin and repeat the image comparison process. this might be a long process, so make sure LLM keep updating the user with each step. 
+     - if during serach LLM found that text matches but images differ then is not a duplicate, we will have multiple versions of the same book
 
 - **Admin Options for Duplicates**:
   1. Create new listing anyway
@@ -196,7 +392,7 @@ interface BookData {
    - Store original and optimized URLs
 
 3. **Initial Analysis**:
-   - GPT-4o processes optimized image
+   - gpt-4o processes optimized image
    - Extracts:
      - Visible text (both English and Chinese)
      - Title candidates
@@ -349,7 +545,87 @@ interface BookData {
    - Log admin decisions
    - Store in ai_metadata
 
+### 2.3.3.8 AI Assistant Core Principles
 
+1. **Purpose & Scope**
+   - Primary role: Help admins manage book database efficiently
+   - Focus: Accurate data extraction and verification
+   - NOT responsible for: Content generation or Buddhist interpretation
+
+2. **Data Integrity**
+   - Extract ONLY visible/provided information
+   - Never generate content without evidence
+   - Never translate or interpret Buddhist concepts
+   - Mark uncertainties explicitly
+   - Maintain strict database schema compliance
+
+3. **Category Enforcement**
+   Strictly limited to defined categories:
+   ```typescript
+   enum CategoryType {
+     PURE_LAND_BOOKS = "PURE_LAND_BOOKS"  // 净土佛书
+     OTHER_BOOKS = "OTHER_BOOKS"          // 其他佛书
+     DHARMA_ITEMS = "DHARMA_ITEMS"        // 法宝
+     BUDDHA_STATUES = "BUDDHA_STATUES"    // 佛像
+   }
+   ```
+
+4. **Image Analysis Capabilities**
+   - Text extraction with position data
+   - Layout pattern recognition
+   - Duplicate detection
+   - Visual verification markers
+   - Confidence scoring
+   - Uncertainty reporting
+
+5. **Natural Language Processing**
+   - Understand admin intent
+   - Process bilingual input (EN/ZH)
+   - Maintain conversation context
+   - Follow database schema
+   - Verify before updates
+
+6. **Verification First Approach**
+   - Always verify data before updates
+   - Report confidence levels
+   - Flag uncertainties
+   - Request admin confirmation
+   - Track verification metadata
+
+7. **Error Prevention**
+   - Validate against schema
+   - Check for duplicates
+   - Enforce category constraints
+   - Maintain data integrity
+   - Log all operations (ALL steps or components should have super detailed logging for the terminal window for me to monitor when developing! do not remove these logging features!)
+
+8. **Metadata Collection**
+   ```typescript
+   interface AIMetadata {
+     extracted_text: {
+       main_text: string;
+       position_data: object;
+     };
+     confidence_scores: object;
+     visual_verification: object;
+     uncertainties: string[];
+     analysis_date: string;
+   }
+   ```
+
+9. **Key Constraints**
+   - No content generation
+   - No Buddhist interpretation
+   - No automatic translation
+   - No assumption of missing data
+   - Strict schema adherence
+
+10. **Success Metrics**
+    - Accuracy of text extraction
+    - Duplicate detection rate
+    - Data validation accuracy
+    - Admin correction rate
+    - Operation completion rate
 
 ## 3. Technical Architecture
 
@@ -592,13 +868,13 @@ enum OrderStatus {
 
 ### 8.1 Infrastructure
 - Vercel: $0 (Hobby tier)
-- Cloudinary: $0 (Free tier - 25GB storage)
+- Cloudinary: $0 (Free tier - 25GB storage) 
 - Upstash Redis: $0 (Free tier)
 - Domain: ~$1-2/month
 - PostgreSQL: $0 (Supabase/Neon free tier)
 
 ### 8.2 AI Services
-- use OPENAI API with GPT-4o model 
+- use openAI API with "gpt-4o" (do not change my model) 
 
 Total Estimated Monthly Cost: $25-60
 
