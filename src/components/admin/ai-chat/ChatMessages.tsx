@@ -23,6 +23,36 @@ export function ChatMessages({ messages }: ChatMessagesProps) {
     });
   };
 
+  const formatExtractedText = (extractedText: any) => {
+    if (!extractedText) return 'No text extracted';
+    
+    // Handle the case where extractedText is an object with raw_text and positions
+    if (typeof extractedText === 'object') {
+      if (extractedText.raw_text) {
+        return extractedText.raw_text;
+      }
+      
+      // If we have positions, format them nicely
+      if (extractedText.positions) {
+        const parts = [];
+        if (extractedText.positions.title) {
+          parts.push(`Title: ${extractedText.positions.title}`);
+        }
+        if (extractedText.positions.other && extractedText.positions.other.length > 0) {
+          parts.push(`Other text: ${extractedText.positions.other.join(', ')}`);
+        }
+        return parts.join('\n');
+      }
+    }
+    
+    // If it's a string, return it directly
+    if (typeof extractedText === 'string') {
+      return extractedText;
+    }
+    
+    return 'Invalid text format';
+  };
+
   return (
     <div className="flex flex-col space-y-4 p-4 md:p-6">
       {messages.map((message, index) => {
@@ -44,6 +74,25 @@ export function ChatMessages({ messages }: ChatMessagesProps) {
             )}>
               <p className="text-sm whitespace-pre-wrap">{message.content}</p>
               
+              {message.analysis && (
+                <div className="mt-2 space-y-2 border-t border-border/50 pt-2">
+                  {message.analysis.extracted_text && (
+                    <div className="text-sm">
+                      <p className="font-semibold">Extracted Text:</p>
+                      <p className="mt-1 whitespace-pre-wrap">
+                        {formatExtractedText(message.analysis.extracted_text)}
+                      </p>
+                    </div>
+                  )}
+                  
+                  {message.analysis.confidence_scores && (
+                    <p className="text-xs text-muted-foreground">
+                      Confidence: {Math.round(message.analysis.confidence_scores.title * 100)}%
+                    </p>
+                  )}
+                </div>
+              )}
+
               {/* Image handling remains the same */}
               {message.imageUrl && (
                 <Dialog>

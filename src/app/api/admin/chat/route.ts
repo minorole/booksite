@@ -1,14 +1,20 @@
 import { NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
-import { processBookImage } from '@/lib/ai/image-analysis';
-import { getChatResponse } from '@/lib/ai/chat';
+import { processBookImage, getChatResponse, formatExtractedText } from '@/lib/openai';
 import { uploadAndOptimizeImage } from '@/lib/cloudinary';
 import { findPossibleDuplicates, analyzeDuplicateWithImages } from '@/lib/services/book-service';
-import { BookCreationState } from '@/lib/state/book-creation-state';
+import { BookCreationState, StateUpdates } from '@/lib/state/book-creation-state';
 import { CommandFactory } from '@/lib/commands/command-factory';
-import { ChatAPIAction } from '@/lib/ai/types';
-import { PrismaClient } from '@prisma/client';
+import { 
+  AssistantResponse, 
+  ChatAPIAction, 
+  ChatResponseData, 
+  ChatMessage,
+  BookState 
+} from '@/lib/ai/types';
+import { PrismaClient, CategoryType } from '@prisma/client';
+import { UpdateBookCommand } from '@/lib/commands/update-book';
 
 const prisma = new PrismaClient();
 
@@ -22,12 +28,37 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Parse request body
+    // Parse request body with typed previousMessages
     const body = await request.json();
-    const { message, image, previousMessages, currentBookData } = body;
+    const { 
+      message, 
+      image, 
+      previousMessages,
+      currentBookData 
+    }: {
+      message?: string;
+      image?: string;
+      previousMessages?: ChatMessage[];
+      currentBookData?: Partial<BookState>;
+    } = body;
 
-    // Initialize state
-    const state = new BookCreationState(currentBookData);
+    // Find the most recent state data from messages or currentBookData
+    const lastMessageWithBookData = previousMessages
+      ?.slice()  // Create a copy before reverse
+      .reverse()
+      .find((msg: ChatMessage) => msg.bookData || msg.imageUrl);
+
+    // Combine state data, prioritizing most recent
+    const initialState = {
+      ...lastMessageWithBookData?.bookData,
+      ...currentBookData,
+      cover_image: currentBookData?.cover_image || 
+                  lastMessageWithBookData?.bookData?.cover_image ||
+                  lastMessageWithBookData?.imageUrl
+    };
+
+    console.log('Initializing state with:', initialState);
+    const state = new BookCreationState(initialState);
 
     // Handle image upload
     if (image) {
@@ -39,6 +70,15 @@ export async function POST(request: Request) {
         const bookAnalysis = await processBookImage(displayUrl);
         console.log('Book analysis result:', bookAnalysis);
 
+        // Update state with analysis results AND cover image
+        const updatedState = {
+          ...bookAnalysis,
+          cover_image: displayUrl
+        };
+        
+        state.updateState(updatedState);
+        console.log('Updated state after image analysis:', state.getState());
+
         // Check for duplicates if we have a title
         const title = bookAnalysis.title_zh || bookAnalysis.title_en;
         if (title) {
@@ -48,49 +88,42 @@ export async function POST(request: Request) {
             const duplicate = exactMatch || similarMatches[0];
             
             // Add image analysis for potential duplicates
-            const imageAnalysis = await analyzeDuplicateWithImages(
+            const duplicateAnalysis = await analyzeDuplicateWithImages(
               displayUrl,
               duplicate,
               duplicate.title_zh || duplicate.title_en
             );
 
-            // Combine text and image analysis
-            const combinedAnalysis = {
-              ...bookAnalysis,
-              cover_image: displayUrl,
-              imageUrl: displayUrl,
-              possible_duplicate: true,
-              id: duplicate.id,
-              duplicate: {
-                book: duplicate,
-                confidence: exactMatch ? 1 : similarMatches[0].similarity_score,
-                image_confidence: imageAnalysis.confidence,
-                reasons: [
-                  ...(exactMatch ? ['Exact title match'] : ['Similar title found']),
-                  ...imageAnalysis.reasons
-                ],
-                image_analysis: imageAnalysis.analysis,
-                alternatives: similarMatches
-              }
-            };
+            // Update state with the existing book's data
+            state.updateState({
+              ...duplicate,
+              id: duplicate.id,  // Important for updates
+              cover_image: duplicate.cover_image
+            });
 
             return NextResponse.json({
               message: [
-                `I found a similar book in our database and analyzed both covers:`,
+                `I found a potential duplicate and analyzed both covers:`,
                 ``,
-                `Title: ${duplicate.title_zh || duplicate.title_en}`,
-                `Current Quantity: ${duplicate.quantity}`,
-                `Category: ${duplicate.category?.name_zh}`,
+                `Existing Book:`,
+                `- Title: ${duplicate.title_zh || duplicate.title_en}`,
+                `- Quantity: ${duplicate.quantity}`,
+                `- Category: ${duplicate.category?.type}`,
                 ``,
-                `Image Analysis:`,
-                imageAnalysis.analysis,
+                `Analysis Results:`,
+                `- Confidence: ${duplicateAnalysis.confidence * 100}%`,
+                ...duplicateAnalysis.reasons.map(reason => `- ${reason}`),
                 ``,
                 `Would you like to:`,
-                `1. Update the existing book`,
+                `1. Update the existing book's quantity`,
                 `2. Create a new listing anyway`,
                 `3. Cancel the operation`
               ].join('\n'),
-              analysis: combinedAnalysis,
+              analysis: {
+                ...bookAnalysis,
+                duplicate: duplicateAnalysis,
+                existingBook: duplicate  // Include full book data
+              },
               images: {
                 existing: duplicate.cover_image,
                 new: displayUrl
@@ -99,15 +132,6 @@ export async function POST(request: Request) {
           }
         }
 
-        const analysisWithImage = {
-          ...bookAnalysis,
-          cover_image: displayUrl,
-          imageUrl: displayUrl
-        };
-
-        // Update state with analysis results
-        state.updateState(analysisWithImage);
-
         return NextResponse.json({ 
           message: [
             `I've analyzed the book cover. Here's what I found:`,
@@ -115,19 +139,23 @@ export async function POST(request: Request) {
             `Title (English): ${bookAnalysis?.title_en || 'Not detected'}`,
             `Title (Chinese): ${bookAnalysis?.title_zh || 'Not detected'}`,
             ``,
-            `Description (English):`,
-            `${bookAnalysis?.description_en || 'No description available'}`,
+            `All Extracted Text:`,
+            `${formatExtractedText(bookAnalysis?.extracted_text) || 'No text extracted'}`,
             ``,
-            `Description (Chinese):`,
-            `${bookAnalysis?.description_zh || 'No description available'}`,
+            `Suggested Tags: ${bookAnalysis?.search_tags?.join(', ') || 'None'}`,
+            `Suggested Category: ${bookAnalysis?.category_suggestions?.join(', ') || 'None'}`,
             ``,
-            `Tags: ${bookAnalysis?.search_tags?.join(', ') || 'None'}`,
-            `Categories: ${bookAnalysis?.category_suggestions?.join(', ') || 'None'}`,
-            ``,
-            `Would you like me to create a new book listing with this information?`
+            `Would you like to create this book? Before we do, I'll need to know:`,
+            `- How many copies do we have?`,
+            `- Should we use any of the extracted text for the description?`,
+            `- Would you like to use any of these terms as tags?`
           ].join('\n'),
-          analysis: analysisWithImage,
-          imageUrl: displayUrl
+          analysis: {
+            ...bookAnalysis,
+            cover_image: displayUrl  // Include cover image in response
+          },
+          imageUrl: displayUrl,
+          bookData: state.getState() // Include full state in response
         });
       } catch (error) {
         console.error('Error processing image:', error);
@@ -141,33 +169,93 @@ export async function POST(request: Request) {
       const stream = new TransformStream();
       const writer = stream.writable.getWriter();
       
-      // Start processing in the background
+      // Enhanced logging
+      console.log('Processing chat message:', {
+        message,
+        currentBookData,
+        previousMessagesCount: previousMessages?.length
+      });
+
       getChatResponse(
         message,
         {
           previousMessages: previousMessages || [],
-          bookData: currentBookData,
+          bookData: state.getState(),
           adminAction: 'chat'
         },
-        async (chunk) => {
-          // Write each chunk to the stream
+        async (chunk: string) => {
           await writer.write(encoder.encode(chunk));
         }
-      ).then(async (finalResponse) => {
-        // When complete, write the final structured response
+      ).then(async (finalResponse: AssistantResponse) => {
+        console.log('Chat response:', finalResponse);
+
+        // Update state while preserving existing data
+        if (finalResponse.data) {
+          const currentState = state.getState();
+          
+          // Create properly typed update object
+          const stateUpdate: StateUpdates = {
+            ...finalResponse.data,  // Let LLM provide all updates
+            // Handle category conversion if needed
+            category: typeof finalResponse.data.category === 'string' 
+              ? {
+                  id: '',
+                  name_en: finalResponse.data.category,
+                  name_zh: finalResponse.data.category,
+                  type: finalResponse.data.category as CategoryType
+                }
+              : finalResponse.data.category || currentState.category,
+            // Only preserve cover_image from current state
+            cover_image: currentState.cover_image
+          };
+
+          state.updateState(stateUpdate);
+        }
+
+        // Log state before command execution
+        console.log('State before command execution:', state.getState());
+
+        // Execute command if action is present
+        if (finalResponse.action && finalResponse.data) {
+          try {
+            const command = CommandFactory.createCommand(
+              finalResponse.action as ChatAPIAction, 
+              state
+            );
+            
+            console.log('Executing command:', {
+              action: finalResponse.action,
+              data: finalResponse.data,
+              currentState: state.getState()
+            });
+
+            const result = await command.execute(finalResponse.data);
+            console.log('Command execution result:', result);
+
+            // Add success message to stream
+            const successMsg = `\n\nOperation successful! Book ${result.id ? 'updated' : 'created'}.`;
+            await writer.write(encoder.encode(successMsg));
+          } catch (error) {
+            console.error('Command execution error:', error);
+            const errorMsg = `\n\nError: ${error instanceof Error ? error.message : 'Unknown error'}`;
+            await writer.write(encoder.encode(errorMsg));
+          }
+        }
+
+        // Include full state in response
         await writer.write(
           encoder.encode(
-            `\n__END_RESPONSE__${JSON.stringify(finalResponse)}`
+            `\n__END_RESPONSE__${JSON.stringify({
+              ...finalResponse,
+              message: finalResponse.content,
+              bookData: state.getState() // Include full state in response
+            })}`
           )
         );
         await writer.close();
-      }).catch(async (error) => {
+      }).catch(async (error: Error) => {
         console.error('Streaming error:', error);
-        await writer.write(
-          encoder.encode(
-            `Error: ${error instanceof Error ? error.message : 'Unknown error'}`
-          )
-        );
+        await writer.write(encoder.encode(`Error: ${error.message}`));
         await writer.close();
       });
 

@@ -1,0 +1,6 @@
+export const AI_CONSTANTS = {
+  MODEL: "gpt-4o",
+  CONTEXT_WINDOW: 128_000,
+  MAX_OUTPUT_TOKENS: 16_384,
+  TEMPERATURE: 0
+} as const; 

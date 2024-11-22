@@ -1,17 +1,14 @@
-import OpenAI from 'openai';
 import { BookAnalysis } from './types';
+import { openai } from '../openai';
 import { SYSTEM_PROMPTS } from './prompts';
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+import { AI_CONSTANTS } from '../constants/ai';
 
 export async function processBookImage(
   imageUrl: string
 ): Promise<BookAnalysis> {
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: AI_CONSTANTS.MODEL,
       messages: [
         {
           role: "system",
@@ -34,8 +31,8 @@ export async function processBookImage(
           ]
         }
       ],
-      max_tokens: 4096,
-      temperature: 0
+      max_tokens: AI_CONSTANTS.MAX_OUTPUT_TOKENS,
+      temperature: AI_CONSTANTS.TEMPERATURE
     });
 
     if (!response.choices[0].message.content) {
@@ -54,7 +51,10 @@ export async function processBookImage(
         description_en: parsedResponse.description_en || '',
         description_zh: parsedResponse.description_zh || '',
         extracted_text: parsedResponse.extracted_text || '',
-        confidence_score: parsedResponse.confidence_score || 0,
+        confidence_scores: parsedResponse.confidence_scores || {
+          title: 0,
+          language_detection: 0
+        },
         possible_duplicate: parsedResponse.possible_duplicate || false,
         duplicate_reasons: parsedResponse.duplicate_reasons || [],
         search_tags: parsedResponse.search_tags || [],

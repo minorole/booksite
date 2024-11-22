@@ -1,7 +1,10 @@
 import { prisma } from '../prisma';
 import { BookAnalysis, BookState } from '../ai/types';
 import { CategoryType, Prisma } from '@prisma/client';
-import { OpenAI } from 'openai';
+import { openai } from '../openai';
+import { SYSTEM_PROMPTS } from '../ai/prompts';
+import { AI_CONSTANTS } from '../constants/ai';
+import { mapToCategoryType, CATEGORY_NAMES } from '../constants/categories';
 
 interface BookCreationData extends BookState {
   cover_image: string;
@@ -19,40 +22,6 @@ interface BookOperationResult {
   };
   error?: string;
 }
-
-export const CATEGORY_MAP: Record<string, CategoryType> = {
-  'PURE_LAND_BOOKS': CategoryType.PURE_LAND_BOOKS,
-  'OTHER_BOOKS': CategoryType.OTHER_BOOKS,
-  'DHARMA_ITEMS': CategoryType.DHARMA_ITEMS,
-  'BUDDHA_STATUES': CategoryType.BUDDHA_STATUES,
-  'Pure Land Books': CategoryType.PURE_LAND_BOOKS,
-  'Other Books': CategoryType.OTHER_BOOKS,
-  'Dharma Items': CategoryType.DHARMA_ITEMS,
-  'Buddha Statues': CategoryType.BUDDHA_STATUES,
-  '净土佛书': CategoryType.PURE_LAND_BOOKS,
-  '其他佛书': CategoryType.OTHER_BOOKS,
-  '法宝': CategoryType.DHARMA_ITEMS,
-  '佛像': CategoryType.BUDDHA_STATUES
-};
-
-export const CATEGORY_NAMES: Record<CategoryType, { en: string; zh: string }> = {
-  [CategoryType.PURE_LAND_BOOKS]: {
-    en: 'Pure Land Books',
-    zh: '净土佛书'
-  },
-  [CategoryType.OTHER_BOOKS]: {
-    en: 'Other Books',
-    zh: '其他佛书'
-  },
-  [CategoryType.DHARMA_ITEMS]: {
-    en: 'Dharma Items',
-    zh: '法宝'
-  },
-  [CategoryType.BUDDHA_STATUES]: {
-    en: 'Buddha Statues',
-    zh: '佛像'
-  }
-};
 
 function validateBookData(data: BookCreationData) {
   const errors: string[] = [];
@@ -72,11 +41,6 @@ async function getCategory(type: CategoryType) {
   return await prisma.category.findFirst({
     where: { type }
   });
-}
-
-function mapToCategoryType(categoryName: string): CategoryType {
-  const categoryType = CATEGORY_MAP[categoryName.trim()];
-  return categoryType || CategoryType.OTHER_BOOKS;
 }
 
 export async function updateBookCategory(
@@ -212,7 +176,7 @@ async function createBookWithData(
     search_tags: data.search_tags || [],
     ai_metadata: {
       extracted_text: data.extracted_text,
-      confidence_score: data.confidence_score,
+      confidence_scores: data.confidence_scores,
       possible_duplicate: isForced,
       duplicate_reasons: [
         ...(data.duplicate_reasons || []),
@@ -351,42 +315,28 @@ export async function analyzeDuplicateWithImages(
   isDuplicate: boolean;
   confidence: number;
   reasons: string[];
-  analysis: string;
+  existingBook?: {
+    id: string;
+    title_en: string | null;
+    title_zh: string | null;
+    quantity: number;
+    category: string;
+  };
 }> {
   try {
-    const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
-
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: AI_CONSTANTS.MODEL,
       messages: [
         {
           role: "system",
-          content: `You are analyzing two book covers to determine if they are the same book or different editions.
-          Focus on:
-          - Visual similarities/differences
-          - Text content comparison
-          - Layout and design elements
-          - Edition indicators
-          - Publisher marks
-          
-          Respond in JSON format with the following structure:
-          {
-            "isDuplicate": boolean,
-            "confidence": number,
-            "reasons": string[],
-            "analysis": string
-          }
-          
-          The first image is a new upload, the second is an existing book titled: ${title}`
+          content: SYSTEM_PROMPTS.duplicateAnalysis
         },
         {
           role: "user",
           content: [
             {
               type: "text",
-              text: "Compare these two book covers and determine if they are the same book. Provide the analysis in JSON format."
+              text: "Compare these two book covers and determine if they are the same book."
             },
             {
               type: "image_url",
@@ -406,18 +356,88 @@ export async function analyzeDuplicateWithImages(
         }
       ],
       response_format: { type: "json_object" },
-      temperature: 0
+      temperature: AI_CONSTANTS.TEMPERATURE
     });
 
     const result = JSON.parse(response.choices[0].message.content || '{}');
-    return result;
+    return {
+      ...result,
+      existingBook: result.isDuplicate ? {
+        id: existingBook.id,
+        title_en: existingBook.title_en,
+        title_zh: existingBook.title_zh,
+        quantity: existingBook.quantity,
+        category: existingBook.category?.type
+      } : undefined
+    };
   } catch (error) {
     console.error('Error analyzing duplicate images:', error);
     return {
       isDuplicate: false,
       confidence: 0,
-      reasons: ['Failed to analyze images'],
-      analysis: 'Image analysis failed'
+      reasons: ['Failed to analyze images']
+    };
+  }
+}
+
+export async function updateBookQuantity(
+  bookId: string,
+  quantity: number,
+  adminEmail: string
+): Promise<BookOperationResult> {
+  try {
+    const book = await prisma.book.findUnique({
+      where: { id: bookId },
+      include: { category: true }
+    });
+
+    if (!book) {
+      return {
+        success: false,
+        error: 'Book not found'
+      };
+    }
+
+    // Validate quantity
+    if (quantity < 0) {
+      return {
+        success: false,
+        error: 'Quantity cannot be negative'
+      };
+    }
+
+    // Update book
+    const updatedBook = await prisma.book.update({
+      where: { id: bookId },
+      data: { quantity },
+      include: { category: true }
+    });
+
+    // Create audit log
+    await prisma.adminLog.create({
+      data: {
+        action: 'EDIT_BOOK',
+        book_id: bookId,
+        book_title: book.title_zh || book.title_en,
+        admin_email: adminEmail,
+        metadata: {
+          previous_quantity: book.quantity,
+          new_quantity: quantity,
+          update_type: 'quantity_update',
+          timestamp: new Date().toISOString()
+        }
+      }
+    });
+
+    return {
+      success: true,
+      book: updatedBook
+    };
+  } catch (error) {
+    console.error('Error updating book quantity:', error);
+    return {
+      success: false,
+      error: `Failed to update quantity: ${error instanceof Error ? error.message : 'Unknown error'}`
     };
   }
 }

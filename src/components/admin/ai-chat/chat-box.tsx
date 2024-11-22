@@ -9,6 +9,10 @@ import { BookCreationState } from '@/lib/state/book-creation-state';
 import { ProgressIndicator } from './ProgressIndicator';
 import { toast } from 'sonner';
 import { Toaster } from 'sonner';
+import { UPLOAD_CONSTANTS } from '@/lib/constants/upload';
+
+// Add type for valid MIME types
+type ValidMimeType = typeof UPLOAD_CONSTANTS.VALID_MIME_TYPES[number];
 
 interface ChatBoxState {
   messages: ChatMessage[];
@@ -80,8 +84,17 @@ function chatReducer(state: ChatBoxState, action: ChatAction): ChatBoxState {
         quantity: action.payload.quantity ?? state.currentBookData?.quantity ?? 0,
         search_tags: action.payload.search_tags ?? state.currentBookData?.search_tags ?? [],
         category_suggestions: action.payload.category_suggestions ?? state.currentBookData?.category_suggestions ?? [],
-        extracted_text: action.payload.extracted_text ?? state.currentBookData?.extracted_text ?? '',
-        confidence_score: action.payload.confidence_score ?? state.currentBookData?.confidence_score ?? 0,
+        extracted_text: action.payload.extracted_text ?? state.currentBookData?.extracted_text ?? {
+          raw_text: '',
+          positions: {
+            title: '',
+            other: []
+          }
+        },
+        confidence_scores: action.payload.confidence_scores ?? state.currentBookData?.confidence_scores ?? {
+          title: 0,
+          language_detection: 0
+        },
         possible_duplicate: action.payload.possible_duplicate ?? state.currentBookData?.possible_duplicate ?? false,
         duplicate_reasons: action.payload.duplicate_reasons ?? state.currentBookData?.duplicate_reasons ?? []
       };
@@ -244,16 +257,14 @@ export function ChatBox() {
 
   const handleImageUpload = async (file: File) => {
     // Validate file size
-    const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
-    if (file.size > MAX_FILE_SIZE) {
-      toast.error('File size must be less than 20MB');
+    if (file.size > UPLOAD_CONSTANTS.MAX_FILE_SIZE) {
+      toast.error(UPLOAD_CONSTANTS.ERROR_MESSAGES.SIZE);
       return;
     }
 
-    // Validate file type
-    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'image/heif'];
-    if (!validTypes.includes(file.type)) {
-      toast.error('Invalid file type. Please upload an image file.');
+    // Validate file type with type assertion
+    if (!UPLOAD_CONSTANTS.VALID_MIME_TYPES.includes(file.type as ValidMimeType)) {
+      toast.error(UPLOAD_CONSTANTS.ERROR_MESSAGES.TYPE);
       return;
     }
 
@@ -263,7 +274,7 @@ export function ChatBox() {
     try {
       const base64Data = await convertToBase64(file);
       
-      dispatch({ type: 'SET_CURRENT_STEP', payload: 'Analyzing image...' });
+      dispatch({ type: 'SET_CURRENT_STEP', payload: 'Analyzing image with AI...' });
       console.log('Starting image analysis...'); // Debug log
       
       const response = await fetch('/api/admin/chat', {
@@ -302,7 +313,7 @@ export function ChatBox() {
 
     } catch (error) {
       console.error('Error uploading image:', error);
-      toast.error('Failed to process image. Please try again.');
+      toast.error(UPLOAD_CONSTANTS.ERROR_MESSAGES.GENERIC);
       dispatch({
         type: 'ADD_MESSAGE',
         payload: {

@@ -1,94 +1,62 @@
 import OpenAI from 'openai';
+import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
+import { SYSTEM_PROMPTS } from './ai/prompts';
+import { BookAnalysis, AssistantResponse } from './ai/types';
+import { AI_CONSTANTS } from './constants/ai';
 
-// Define our own type if needed
-type ChatCompletionMessageParam = {
-  role: 'system' | 'user' | 'assistant';
-  content: string;
-  name?: string;
-};
-
-// Initialize OpenAI with environment variable
-const openai = new OpenAI({
+// Export the OpenAI client instance
+export const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-interface BookAnalysis {
-  title_en: string | null;
-  title_zh: string | null;
-  description_en: string;
-  description_zh: string;
-  extracted_text: string;    
-  confidence_score: number;  
-  possible_duplicate: boolean;
-  duplicate_reasons?: string[];
-  search_tags: string[];
-  category_suggestions: string[];
+// Helper function to format extracted text
+export function formatExtractedText(extractedText: any): string {
+  if (!extractedText) return 'No text extracted';
+  
+  if (typeof extractedText === 'object') {
+    if (extractedText.raw_text) {
+      return extractedText.raw_text;
+    }
+    if (extractedText.positions) {
+      const parts = [];
+      if (extractedText.positions.title) {
+        parts.push(`Title: ${extractedText.positions.title}`);
+      }
+      if (extractedText.positions.other && extractedText.positions.other.length > 0) {
+        parts.push(`Other text: ${extractedText.positions.other.join(', ')}`);
+      }
+      return parts.join('\n');
+    }
+  }
+  
+  return String(extractedText);
 }
 
-interface AssistantResponse {
-  content: string;
-  certainty: 'high' | 'medium' | 'low' | 'unknown';
-  needs_review: boolean;
-  action?: 'UPDATE_TITLE' | 'UPDATE_QUANTITY' | 'CREATE_BOOK';
-  data?: {
-    title?: string;
-    quantity?: number;
-    category?: string;
-  };
-}
-
+// Export the existing functions with the formatting improvement
 export async function processBookImage(
-  imageData: string,
-  existingBooks?: Array<{ title_en: string; title_zh: string }>
+  imageData: string | { displayUrl: string; originalImageData: string }
 ): Promise<BookAnalysis> {
   try {
-    // Ensure the image data is in the correct format
-    let cleanImageData = imageData;
-    
-    // If it's a base64 string without prefix, add it
-    if (!imageData.startsWith('data:image/')) {
-      // Try to detect the image type from the base64 data
-      const buffer = Buffer.from(imageData, 'base64');
-      const type = detectImageType(buffer);
-      cleanImageData = `data:image/${type};base64,${imageData}`;
+    console.log('Processing image data...');
+
+    // Handle both string and object input
+    const imageContent = typeof imageData === 'string' 
+      ? imageData 
+      : imageData.displayUrl;
+
+    // Validate image data
+    if (!imageContent) {
+      throw new Error('No image data provided');
     }
 
+    console.log('Using image URL:', imageContent);
+
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: AI_CONSTANTS.MODEL,
       messages: [
         {
           role: "system",
-          content: `You are an AI assistant for Buddhist book inventory management.
-          Your task is to extract text from book images and provide structured analysis.
-          
-          IMPORTANT GUIDELINES:
-          - Focus on extracting Chinese and English text accurately
-          - Always preserve original Chinese characters exactly as shown
-          - If you see Chinese text, it MUST be included in title_zh
-          - Do not transliterate or translate between languages
-          - If text is unclear, mark as null
-          - Do not make assumptions or generate content
-          - Do not interpret Buddhist concepts
-          
-          VALID CATEGORIES (always return exactly these names):
-          - Pure Land Buddhist Books (净土佛书)
-          - Other Buddhist Books (其他佛书)
-          - Dharma Items (法宝)
-          - Buddha Statues (佛像)
-          
-          Return response in JSON format with the following structure:
-          {
-            "title_en": string | null,
-            "title_zh": string | null,
-            "description_en": string,
-            "description_zh": string,
-            "extracted_text": string,
-            "confidence_score": number,
-            "possible_duplicate": boolean,
-            "duplicate_reasons": string[],
-            "search_tags": string[],
-            "category_suggestions": string[]
-          }`
+          content: SYSTEM_PROMPTS.imageAnalysis
         },
         {
           role: "user",
@@ -100,15 +68,15 @@ export async function processBookImage(
             {
               type: "image_url",
               image_url: {
-                url: cleanImageData,
+                url: imageContent,
                 detail: "high"
               }
             }
           ]
         }
       ],
-      max_tokens: 4096,
-      temperature: 0
+      max_tokens: AI_CONSTANTS.MAX_OUTPUT_TOKENS,
+      temperature: AI_CONSTANTS.TEMPERATURE
     });
 
     if (!response.choices[0].message.content) {
@@ -116,7 +84,6 @@ export async function processBookImage(
     }
 
     const content = response.choices[0].message.content.trim();
-    // Clean the response - remove markdown formatting if present
     const jsonContent = content.replace(/```json\n|\n```/g, '').trim();
 
     try {
@@ -128,7 +95,10 @@ export async function processBookImage(
         description_en: parsedResponse.description_en || '',
         description_zh: parsedResponse.description_zh || '',
         extracted_text: parsedResponse.extracted_text || '',
-        confidence_score: parsedResponse.confidence_score || 0,
+        confidence_scores: parsedResponse.confidence_scores || {
+          title: 0,
+          language_detection: 0
+        },
         possible_duplicate: parsedResponse.possible_duplicate || false,
         duplicate_reasons: parsedResponse.duplicate_reasons || [],
         search_tags: parsedResponse.search_tags || [],
@@ -140,8 +110,11 @@ export async function processBookImage(
     }
 
   } catch (error) {
-    console.error('Error processing book image:', error);
-    throw new Error('Failed to process book image: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    console.error('Error details:', error);
+    if (error instanceof Error) {
+      throw new Error(`Failed to process book image: ${error.message}`);
+    }
+    throw error;
   }
 }
 
@@ -172,7 +145,8 @@ export async function getChatResponse(
     bookData?: any,
     adminAction?: string,
     previousMessages: Array<{role: string, content: string}>
-  }
+  },
+  onProgress?: (chunk: string) => void
 ): Promise<AssistantResponse> {
   try {
     console.log('Getting chat response for:', {
@@ -184,100 +158,11 @@ export async function getChatResponse(
       previousMessagesCount: context.previousMessages.length
     });
 
-    const systemPrompt = `You are an AI assistant for Buddhist book inventory management.
-    
-    Your task is to:
-    1. Understand user intent from natural language
-    2. Extract relevant information
-    3. Return structured response with appropriate action
-
-    IMPORTANT: You must respond with a valid JSON object containing:
-    {
-      "action": "UPDATE_TITLE" | "UPDATE_QUANTITY" | "UPDATE_DESCRIPTION" | "UPDATE_TAGS" | "UPDATE_CATEGORY" | "CREATE_BOOK" | "CONFIRM_QUANTITY",
-      "data": {
-        "title"?: string,
-        "quantity"?: number,
-        "description_en"?: string,
-        "description_zh"?: string,
-        "search_tags"?: string[],
-        "category"?: string,
-        "confirmed"?: boolean
-      },
-      "message": string,
-      "certainty": "high" | "medium" | "low",
-      "needs_review": boolean
-    }
-
-    WORKFLOW:
-    1. For quantity updates:
-       - When user mentions a number or quantity:
-         Return {
-           "action": "CONFIRM_QUANTITY",
-           "data": { "quantity": X },
-           "message": "Would you like to set the quantity to X? Please confirm.",
-           "certainty": "high",
-           "needs_review": true
-         }
-       - Only after user confirms:
-         Return {
-           "action": "UPDATE_QUANTITY",
-           "data": { "quantity": X, "confirmed": true },
-           "message": "Updated quantity to X."
-         }
-
-    2. For book creation:
-       - When quantity is not specified:
-         Return {
-           "action": "CONFIRM_QUANTITY",
-           "data": { "quantity": 0 },
-           "message": "What should be the initial quantity for this book?",
-           "certainty": "high",
-           "needs_review": true
-         }
-       - After quantity confirmation:
-         Return {
-           "action": "CREATE_BOOK",
-           "data": { "confirmed": true, "quantity": X },
-           "message": "Creating book listing with quantity X..."
-         }
-
-    3. For description updates:
-       - When user provides description:
-         Return {
-           "action": "UPDATE_DESCRIPTION",
-           "data": { 
-             "description_en": "English description",
-             "description_zh": "Chinese description"
-           },
-           "message": "Updated description."
-         }
-       - Support both languages independently
-       - Preserve existing description in other language
-
-    4. For tag updates:
-       - When user says "add tag(s) X" or similar:
-         Return {
-           "action": "UPDATE_TAGS",
-           "data": { "search_tags": ["X"] },
-           "message": "Added tag: X. Would you like to add more tags?"
-         }
-
-    5. For category updates:
-       - When user says "category X" or similar:
-         Return {
-           "action": "UPDATE_CATEGORY",
-           "data": { "category": X },
-           "message": "Updated category to X."
-         }
-
-    Always track the current state and maintain all previous updates.
-    Support both English and Chinese input for all operations.`;
-
     // Convert messages to proper OpenAI message format
     const messages: ChatCompletionMessageParam[] = [
       {
         role: "system",
-        content: systemPrompt
+        content: SYSTEM_PROMPTS.chatAssistant
       },
       ...context.previousMessages.map(msg => ({
         role: msg.role as "system" | "user" | "assistant",
@@ -289,32 +174,58 @@ export async function getChatResponse(
       }
     ];
 
-    console.log('Sending to OpenAI:', {
-      messageCount: messages.length,
-      lastUserMessage: message
-    });
+    if (onProgress) {
+      const stream = await openai.chat.completions.create({
+        model: AI_CONSTANTS.MODEL,
+        messages,
+        stream: true,
+        temperature: AI_CONSTANTS.TEMPERATURE,
+        response_format: { type: "json_object" }
+      });
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages,
-      response_format: { type: "json_object" },
-      temperature: 0
-    });
+      let fullResponse = '';
 
-    const result = JSON.parse(response.choices[0].message.content || '{}');
-    console.log('OpenAI response:', {
-      action: result.action,
-      data: result.data,
-      messagePreview: result.message?.slice(0, 100)
-    });
-    
-    return {
-      content: result.message || result.content,
-      action: result.action,
-      data: result.data,
-      certainty: result.certainty || 'high',
-      needs_review: result.needs_review || false
-    };
+      for await (const chunk of stream) {
+        const content = chunk.choices[0]?.delta?.content || '';
+        fullResponse += content;
+        onProgress(content);
+      }
+
+      try {
+        // Parse the complete response
+        const result = JSON.parse(fullResponse);
+        console.log('Parsed streaming response:', result);
+        
+        return {
+          content: result.message || result.content,
+          action: result.action,
+          data: result.data,
+          certainty: result.certainty || 'high',
+          needs_review: result.needs_review || false
+        };
+      } catch (error) {
+        console.error('Error parsing streaming response:', error);
+        throw new Error('Failed to parse streaming response');
+      }
+    } else {
+      const response = await openai.chat.completions.create({
+        model: AI_CONSTANTS.MODEL,
+        messages,
+        response_format: { type: "json_object" },
+        temperature: AI_CONSTANTS.TEMPERATURE
+      });
+
+      const result = JSON.parse(response.choices[0].message.content || '{}');
+      console.log('OpenAI response:', result);
+      
+      return {
+        content: result.message || result.content,
+        action: result.action,
+        data: result.data,
+        certainty: result.certainty || 'high',
+        needs_review: result.needs_review || false
+      };
+    }
 
   } catch (error) {
     console.error('Error getting chat response:', error);
