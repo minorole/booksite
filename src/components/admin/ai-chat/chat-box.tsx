@@ -1,6 +1,6 @@
 "use client"
 
-import { useReducer, useRef, useEffect } from 'react';
+import { useReducer, useRef, useEffect, useMemo } from 'react';
 import { Card } from "@/components/ui/card";
 import { ChatInput } from './ChatInput';
 import { ChatMessages } from './ChatMessages';
@@ -126,9 +126,20 @@ function chatReducer(state: ChatBoxState, action: ChatAction): ChatBoxState {
 }
 
 export function ChatBox() {
+  // Create a stable reference for the state and book data
+  const stateRef = useRef<BookCreationState | null>(null);
+  const bookDataRef = useRef<BookState | null>(null);
+
+  // Initialize state only once
+  if (!stateRef.current) {
+    stateRef.current = new BookCreationState();
+  }
+
   const [state, dispatch] = useReducer(chatReducer, initialState);
   const chatEndRef = useRef<HTMLDivElement>(null);
-  const bookState = new BookCreationState(state.currentBookData);
+
+  // Use the stable state reference
+  const bookState = useMemo(() => stateRef.current, []);
 
   // Auto-scroll effect
   useEffect(() => {
@@ -139,6 +150,12 @@ export function ChatBox() {
       });
     }
   }, [state.messages]);
+
+  // Update book data when we get a response
+  const updateBookData = (data: BookState) => {
+    bookDataRef.current = data;
+    dispatch({ type: 'UPDATE_BOOK_DATA', payload: data });
+  };
 
   const handleSubmit = async (message: string) => {
     if (!message?.trim()) return;
@@ -179,7 +196,7 @@ export function ChatBox() {
         body: JSON.stringify({
           message,
           previousMessages: [...state.messages, userMessage],
-          currentBookData: state.currentBookData
+          currentBookData: bookDataRef.current // Send current book data
         }),
       });
 
@@ -282,7 +299,7 @@ export function ChatBox() {
         body: JSON.stringify({
           image: base64Data,
           previousMessages: state.messages,
-          currentBookData: state.currentBookData
+          currentBookData: bookDataRef.current // Send current book data
         }),
         headers: {
           'Content-Type': 'application/json',
@@ -299,6 +316,11 @@ export function ChatBox() {
 
       if (data.error) throw new Error(data.error);
 
+      // Update book data reference
+      if (data.bookData) {
+        updateBookData(data.bookData);
+      }
+
       dispatch({
         type: 'ADD_MESSAGE',
         payload: {
@@ -307,7 +329,7 @@ export function ChatBox() {
           timestamp: new Date(),
           imageUrl: data.imageUrl,
           images: data.images,
-          bookData: data.analysis,
+          bookData: data.bookData,
         }
       });
 

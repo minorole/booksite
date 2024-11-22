@@ -1,118 +1,111 @@
 import { BookState, ChatMessage, ChatResponseData } from '../ai/types';
 import { CategoryType } from '@prisma/client';
 
-interface BookStateInitialization extends Partial<BookState> {
-  imageUrl?: string;
-}
-
 export interface StateUpdates extends Partial<BookState> {
   imageUrl?: string;
 }
 
 export class BookCreationState {
+  private static instance: BookCreationState | null = null;
   private state: BookState;
   private history: ChatMessage[];
+  private currentImageUrl: string | null = null;
 
-  constructor(initialState?: BookStateInitialization) {
-    // Initialize state with cover image if provided
-    const cover_image = initialState?.cover_image || initialState?.imageUrl || null;
-    
+  private constructor(initialState?: Partial<BookState>) {
     this.state = {
-      id: undefined,
-      title_en: null,
-      title_zh: null,
-      description_en: '',
-      description_zh: '',
-      cover_image,
-      quantity: 0,
-      search_tags: [],
-      category_suggestions: [],
-      extracted_text: {
+      id: initialState?.id,
+      title_en: initialState?.title_en || null,
+      title_zh: initialState?.title_zh || null,
+      description_en: initialState?.description_en || '',
+      description_zh: initialState?.description_zh || '',
+      cover_image: initialState?.cover_image || null,
+      quantity: initialState?.quantity || 0,
+      search_tags: initialState?.search_tags || [],
+      category_suggestions: initialState?.category_suggestions || [],
+      extracted_text: initialState?.extracted_text || {
         raw_text: '',
-        positions: {
-          title: '',
-          other: []
-        }
+        positions: { title: '', other: [] }
       },
-      confidence_scores: {
+      confidence_scores: initialState?.confidence_scores || {
         title: 0,
         language_detection: 0
       },
-      possible_duplicate: false,
-      duplicate_reasons: [],
-      ...initialState
+      possible_duplicate: initialState?.possible_duplicate || false,
+      duplicate_reasons: initialState?.duplicate_reasons || [],
+      category: initialState?.category
     };
     this.history = [];
-    
-    console.log('BookCreationState initialized:', {
-      cover_image: this.state.cover_image,
-      title_zh: this.state.title_zh,
-      title_en: this.state.title_en
+  }
+
+  static getInstance(initialState?: Partial<BookState>): BookCreationState {
+    console.log('BookCreationState.getInstance called with:', {
+      hasInstance: !!BookCreationState.instance,
+      initialState: initialState ? {
+        id: initialState.id,
+        title_zh: initialState.title_zh,
+        cover_image: initialState.cover_image
+      } : null
+    });
+
+    if (!BookCreationState.instance) {
+      BookCreationState.instance = new BookCreationState(initialState);
+    }
+    return BookCreationState.instance;
+  }
+
+  setCurrentImage(url: string) {
+    console.log('Setting current image:', { url });
+    this.currentImageUrl = url;
+    this.updateState({
+      cover_image: url
     });
   }
 
+  getCurrentImage(): string | null {
+    return this.currentImageUrl;
+  }
+
   updateState(updates: StateUpdates | ChatResponseData): BookState {
+    console.log('Updating state with:', {
+      currentId: this.state.id,
+      updates: {
+        id: 'id' in updates ? updates.id : undefined,
+        title_zh: 'title_zh' in updates ? updates.title_zh : undefined,
+        cover_image: 'cover_image' in updates ? updates.cover_image : undefined,
+        imageUrl: 'imageUrl' in updates ? updates.imageUrl : undefined
+      }
+    });
+
     const validUpdates: Partial<BookState> = {};
-    const currentState = this.getState();
-
-    // Only reset state if this is a new image upload
-    if ('cover_image' in updates || 'imageUrl' in updates) {
-      const newImage = (updates as StateUpdates).cover_image || (updates as StateUpdates).imageUrl;
-      if (newImage && newImage !== currentState.cover_image) {
-        this.reset();
-        validUpdates.cover_image = newImage;
-        console.log('New image uploaded, state reset with new cover_image:', newImage);
-      }
+    
+    // Keep existing ID if present
+    if ('id' in updates) {
+      validUpdates.id = updates.id;
     }
 
-    // Update fields while preserving existing data
-    if ('quantity' in updates) {
-      validUpdates.quantity = updates.quantity as number;
-    }
-    if ('title_en' in updates) {
-      validUpdates.title_en = updates.title_en as string;
-    }
-    if ('title_zh' in updates) {
-      validUpdates.title_zh = updates.title_zh as string;
-    }
-    if ('description_en' in updates) {
-      validUpdates.description_en = updates.description_en as string;
-    }
-    if ('description_zh' in updates) {
-      validUpdates.description_zh = updates.description_zh as string;
+    // Handle image updates
+    if ('cover_image' in updates && updates.cover_image !== undefined) {
+      validUpdates.cover_image = updates.cover_image;
+      this.currentImageUrl = updates.cover_image;
+    } else if ('imageUrl' in updates && updates.imageUrl) {
+      validUpdates.cover_image = updates.imageUrl;
+      this.currentImageUrl = updates.imageUrl;
     }
 
-    // Handle extracted text
-    if ('extracted_text' in updates) {
-      if (typeof updates.extracted_text === 'string') {
-        validUpdates.extracted_text = {
-          raw_text: updates.extracted_text,
-          positions: { title: '', other: [] }
-        };
-      } else if (updates.extracted_text && typeof updates.extracted_text === 'object') {
-        validUpdates.extracted_text = updates.extracted_text;
-      }
-    }
+    // Handle other fields
+    if ('title_en' in updates) validUpdates.title_en = updates.title_en;
+    if ('title_zh' in updates) validUpdates.title_zh = updates.title_zh;
+    if ('description_en' in updates) validUpdates.description_en = updates.description_en;
+    if ('description_zh' in updates) validUpdates.description_zh = updates.description_zh;
+    if ('quantity' in updates) validUpdates.quantity = updates.quantity;
+    if ('search_tags' in updates) validUpdates.search_tags = updates.search_tags;
+    if ('category_suggestions' in updates) validUpdates.category_suggestions = updates.category_suggestions;
+    if ('extracted_text' in updates) validUpdates.extracted_text = updates.extracted_text;
+    if ('confidence_scores' in updates) validUpdates.confidence_scores = updates.confidence_scores;
+    if ('possible_duplicate' in updates) validUpdates.possible_duplicate = updates.possible_duplicate;
+    if ('duplicate_reasons' in updates) validUpdates.duplicate_reasons = updates.duplicate_reasons;
 
-    // Handle confidence scores
-    if ('confidence_scores' in updates) {
-      validUpdates.confidence_scores = updates.confidence_scores;
-    }
-
-    // Handle search tags with deduplication
-    if ('search_tags' in updates && Array.isArray(updates.search_tags)) {
-      validUpdates.search_tags = [...new Set([
-        ...(this.state.search_tags || []),
-        ...updates.search_tags
-      ])];
-    }
-
-    // Handle category suggestions
-    if ('category_suggestions' in updates && Array.isArray(updates.category_suggestions)) {
-      validUpdates.category_suggestions = updates.category_suggestions;
-    }
-
-    // Handle category
+    // Handle category updates
     if ('category' in updates && updates.category) {
       if (typeof updates.category === 'string') {
         validUpdates.category = {
@@ -126,42 +119,43 @@ export class BookCreationState {
       }
     }
 
-    // Update state while preserving existing data
     this.state = {
-      ...currentState, // Keep existing data
-      ...validUpdates, // Apply updates
-      cover_image: validUpdates.cover_image || currentState.cover_image // Ensure cover_image is preserved
+      ...this.state,
+      ...validUpdates
     };
 
-    console.log('State updated:', {
-      cover_image: this.state.cover_image,
+    console.log('State updated to:', {
+      id: this.state.id,
       title_zh: this.state.title_zh,
-      title_en: this.state.title_en,
-      quantity: this.state.quantity
+      cover_image: this.state.cover_image,
+      currentImage: this.currentImageUrl
     });
 
     return { ...this.state };
-  }
-
-  addMessage(message: ChatMessage) {
-    this.history.push(message);
-    
-    if (message.bookData) {
-      this.updateState(message.bookData);
-    }
   }
 
   getState(): BookState {
     return { ...this.state };
   }
 
+  addMessage(message: ChatMessage) {
+    this.history.push(message);
+  }
+
   getHistory(): ChatMessage[] {
     return [...this.history];
   }
 
-  reset() {
+  reset(preserveId: boolean = true) {
+    console.log('Resetting state:', {
+      preserveId,
+      currentId: this.state.id
+    });
+    
+    const currentId = preserveId ? this.state.id : undefined;
+    
     this.state = {
-      id: undefined,
+      id: currentId,
       title_en: null,
       title_zh: null,
       description_en: '',
@@ -185,5 +179,15 @@ export class BookCreationState {
       duplicate_reasons: []
     };
     this.history = [];
+    this.currentImageUrl = null;
+
+    console.log('State reset complete:', {
+      newId: this.state.id,
+      hasImage: !!this.currentImageUrl
+    });
+  }
+
+  hasExistingBook(): boolean {
+    return Boolean(this.state.id);
   }
 } 

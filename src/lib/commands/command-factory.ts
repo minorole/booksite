@@ -9,6 +9,17 @@ export class CommandFactory {
   static createCommand(action: ChatAPIAction, state: BookCreationState): BaseCommand {
     console.log('Creating command for action:', action);
     
+    if (!state.getState().id && 
+        (action === ChatAPIAction.UPDATE_BOOK || 
+         action === ChatAPIAction.UPDATE_QUANTITY ||
+         action === ChatAPIAction.UPDATE_TITLE ||
+         action === ChatAPIAction.UPDATE_DESCRIPTION ||
+         action === ChatAPIAction.UPDATE_TAGS ||
+         action === ChatAPIAction.UPDATE_CATEGORY)) {
+      console.log('Converting UPDATE to CREATE due to missing ID');
+      return new CreateBookCommand(state);
+    }
+    
     switch (action) {
       case ChatAPIAction.CREATE_BOOK:
         return new CreateBookCommand(state);

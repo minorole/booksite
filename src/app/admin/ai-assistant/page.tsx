@@ -1,10 +1,12 @@
 import { ChatBox } from "@/components/admin/ai-chat/chat-box"
+import { ScrollArea } from "@/components/ui/scroll-area"
 
-export default function AIAssistant() {
+export default function AIAssistantPage() {
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-6">AI Assistant</h1>
-      <ChatBox />
-    </div>
+    <ScrollArea className="h-[calc(100vh-8rem)]">
+      <div className="w-full max-w-5xl mx-auto">
+        <ChatBox />
+      </div>
+    </ScrollArea>
   )
 } 

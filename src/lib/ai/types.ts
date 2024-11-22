@@ -99,4 +99,9 @@ export interface ChatResponseData {
   bookId?: string;
   updatedBook?: BookState;
   confirmed?: boolean;
+}
+
+export interface StateUpdates extends Partial<BookState> {
+  id?: string;
+  imageUrl?: string;
 } 

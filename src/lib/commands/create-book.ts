@@ -39,7 +39,7 @@ export class CreateBookCommand extends BaseCommand {
       category: {
         connect: { id: category.id }
       },
-      search_tags: currentState.search_tags || [],
+      search_tags: data.search_tags || currentState.search_tags || [],
       ai_metadata: {
         extracted_text: currentState.extracted_text,
         confidence_scores: currentState.confidence_scores,
@@ -56,6 +56,10 @@ export class CreateBookCommand extends BaseCommand {
       }
     });
 
-    return this.state.updateState(book);
+    // Make sure to update state with the new book ID
+    return this.state.updateState({
+      ...book,
+      id: book.id // Explicitly set the ID
+    });
   }
 } 

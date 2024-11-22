@@ -10,20 +10,16 @@ export function AdminNavbar() {
 
   const navItems = [
     {
-      href: "/admin",
-      label: "Dashboard"
-    },
-    {
-      href: "/admin/books",
-      label: "Book Listings"
-    },
-    {
       href: "/admin/ai-assistant",
       label: "AI Assistant"
     },
     {
       href: "/admin/orders",
       label: "Orders"
+    },
+    {
+      href: "/admin/books",
+      label: "Book Listings"
     }
   ]
 

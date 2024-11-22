@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
-import { createBookListing, findPossibleDuplicates } from '@/lib/services/book-service';
+import { createBookListing } from '@/lib/services/book-service';
+import { findPossibleDuplicates } from '@/lib/services/duplicate-detection';
 
 export async function GET(request: Request) {
   try {

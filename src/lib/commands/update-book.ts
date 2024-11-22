@@ -29,32 +29,19 @@ export class UpdateBookCommand extends BaseCommand {
     }
 
     // Prepare update data
-    const updateData: Prisma.BookUpdateInput = {};
-
-    // Handle quantity update with validation
-    if (typeof data.quantity === 'number') {
-      if (data.quantity < 0) {
-        throw new Error('Quantity cannot be negative');
-      }
-      updateData.quantity = data.quantity;
-      console.log(`Updating quantity from ${existingBook.quantity} to ${data.quantity}`);
-    }
-
-    // Handle title updates
-    if (data.title_en !== undefined) updateData.title_en = data.title_en;
-    if (data.title_zh !== undefined) updateData.title_zh = data.title_zh;
-
-    // Handle description updates
-    if (data.description_en !== undefined) updateData.description_en = data.description_en;
-    if (data.description_zh !== undefined) updateData.description_zh = data.description_zh;
-
-    // Handle tag updates - merge with existing tags
-    if (data.search_tags && Array.isArray(data.search_tags)) {
-      const existingTags = existingBook.search_tags || [];
-      updateData.search_tags = {
-        set: [...new Set([...existingTags, ...data.search_tags])]
-      };
-    }
+    const updateData: Prisma.BookUpdateInput = {
+      // Only include title_en if it's a non-null string
+      ...(typeof data.title_en === 'string' && { title_en: data.title_en }),
+      ...(data.title_zh && { title_zh: data.title_zh }),
+      ...(typeof data.description_en === 'string' && { description_en: data.description_en }),
+      ...(typeof data.description_zh === 'string' && { description_zh: data.description_zh }),
+      ...(typeof data.quantity === 'number' && { quantity: data.quantity }),
+      ...(Array.isArray(data.search_tags) && {
+        search_tags: {
+          set: data.search_tags
+        }
+      })
+    };
 
     // Handle category update
     if (data.category) {
