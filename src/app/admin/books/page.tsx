@@ -1,4 +1,4 @@
-import { BookManagement } from "@/components/admin/book-management"
+import { BookManagement } from "@/components/admin/manual/book-management"
 
 export default function BooksPage() {
   return (

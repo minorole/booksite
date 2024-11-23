@@ -10,7 +10,7 @@ export function AdminNavbar() {
 
   const navItems = [
     {
-      href: "/admin/ai-assistant",
+      href: "/admin/ai-chat",
       label: "AI Assistant"
     },
     {

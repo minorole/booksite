@@ -25,7 +25,7 @@ export function Navbar() {
               </>
             )}
             {isAdmin && (
-              <Link href="/admin" className="text-blue-600">
+              <Link href="/admin/ai-chat" className="text-blue-600">
                 Admin
               </Link>
             )}
