@@ -14,12 +14,12 @@ export function AdminNavbar() {
       label: "AI Assistant"
     },
     {
-      href: "/admin/orders",
-      label: "Orders"
+      href: "/admin/manual",
+      label: "Listing Management"
     },
     {
-      href: "/admin/books",
-      label: "Book Listings"
+      href: "/admin/orders",
+      label: "Orders"
     }
   ]
 

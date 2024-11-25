@@ -31,8 +31,8 @@ model User {
 
 model Book {
   id                    String          @id @default(uuid())
-  title_zh             String          // Chinese title is required
-  title_en             String?         // English title can be null initially
+  title_zh             String          // Chinese title 
+  title_en             String?         // English title 
   description_zh       String
   description_en       String?
   cover_image          String?
@@ -196,15 +196,17 @@ model AdminChatSession {
   created_at           DateTime      @default(now())
   last_activity        DateTime      @default(now())
   context              Json?
-  current_books        String[]
-  current_orders       String[]
+  current_books        String[]      // For tracking books in current conversation
+  current_orders       String[]      // For tracking orders in current conversation
   session_type         SessionType
-  last_command         Json?
-  conversation_history Json?
-  tag_operations      Json?
-  confidence_threshold Float?
-  auto_approve_tags   Boolean       @default(false)
+  last_command         Json?         // Store last executed command
+  conversation_history Json?         // Full conversation history
+  tag_operations      Json?         // Track tag-related operations
+  confidence_threshold Float?        // For LLM decision confidence
+  auto_approve_tags   Boolean       @default(false)  // For automatic tag approval
   active              Boolean       @default(true)
+  prompt_version      Int?          // Add this field to track prompt versions
+  llm_settings        Json?         // Add this field for custom LLM settings
 
   @@index([admin_email])
   @@index([session_type])
@@ -286,7 +288,8 @@ model SystemPrompt {
   created_at      DateTime  @default(now())
   updated_at      DateTime  @updatedAt
   created_by      String?
-  
+  performance_metrics Json? // Add this field to track prompt performance
+
   @@index([name])
   @@index([use_case])
   @@index([version])
@@ -332,6 +335,14 @@ enum AdminAction {
   OVERRIDE_MONTHLY_LIMIT
   UPDATE_SYSTEM_SETTINGS
   UPDATE_PROMPTS
+  CHAT_MESSAGE
+  LLM_REQUEST
+  LLM_RESPONSE
+  FUNCTION_CALL
+  FUNCTION_SUCCESS
+  CONFIDENCE_CHECK_FAILED
+  CHAT_COMPLETE
+  LLM_RETRY
 }
 
 enum AnalysisType {

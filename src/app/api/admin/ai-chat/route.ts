@@ -1,107 +1,128 @@
+import { openai } from '@/lib/openai';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
-import { LLMManager } from '@/lib/admin/ai/llm-manager';
-import { ContextBuilder } from '@/lib/admin/ai/context-builder';
-import { adminLogService } from '@/lib/admin/services/admin-log-service';
-import { AppError } from '@/lib/admin/utils/error-handler';
-import { prisma } from '@/lib/prisma';
-import { bookService } from '@/lib/admin/services/book-service';
-import type { ChatMessage, BookAnalysis } from '@/types/admin/chat';
-
-// Add detailed logging
-const log = {
-  api: (message: string, data?: any) => {
-    console.log(`🌐 [API] ${message}`, data ? JSON.stringify(data, null, 2) : '')
-  },
-  error: (message: string, error: any) => {
-    console.error(`❌ [API Error] ${message}`, error)
-  },
-  llm: (message: string, data?: any) => {
-    console.log(`🤖 [LLM] ${message}`, data ? JSON.stringify(data, null, 2) : '')
-  }
-}
+import { AI_MODELS, type Message, type MessageContent, convertToOpenAIMessage } from '@/lib/admin/constants';
+import { adminTools } from '@/lib/admin/function-definitions';
+import { createBook, updateBook, updateOrderStatus, searchBooks } from '@/lib/admin/function-handlers';
+import { ADMIN_SYSTEM_PROMPT } from '@/lib/admin/system-prompts';
+import type OpenAI from 'openai';
+import type { User } from '@supabase/supabase-js';
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json()
-    log.api('Received request:', body)
-
-    // Initialize LLM manager
-    const llmManager = new LLMManager(undefined, 'INVENTORY_MANAGEMENT')
-
-    // Handle image analysis
-    if (body.type === 'image_analysis' && body.imageUrl) {
-      log.api('Processing image analysis:', body.imageUrl)
-      
-      try {
-        const analysis = await llmManager.processImage(body.imageUrl, body.previousMessages)
-        
-        return NextResponse.json({
-          content: 'I analyzed the book cover. Here are my findings. Would you like to modify any details before creating the book listing?',
-          timestamp: new Date(),
-          analysis,
-          metadata: {
-            confidence_scores: analysis.confidence_scores,
-            analysis_type: 'IMAGE_ANALYSIS'
-          }
-        })
-      } catch (error) {
-        log.error('Image analysis failed:', error)
-        return NextResponse.json({ 
-          error: 'Failed to analyze image',
-          details: error instanceof Error ? error.message : 'Unknown error'
-        }, { 
-          status: 500 
-        })
-      }
-    }
-
-    // Handle book creation
-    if (body.message?.toLowerCase().includes('create') || body.action === 'CREATE_BOOK') {
-      try {
-        // Ask LLM for final book data based on conversation
-        const response = await llmManager.processMessage(
-          "Based on our discussion, what is the final book data we should use to create the listing? Include all modifications we discussed.",
-          body.previousMessages
-        )
-
-        // Create book using LLM's final data
-        const book = await bookService.createBook(response.bookData)
-
-        return NextResponse.json({
-          success: true,
-          book,
-          content: "Book listing created successfully! Would you like to make any other changes?",
-          timestamp: new Date()
-        })
-
-      } catch (error) {
-        log.error('Book creation failed:', error)
-        return NextResponse.json({ 
-          error: 'Failed to create book',
-          details: error instanceof Error ? error.message : 'Unknown error'
-        }, { 
-          status: 500 
-        })
-      }
-    }
-
-    // Regular message processing
-    const response = await llmManager.processMessage(body.message, body.previousMessages)
+    // Verify admin access
+    const supabase = createRouteHandlerClient({ cookies });
+    const { data: { user } } = await supabase.auth.getUser();
     
-    return NextResponse.json({
-      content: response.content,
-      timestamp: new Date(),
-      metadata: response.metadata,
-      language: response.language
-    })
+    if (!user || !['ADMIN', 'SUPER_ADMIN'].includes(user.user_metadata?.role)) {
+      console.log('❌ Unauthorized access attempt:', {
+        email: user?.email,
+        role: user?.user_metadata?.role
+      });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-  } catch (error) {
-    log.error('Request failed:', error)
+    const { messages }: { messages: Message[] } = await request.json();
+
+    // Add system prompt if not present
+    if (!messages.find((m: Message) => m.role === 'system')) {
+      messages.unshift({
+        role: 'system',
+        content: ADMIN_SYSTEM_PROMPT
+      });
+    }
+
+    console.log('🔄 Sending request to OpenAI...');
+    
+    const completion = await openai.chat.completions.create({
+      model: AI_MODELS.ADMIN,
+      messages: messages.map(convertToOpenAIMessage),
+      tools: adminTools,
+      tool_choice: "auto"
+    });
+
+    const responseMessage = completion.choices[0].message;
+    
+    // Handle function calls
+    if (responseMessage.tool_calls) {
+      console.log('🛠️ Function call detected:', {
+        function: responseMessage.tool_calls[0].function.name,
+        timestamp: new Date().toISOString()
+      });
+
+      try {
+        const toolCall = responseMessage.tool_calls[0];
+        const functionName = toolCall.function.name;
+        const args = JSON.parse(toolCall.function.arguments);
+
+        // Log the function call details
+        console.log('📝 Function details:', {
+          name: functionName,
+          args: args
+        });
+        
+        let functionResult;
+        switch (functionName) {
+          case 'search_books':
+            functionResult = await searchBooks(args);
+            break;
+          case 'create_book':
+            functionResult = await createBook(args, user.email!);
+            break;
+          case 'update_book':
+            functionResult = await updateBook(args, user.email!);
+            break;
+          default:
+            throw new Error(`Unknown function: ${functionName}`);
+        }
+
+        // Add results to conversation
+        messages.push({
+          role: 'assistant',
+          content: responseMessage.content || '',
+          tool_call_id: toolCall.id
+        });
+        
+        messages.push({
+          role: 'tool',
+          content: JSON.stringify(functionResult),
+          tool_call_id: toolCall.id,
+          name: functionName
+        });
+
+        // Let LLM process the result
+        const finalResponse = await openai.chat.completions.create({
+          model: AI_MODELS.ADMIN,
+          messages: messages.map(convertToOpenAIMessage),
+          tools: adminTools,
+          tool_choice: "auto"
+        });
+
+        console.log('✅ Operation completed');
+        return NextResponse.json({ 
+          message: finalResponse.choices[0].message 
+        });
+
+      } catch (error) {
+        console.error('❌ Function execution failed:', error);
+        return NextResponse.json({ 
+          message: {
+            role: 'assistant',
+            content: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`
+          }
+        });
+      }
+    }
+
     return NextResponse.json({ 
-      error: 'An unexpected error occurred',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { 
-      status: 500 
-    })
+      message: responseMessage 
+    });
+  } catch (error) {
+    console.error('❌ Error in AI chat:', error);
+    return NextResponse.json(
+      { error: 'Failed to process request' },
+      { status: 500 }
+    );
   }
 } 

@@ -16,6 +16,11 @@ const nextConfig = {
         hostname: 'res.cloudinary.com',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 's3.amazonaws.com',
+        pathname: '/moonstorage-yozma-tech/**',
+      }
     ],
   },
 };

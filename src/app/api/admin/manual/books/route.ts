@@ -1,70 +1,98 @@
-import { NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
-import { prisma } from '@/lib/prisma';
-import { AdminAction } from '@prisma/client';
-import type { BookData } from '@/types/admin/chat';
+import { prisma } from '@/lib/prisma'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
+import { NextResponse } from 'next/server'
+import { type AdminAction } from '@prisma/client'
 
-// Transform database book to BookData
-const transformToBookData = (book: any): BookData => ({
-  id: book.id,
-  title_zh: book.title_zh,
-  title_en: book.title_en,
-  description_zh: book.description_zh,
-  description_en: book.description_en,
-  cover_image: book.cover_image,
-  quantity: book.quantity,
-  category: {
-    id: book.category.id,
-    type: book.category.type,
-    name_zh: book.category.name_zh,
-    name_en: book.category.name_en
-  },
-  search_tags: book.search_tags || [],
-  auto_tags: book.auto_tags || [],
-  pending_tags: book.pending_tags || [],
-  rejected_tags: book.rejected_tags || [],
-  ai_metadata: book.ai_metadata || null,
-  image_analysis_data: book.image_analysis_data || null,
-  discontinued: book.discontinued || false,
-  discontinued_at: book.discontinued_at || undefined,
-  discontinued_by: book.discontinued_by || undefined,
-  discontinued_reason: book.discontinued_reason || undefined,
-  last_quantity_update: book.last_quantity_update || undefined,
-  created_at: book.created_at,
-  updated_at: book.updated_at
-});
-
-export async function GET(request: Request) {
+export async function GET() {
   try {
-    const cookieStore = cookies();
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+    // Verify admin access
+    const supabase = createRouteHandlerClient({ cookies })
+    const { data: { user } } = await supabase.auth.getUser()
     
-    // Check authentication and admin role
-    const { data: { session }, error: authError } = await supabase.auth.getSession();
-    if (authError || !session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!user || !['ADMIN', 'SUPER_ADMIN'].includes(user.user_metadata?.role)) {
+      console.log('❌ Unauthorized access attempt:', {
+        email: user?.email,
+        role: user?.user_metadata?.role,
+        timestamp: new Date().toISOString()
+      })
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Fetch books with categories
     const books = await prisma.book.findMany({
       include: {
         category: true
       },
       orderBy: {
-        created_at: 'desc'
+        updated_at: 'desc'
       }
-    });
+    })
 
-    // Transform to BookData type
-    const transformedBooks = books.map(transformToBookData);
-
-    return NextResponse.json({ books: transformedBooks });
+    return NextResponse.json({ books })
   } catch (error) {
-    console.error('Error fetching books:', error);
-    return NextResponse.json({ 
-      error: 'Failed to fetch books',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+    console.error('❌ Failed to fetch books:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch books' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    // Verify admin access
+    const supabase = createRouteHandlerClient({ cookies })
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user || !['ADMIN', 'SUPER_ADMIN'].includes(user.user_metadata?.role)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const data = await request.json()
+
+    // Validate required fields
+    if (!data.title_zh && !data.title_en) {
+      return NextResponse.json(
+        { error: 'At least one title (Chinese or English) must be provided' },
+        { status: 400 }
+      )
+    }
+
+    const book = await prisma.book.create({
+      data: {
+        title_zh: data.title_zh || '',
+        title_en: data.title_en,
+        description_zh: data.description_zh || '',
+        description_en: data.description_en,
+        category: {
+          connect: {
+            type: data.category_type
+          }
+        },
+        quantity: data.quantity,
+        search_tags: data.tags,
+        content_summary_zh: '',
+        content_summary_en: null
+      }
+    })
+
+    // Log the action
+    await prisma.adminLog.create({
+      data: {
+        action: 'CREATE_BOOK' as AdminAction,
+        book_id: book.id,
+        book_title: data.title_en || data.title_zh,
+        admin_email: user.email!,
+        metadata: data
+      }
+    })
+
+    return NextResponse.json({ book })
+  } catch (error) {
+    console.error('❌ Failed to create book:', error)
+    return NextResponse.json(
+      { error: 'Failed to create book' },
+      { status: 500 }
+    )
   }
 } 

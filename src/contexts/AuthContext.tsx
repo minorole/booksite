@@ -12,7 +12,7 @@ type AuthContextType = {
   isSuperAdmin: boolean
 }
 
-const AuthContext = createContext<AuthContextType>({
+export const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
   isAdmin: false,
@@ -20,69 +20,83 @@ const AuthContext = createContext<AuthContextType>({
 })
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [isAdmin, setIsAdmin] = useState(false)
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false)
+  const [authState, setAuthState] = useState<AuthContextType>({
+    user: null,
+    loading: true,
+    isAdmin: false,
+    isSuperAdmin: false,
+  })
   const router = useRouter()
   const supabase = createClient()
 
   useEffect(() => {
-    const initializeAuth = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession()
-        
-        if (session?.user) {
-          setUser(session.user)
-          const role = session.user.user_metadata?.role
-          setIsAdmin(role === 'ADMIN' || role === 'SUPER_ADMIN')
-          setIsSuperAdmin(role === 'SUPER_ADMIN')
-        }
-      } catch (error) {
-        console.error('Auth initialization error:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    initializeAuth()
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_OUT') {
-        setUser(null)
-        setIsAdmin(false)
-        setIsSuperAdmin(false)
-        router.refresh()
-        return
-      }
-
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
-        setUser(session.user)
-        const role = session.user.user_metadata?.role
-        setIsAdmin(role === 'ADMIN' || role === 'SUPER_ADMIN')
-        setIsSuperAdmin(role === 'SUPER_ADMIN')
-        router.refresh()
+        const isAdmin = session.user.user_metadata?.role === 'ADMIN';
+        const isSuperAdmin = session.user.user_metadata?.role === 'SUPER_ADMIN';
+        setAuthState({
+          user: session.user,
+          isAdmin: isAdmin || isSuperAdmin, // Ensure SUPER_ADMIN also has admin privileges
+          isSuperAdmin,
+          loading: false,
+        });
+      } else {
+        setAuthState(prev => ({ ...prev, loading: false }));
       }
-    })
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'SIGNED_OUT') {
+          setAuthState({
+            user: null,
+            isAdmin: false,
+            isSuperAdmin: false,
+            loading: false,
+          });
+          router.refresh();
+          return;
+        }
+
+        if (session?.user) {
+          const isAdmin = session.user.user_metadata?.role === 'ADMIN';
+          const isSuperAdmin = session.user.user_metadata?.role === 'SUPER_ADMIN';
+          setAuthState({
+            user: session.user,
+            isAdmin: isAdmin || isSuperAdmin, // Ensure SUPER_ADMIN also has admin privileges
+            isSuperAdmin,
+            loading: false,
+          });
+          router.refresh();
+        } else {
+          setAuthState({
+            user: null,
+            isAdmin: false,
+            isSuperAdmin: false,
+            loading: false,
+          });
+        }
+      }
+    );
 
     return () => {
-      subscription.unsubscribe()
-    }
-  }, [supabase, router])
+      subscription.unsubscribe();
+    };
+  }, [supabase, router]);
 
   return (
-    <AuthContext.Provider value={{ user, loading, isAdmin, isSuperAdmin }}>
+    <AuthContext.Provider value={authState}>
       {children}
     </AuthContext.Provider>
-  )
+  );
 }
 
 export const useAuth = () => {
-  const context = useContext(AuthContext)
+  const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider')
+    throw new Error('useAuth must be used within an AuthProvider');
   }
-  return context
+  return context;
 }
