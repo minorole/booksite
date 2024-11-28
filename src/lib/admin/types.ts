@@ -88,9 +88,33 @@ export type AdminOperationResult = OperationResult<{
   search?: {
     found: boolean
     books: BookBase[]
-    similarity_scores?: Record<string, number>  // For similar book detection
   }
+  duplicate_detection?: DuplicateDetectionResult
   vision_analysis?: VisionAnalysisResult
+  analysis_result?: {
+    current_book: {
+      title_zh: string
+      title_en?: string
+      author_zh?: string
+      author_en?: string
+      publisher_zh?: string
+      publisher_en?: string
+      category_type: CategoryType
+      tags: string[]
+    }
+    matches: Array<{
+      book: BookBase
+      visual_similarity: {
+        layout: number
+        content: number
+      }
+      differences: {
+        publisher?: boolean
+        edition?: boolean
+        layout?: boolean
+      }
+    }>
+  }
 }>
 
 /**
@@ -243,4 +267,27 @@ export interface LLMContext {
   current_orders?: string[]
   language_preference?: StrictLanguagePreference
   confidence_threshold?: number
+}
+
+export interface DuplicateDetectionResult {
+  matches: Array<{
+    book_id: string
+    similarity_score: number
+    differences: {
+      publisher?: boolean
+      edition?: boolean
+      year?: boolean
+      layout?: boolean
+    }
+    visual_analysis: {
+      layout_similarity: number
+      content_similarity: number
+      confidence: number
+    }
+  }>
+  analysis: {
+    has_duplicates: boolean
+    confidence: number
+    recommendation: 'create_new' | 'update_existing' | 'needs_review'
+  }
 } 

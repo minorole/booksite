@@ -20,7 +20,6 @@ import {
 } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
 import { Edit2, Trash2, Plus } from "lucide-react"
-import { CATEGORY_TYPE } from "@/lib/admin/constants"
 import { BookDialog } from "./book-dialog"
 import type { Book, Category } from "@prisma/client"
 import Image from "next/image"
@@ -29,10 +28,19 @@ import {
   DialogContent,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { CategoryType } from '@prisma/client'
 
 type BookWithCategory = Book & {
   category: Category
 }
+
+// Add the category display mapping
+const CATEGORY_LABELS: Record<CategoryType, string> = {
+  PURE_LAND_BOOKS: "净土佛书",
+  OTHER_BOOKS: "其他佛书",
+  DHARMA_ITEMS: "法宝",
+  BUDDHA_STATUES: "佛像"
+} as const
 
 export function BookList() {
   const [books, setBooks] = useState<BookWithCategory[]>([])
@@ -126,7 +134,7 @@ export function BookList() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="ALL">All Categories</SelectItem>
-            {Object.entries(CATEGORY_TYPE).map(([key, value]) => (
+            {Object.entries(CATEGORY_LABELS).map(([key, value]) => (
               <SelectItem key={key} value={key}>
                 {value}
               </SelectItem>
@@ -187,7 +195,7 @@ export function BookList() {
                 </TableCell>
                 <TableCell>{book.title_zh}</TableCell>
                 <TableCell>{book.title_en}</TableCell>
-                <TableCell>{CATEGORY_TYPE[book.category.type as keyof typeof CATEGORY_TYPE]}</TableCell>
+                <TableCell>{CATEGORY_LABELS[book.category.type]}</TableCell>
                 <TableCell>{book.quantity}</TableCell>
                 <TableCell>{book.search_tags.join(", ")}</TableCell>
                 <TableCell>

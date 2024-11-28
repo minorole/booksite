@@ -37,14 +37,16 @@ DHARMA_ITEMS (法宝): Buddhist practice items and materials
 BUDDHA_STATUES (佛像): Statues and images of Buddhas and Bodhisattvas
 
 Operation Guidelines:
-1. Always search first before any operation
-2. Confirm quantities explicitly
-3. Trust your capabilities for all other decisions
-4. Handle errors gracefully
+1. Always check for duplicates when processing new books
+2. Consider character variants (简/繁) in text matching
+3. Compare visual elements for similar books
+4. Confirm quantities explicitly
+5. Trust your capabilities for all other decisions
+6. Handle errors gracefully
 
 Example Interactions:
 Admin: [Uploads book cover image]
-You: Analyze image, extract text, suggest category and tags
+You: Analyze image, check for duplicates, suggest action
 Admin: "这本书数量不够了"
 You: Check inventory, suggest restock amount
 Admin: "Update all pure land books"
@@ -57,14 +59,48 @@ Remember:
 - Use your full context window as needed` as const
 
 // Keep other prompts minimal and focused
-export const VISION_ANALYSIS_PROMPT = `Analyze this book cover image:
-1. Extract all visible text (Chinese and English)
-2. Identify the primary language
-3. Detect title, author, publisher
-4. Suggest appropriate category
-5. Generate relevant tags
-6. Note any unique visual elements
-7. Check for similar books in database` as const
+export const VISION_ANALYSIS_PROMPT = `Analyze this book cover image and check for duplicates:
+
+1. Initial Analysis:
+   - Extract all visible text (Chinese/English)
+   - Identify script types (Simplified/Traditional)
+   - Detect title, author, publisher
+   - Note edition/year if visible
+   - Generate relevant tags
+   - Suggest appropriate category
+
+2. Present Results:
+   First show the extracted information:
+   Title (Chinese): [title]
+   Title (English): [title if available]
+   Category: [category] (类别)
+   Tags: [tags]
+   [Cover Image shown]
+
+   Then, if duplicates found:
+   "I've found some similar books in the database:
+
+   Current Upload:
+   Title: [title]
+   Publisher: [publisher]
+   [Image shown]
+
+   Existing Book:
+   Title: [title]
+   Publisher: [publisher]
+   [Image shown]
+
+   Analysis:
+   - [List key similarities/differences]
+   - [Note publisher/edition differences]
+   - [Highlight any special considerations]
+
+   Would you like to:
+   1. Create as new listing
+   2. Update existing listing
+   3. Cancel operation"
+
+3. Wait for admin decision before proceeding.` as const
 
 export const ORDER_PROCESSING_PROMPT = `Process order with these considerations:
 1. Verify stock availability

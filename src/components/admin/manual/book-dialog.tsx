@@ -29,15 +29,22 @@ import {
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
-import { CATEGORY_TYPE } from "@/lib/admin/constants"
+import { CategoryType } from '@prisma/client'
 import type { Book, Category } from "@prisma/client"
+
+const CATEGORY_LABELS: Record<CategoryType, string> = {
+  PURE_LAND_BOOKS: "净土佛书",
+  OTHER_BOOKS: "其他佛书",
+  DHARMA_ITEMS: "法宝",
+  BUDDHA_STATUES: "佛像"
+} as const
 
 const formSchema = z.object({
   title_zh: z.string().optional(),
   title_en: z.string().optional(),
   description_zh: z.string().optional(),
   description_en: z.string().optional(),
-  category_type: z.string(),
+  category_type: z.nativeEnum(CategoryType),
   quantity: z.number().min(0),
   tags: z.string(),
 })
@@ -180,7 +187,7 @@ export function BookDialog({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {Object.entries(CATEGORY_TYPE).map(([key, value]) => (
+                      {Object.entries(CATEGORY_LABELS).map(([key, value]) => (
                         <SelectItem key={key} value={key}>
                           {value}
                         </SelectItem>

@@ -981,3 +981,103 @@ This implementation demonstrates:
 5. Handling multiple function calls in sequence
 6. Error handling and retries
 7. Structured output formatting
+
+
+Tool Calling
+The Realtime API supports tool calling, which lets the model decide when it should call an external tool, similarly to the Chat Completions API. You can define custom functions as tools for the model to use.
+
+Unlike with the Chat Completions API, you don't need to wrap your function definitions with { "type": "function", "function": ... }.
+
+Defining tools
+You can set default functions for the server in a session.update message, or set per-response functions in the response.create message. The server will respond with function_call items when a function call is triggered.
+
+When the server calls a function, it may also respond with audio and text. You can guide this behavior with the function description field or the instructions. You might want the model to respond to the user before calling the function, for example: “Ok, let me submit that order for you”. Or you might prefer prompting the model not to respond before calling tools.
+
+Below is an example defining a custom function as a tool.
+
+Defining tools
+
+const event = {
+  type: 'session.update',
+  session: {
+    // other session configuration fields
+    tools: [
+      {
+        name: 'get_weather',
+        description: 'Get the current weather',
+        parameters: {
+          type: 'object',
+          properties: {
+            location: { type: 'string' }
+          }
+        }
+      }
+    ]
+  }
+};
+ws.send(JSON.stringify(event));
+Check out our Function Calling guide for more information on function calls.
+
+Function call items
+The model will send a conversation.item.created event with item.type: "function_call" when it decides to call a function.
+
+For example:
+
+Function call item
+
+{
+  "event_id": "event_12345...",
+  "type": "conversation.item.created",
+  "previous_item_id": "item_12345...",
+  "item": {
+      "id": "item_23456...",
+      "object": "realtime.item",
+      "type": "function_call",
+      "status": "in_progress",
+      "name": "get_weather",
+      "call_id": "call_ABCD...",
+      "arguments": ""
+  }
+}
+When the function call is complete, the server will send a response.function_call_arguments.done event.
+
+Function call arguments done
+
+{
+  event_id: "event_12345...",
+  type: "response.function_call_arguments.done",
+  response_id: "resp_12345...",
+  item_id: "item_12345...",
+  output_index: 0,
+  call_id: "call_ABDC...",
+  name: "get_weather",
+  arguments: "{\"location\": \"San Francisco\"}"
+}
+If you want to stream tool calls, you can use the response.function_call_arguments.delta event to handle function arguments as they are being generated.
+
+Function call arguments delta
+
+{
+  event_id: "event_12345...",
+  type: "response.function_call_arguments.delta",
+  response_id: "resp_12345...",
+  item_id: "item_12345...",
+  output_index: 0,
+  call_id: "call_ABDC...",
+  delta: [chunk]
+}
+Handling tool calls
+As with the Chat Completions API, you must respond to the function call by sending a tool response - in this case, the output of the function call. After handling the function execution in your code, you can then send the output via the conversation.item.create message with type: "function_call_output".
+
+Sending a tool response
+
+const event = {
+  type: 'conversation.item.create',
+  item: {
+   type: 'function_call_output',
+    call_id: tool.call_id // call_id from the function_call message
+    output: JSON.stringify(result), // result of the function
+  }
+};
+ws.send(JSON.stringify(event));
+Adding a function call output to the conversation does not automatically trigger another model response. You can experiment with the instructions to prompt a response, or you may wish to trigger one immediately using response.create.

@@ -13,18 +13,26 @@ function LoadingScreen({ onLoadingComplete }: { onLoadingComplete: () => void })
   const [progress, setProgress] = useState(0)
 
   useEffect(() => {
+    let mounted = true;
+
     const timer = setInterval(() => {
-      setProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(timer)
-          onLoadingComplete()
-          return 100
-        }
-        return prev + 1 // Slower increment
-      })
+      if (mounted) {
+        setProgress(prev => {
+          if (prev >= 100) {
+            clearInterval(timer)
+            onLoadingComplete()
+            return 100
+          }
+          return Math.min(prev + 1, 100)
+        })
+      }
     }, 20)
 
-    return () => clearInterval(timer)
+    // Cleanup function
+    return () => {
+      mounted = false;
+      clearInterval(timer)
+    }
   }, [onLoadingComplete])
 
   return (

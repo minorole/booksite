@@ -95,7 +95,7 @@ export async function POST(request: Request) {
 
     const { messages }: { messages: Message[] } = await request.json()
     console.log(' Received messages:', messages)
-    
+
     if (!Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json(
         { error: 'Invalid request: messages array required' },
@@ -128,18 +128,28 @@ export async function POST(request: Request) {
     console.log('📥 OpenAI response:', completion)
 
     // Extract the message from the completion
-    const message = completion.choices[0].message as OpenAIMessage
+    const message = completion.choices[0].message
     console.log('📝 Extracted message:', message)
 
-    // Return the message in our expected format
-    return NextResponse.json({ 
-      message: {
-        role: message.role,
-        content: message.content,
-        ...(message.function_call && { function_call: message.function_call }),
-        ...(message.tool_calls && { tool_calls: message.tool_calls })
-      }
-    })
+    // Format the response based on message type
+    const formattedMessage: Message = {
+      role: message.role,
+      content: message.content,
+      ...(message.function_call && {
+        tool_calls: [{
+          id: `call_${Date.now()}`,
+          function: {
+            name: message.function_call.name,
+            arguments: message.function_call.arguments
+          },
+          type: 'function'
+        }]
+      })
+    }
+
+    console.log('📤 Formatted response message:', formattedMessage)
+
+    return NextResponse.json({ message: formattedMessage })
 
   } catch (error) {
     console.error('❌ Chat API Error:', error)
