@@ -3,130 +3,105 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Send, ImagePlus, Bot, User, Info, Expand, RefreshCw, CheckCircle } from "lucide-react";
+import { Loader2, Send, ImagePlus, Bot, User, Info, Expand, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { FILE_CONFIG } from '@/lib/admin/constants'
 import { 
-  FILE_CONFIG, 
-  ANALYSIS_MESSAGES, 
   type Message, 
   type MessageContent,
-  type AllowedMimeType 
-} from '@/lib/admin/constants'
+  type AllowedMimeType,
+  type ChatResponse 
+} from '@/lib/admin/types'
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 
-// Add type for URL extraction function
-type UrlExtractor = (text: string) => string[];
-
-// Move URL extraction function outside component to avoid redeclaration
-const extractUrlsFromText: UrlExtractor = (text) => {
-  const patterns = [
-    /\[.*?\]\((https?:\/\/[^\s)]+)\)/g,  // Markdown links
-    /(?:cover_image:|image_url:)\s*(https?:\/\/[^\s]+)/g  // Plain URLs
-  ];
-
-  const urls: string[] = [];
-  patterns.forEach(pattern => {
-    const matches = text.matchAll(pattern);
-    for (const match of matches) {
-      urls.push(match[1]);
-    }
-  });
-  return urls;
-};
+const MESSAGE_STYLES = {
+  user: {
+    container: "bg-primary text-primary-foreground",
+    icon: "bg-primary-foreground/10 text-primary-foreground",
+    component: <User className="w-4 h-4" />
+  },
+  assistant: {
+    container: "bg-blue-100 text-blue-900",
+    icon: "bg-blue-200 text-blue-700",
+    component: <Bot className="w-4 h-4" />
+  },
+  system: {
+    container: "bg-muted text-muted-foreground",
+    icon: "bg-muted-foreground/20 text-muted-foreground",
+    component: <Info className="w-4 h-4" />
+  }
+} as const;
 
 export function ChatInterface() {
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const thinkingTimerRef = useRef<NodeJS.Timeout>();
+  const [input, setInput] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [messages, setMessages] = useState<Message[]>([])
+  const [selectedImage, setSelectedImage] = useState<string | null>(null)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  const [error, setError] = useState<string | null>(null)
+  const abortController = useRef<AbortController | null>(null)
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, loading]);
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }, [messages, loading])
 
-  const addSystemMessage = (content: string) => {
-    setMessages(prev => [...prev, { role: 'system', content }]);
-  };
-
-  const updateThinkingMessage = () => {
-    setMessages(prev => prev.map(msg => 
-      typeof msg.content === 'string' && msg.content === "Assistant is thinking..." 
-        ? { ...msg, content: "Assistant is thinking hard..." }
-        : msg
-    ));
-  };
+  useEffect(() => {
+    return () => abortController.current?.abort()
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || loading) return;
+    e.preventDefault()
+    const lastMessage = messages[messages.length - 1]
+    const isImageMessage = lastMessage?.content && Array.isArray(lastMessage.content)
+    if (!isImageMessage && !input.trim() && !loading) return
 
-    const userMessage: Message = {
-      role: 'user',
-      content: input
-    };
-
-    setMessages(prev => [...prev, userMessage]);
-    setInput("");
-    setLoading(true);
-    addSystemMessage("Assistant is thinking...");
-
-    thinkingTimerRef.current = setTimeout(updateThinkingMessage, 4000);
+    const userMessage: Message = isImageMessage 
+      ? lastMessage 
+      : { 
+          role: 'user' as const,
+          content: input 
+        }
+    
+    setMessages(prev => isImageMessage ? prev : [...prev, userMessage])
+    setInput("")
+    setLoading(true)
+    setError(null)
 
     try {
+      console.log(' Sending message to API:', {
+        type: isImageMessage ? 'image' : 'text',
+        messageCount: messages.length
+      })
+
       const response = await fetch('/api/admin/ai-chat', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          messages: [...messages, userMessage]
-        }),
-      });
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: [...messages, ...(isImageMessage ? [] : [userMessage])] }),
+      })
 
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error('API Error Response:', errorData);
-        addSystemMessage("Sorry, there was an error processing your request.");
-        throw new Error(`Failed to get response: ${response.status}`);
+        throw new Error('Failed to get response')
       }
 
-      const data = await response.json();
-      console.log('Received response:', data);
-      
-      // Clear the thinking timer
-      if (thinkingTimerRef.current) {
-        clearTimeout(thinkingTimerRef.current);
+      const data = await response.json()
+      console.log('📥 Received response:', data)
+
+      if (data.message) {
+        setMessages(prev => [...prev, data.message])
       }
-      
-      // Remove thinking messages with proper type checking
-      setMessages(prev => prev.filter(msg => 
-        !(typeof msg.content === 'string' && msg.content.includes("Assistant is thinking"))
-      ));
-      
-      setMessages(prev => [...prev, data.message]);
+
     } catch (error) {
-      console.error('Error in chat interface:', error);
-      if (error instanceof Error) {
-        console.error('Error details:', {
-          name: error.name,
-          message: error.message,
-          stack: error.stack,
-        });
-      }
+      console.error('❌ Error in chat interface:', error)
+      setError(error instanceof Error ? error.message : 'An error occurred')
+      setMessages(prev => [...prev, {
+        role: 'system',
+        content: "Sorry, there was an error processing your request."
+      }])
     } finally {
-      if (thinkingTimerRef.current) {
-        clearTimeout(thinkingTimerRef.current);
-      }
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -138,29 +113,23 @@ export function ChatInterface() {
       size: `${(file.size / 1024 / 1024).toFixed(2)}MB`
     })
 
-    // Validate file type
     if (!FILE_CONFIG.ALLOWED_TYPES.includes(file.type as AllowedMimeType)) {
-      console.log('❌ Invalid file type:', file.type)
-      addSystemMessage("Invalid file type. Only JPEG, PNG, WebP, and HEIC images are allowed.")
+      setError('Invalid file type. Only JPEG, PNG, WebP, and HEIC images are allowed.')
       return
     }
 
-    // Validate file size
     if (file.size > FILE_CONFIG.MAX_SIZE) {
-      console.log('❌ File too large:', `${(file.size / 1024 / 1024).toFixed(2)}MB`)
-      addSystemMessage("File too large. Maximum size is 10MB.")
+      setError('File too large. Maximum size is 10MB.')
       return
     }
 
     try {
-      console.log('🚀 Starting upload process...')
-      addSystemMessage("Processing image...")
       setLoading(true)
+      setError(null)
       
       const formData = new FormData()
       formData.append('file', file)
       
-      console.log('📤 Sending file to upload API...')
       const response = await fetch('/api/upload', {
         method: 'POST',
         body: formData
@@ -168,18 +137,11 @@ export function ChatInterface() {
 
       if (!response.ok) {
         const errorData = await response.json()
-        console.error('❌ Upload API error:', {
-          status: response.status,
-          statusText: response.statusText,
-          error: errorData
-        })
         throw new Error(errorData.error || 'Upload failed')
       }
 
       const { url: cloudinaryUrl } = await response.json()
-      console.log('✅ Upload successful:', { cloudinaryUrl })
       
-      // Add image message to chat with explicit instruction about the URL
       const imageMessage: Message = {
         role: 'user',
         content: [
@@ -189,273 +151,106 @@ export function ChatInterface() {
           },
           {
             type: 'text',
-            text: `Please analyze this book cover image. Note: The cover image URL is ${cloudinaryUrl}`
+            text: 'Please analyze this book cover image.'
           }
         ]
       }
       
-      // Remove the processing message
-      setMessages(prev => prev.filter(msg => 
-        !(typeof msg.content === 'string' && msg.content === "Processing image...")
-      ))
-
-      // Add the image message and send to API
       setMessages(prev => [...prev, imageMessage])
-      
-      // Add initial analysis message
-      addSystemMessage("GPT-4o is analyzing the image...")
-      
-      // Set up analysis progress messages
-      let messageIndex = 0
-      const analysisMessages = ANALYSIS_MESSAGES
-      
-      const progressTimer = setInterval(() => {
-        if (messageIndex < analysisMessages.length) {
-          setMessages(prev => prev.map(msg => 
-            typeof msg.content === 'string' && 
-            msg.content.includes("GPT-4o is") ? 
-            { ...msg, content: analysisMessages[messageIndex] } : 
-            msg
-          ))
-          messageIndex++
-        }
-      }, 4000)
-      
-      // Use the existing handleSubmit logic
-      try {
-        const response = await fetch('/api/admin/ai-chat', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            messages: [...messages, imageMessage]
-          }),
-        })
-
-        if (!response.ok) {
-          throw new Error(`Failed to get response: ${response.status}`)
-        }
-
-        const data = await response.json()
-        clearInterval(progressTimer)
-        
-        // Remove the analysis progress message
-        setMessages(prev => prev.filter(msg => 
-          !(typeof msg.content === 'string' && msg.content.includes("GPT-4o is"))
-        ))
-        
-        setMessages(prev => [...prev, data.message])
-      } catch (error) {
-        clearInterval(progressTimer)
-        console.error('Error processing image:', error)
-        addSystemMessage("Failed to process image. Please try again.")
-      }
+      handleSubmit(new Event('submit') as any)
       
     } catch (error) {
-      console.error('❌ Image upload error:', error instanceof Error ? {
-        name: error.name,
-        message: error.message,
-        stack: error.stack
-      } : error)
-      addSystemMessage(`Failed to upload image: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      console.error('Image upload error:', error)
+      setError(error instanceof Error ? error.message : 'Failed to upload image')
     } finally {
       setLoading(false)
     }
   }
 
-  // Clean up timer on unmount
-  useEffect(() => {
-    return () => {
-      if (thinkingTimerRef.current) {
-        clearTimeout(thinkingTimerRef.current);
-      }
-    };
-  }, []);
-
-  const getMessageIcon = (role: string) => {
-    switch (role) {
-      case 'user':
-        return <User className="w-4 h-4" />;
-      case 'assistant':
-        return <Bot className="w-4 h-4" />;
-      case 'system':
-        return <Info className="w-4 h-4" />;
-      default:
-        return null;
-    }
-  };
-
-  const getMessageStyle = (role: string) => {
-    switch (role) {
-      case 'user':
-        return "bg-primary text-primary-foreground";
-      case 'assistant':
-        return "bg-blue-100 text-blue-900";
-      case 'system':
-        return "bg-muted text-muted-foreground";
-      default:
-        return "";
-    }
-  };
-
-  const getIconStyle = (role: string) => {
-    switch (role) {
-      case 'user':
-        return "bg-primary-foreground/10 text-primary-foreground";
-      case 'assistant':
-        return "bg-blue-200 text-blue-700";
-      case 'system':
-        return "bg-muted-foreground/20 text-muted-foreground";
-      default:
-        return "";
-    }
-  };
-
-  // Add refresh function
-  const handleRefresh = () => {
-    if (loading) return;
-    
-    setMessages([]);
-    setInput("");
-    console.log('🔄 Starting new conversation session');
-  };
-
-  // Update the renderMessageContent function to handle the new format
-  const renderMessageContent = (content: string | MessageContent[] | null) => {
-    if (!content) {
-      return null;
-    }
-
-    if (typeof content === 'string') {
-      // Split content into sections (one section per book)
-      const sections = content.split(/(?=\*\*[^*]+\*\*)/);
-      
+  const renderMessageContent = (message: Message) => {
+    if (Array.isArray(message.content)) {
       return (
-        <div className="whitespace-pre-wrap text-sm sm:text-base break-words">
-          {sections.map((section: string, sectionIndex: number) => {
-            // Extract book ID if present - updated regex to match new format
-            const bookIdMatch = section.match(/(?:ID: |Found book \(ID: )([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\)?/);
-            const bookId = bookIdMatch ? bookIdMatch[1] : null;
-
-            // Extract URLs for images
-            const urls = extractUrlsFromText(section);
-            const textParts = section.split(/\bhttps?:\/\/[^\s]+/g);
-            
-            return (
-              <div key={`section-${sectionIndex}`} className={cn(
-                "mb-6 rounded-lg",
-                bookId ? "border border-border p-4" : "" // Add border for book info sections
-              )}>
-                {/* Book ID display with improved visibility */}
-                {bookId && (
-                  <div className="text-xs bg-muted/50 px-2 py-1 rounded mb-2 font-mono">
-                    Book ID: {bookId}
-                  </div>
-                )}
-                
-                {/* Main content with better formatting for state changes */}
-                <div className={cn(
-                  "prose prose-sm dark:prose-invert max-w-none",
-                  "prose-headings:mb-2 prose-headings:mt-1",
-                  "prose-p:my-1 prose-p:leading-relaxed",
-                  "prose-li:my-0.5"
-                )}>
-                  {textParts.map((part: string, i: number) => {
-                    // Highlight state changes
-                    const isStateChange = part.includes("Updated tags from") || 
-                                       part.includes("Created book") ||
-                                       part.includes("Found book");
-                    return (
-                      <span 
-                        key={`text-${sectionIndex}-${i}`}
-                        className={cn(
-                          isStateChange && "text-blue-600 dark:text-blue-400"
-                        )}
-                      >
-                        {part}
-                      </span>
-                    );
-                  })}
-                </div>
-                
-                {/* Images grid */}
-                {urls.length > 0 && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-                    {urls.map((url: string, index: number) => (
-                      <div key={`img-${sectionIndex}-${index}`} className="relative group">
-                        <div className="relative aspect-[3/4] overflow-hidden rounded-lg cursor-pointer 
-                                    hover:ring-2 hover:ring-primary/50 transition-all duration-200">
-                          <img 
-                            src={url} 
-                            alt="Book cover"
-                            className="w-full h-full object-cover" 
-                            onClick={() => setSelectedImage(url)}
-                          />
-                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-200 
-                                      flex items-center justify-center opacity-0 group-hover:opacity-100">
-                            <Expand className="w-6 h-6 text-white drop-shadow-lg" />
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Status indicators */}
-                {section.includes("successfully") && (
-                  <div className="mt-2 text-sm text-green-600 dark:text-green-400 flex items-center gap-1">
-                    <CheckCircle className="w-4 h-4" />
-                    Operation successful
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      );
-    }
-
-    // Handle MessageContent[] type (for image uploads)
-    return (
-      <>
-        {content.map((item: MessageContent, index: number) => {
-          if (item.type === 'image_url' && item.image_url?.url) {
-            const imageUrl = item.image_url.url; // Extract URL with optional chaining
-            return (
-              <div key={`img-${index}`} className="relative group">
-                <div className="relative aspect-[3/4] overflow-hidden rounded-lg cursor-pointer 
-                              hover:ring-2 hover:ring-primary/50 transition-all duration-200">
-                  <img 
-                    src={imageUrl} 
-                    alt="Book cover"
-                    className="w-full h-full object-cover" 
+        <div className="space-y-2">
+          {message.content.map((content: MessageContent, i) => {
+            if (content.type === 'image_url' && content.image_url?.url) {
+              const imageUrl = content.image_url.url
+              return (
+                <div key={i} className="relative group">
+                  <img
+                    src={imageUrl}
+                    alt="Uploaded content"
+                    className="max-w-sm rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
                     onClick={() => setSelectedImage(imageUrl)}
                   />
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-200 
-                                flex items-center justify-center opacity-0 group-hover:opacity-100">
-                    <Expand className="w-6 h-6 text-white drop-shadow-lg" />
-                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => setSelectedImage(imageUrl)}
+                  >
+                    <Expand className="h-4 w-4" />
+                  </Button>
                 </div>
-              </div>
-            );
-          }
-          if (item.type === 'text' && item.text) {
-            return (
-              <p key={`text-${index}`} className="whitespace-pre-wrap text-sm sm:text-base break-words">
-                {item.text}
-              </p>
-            );
-          }
-          return null;
-        })}
-      </>
-    );
-  };
+              )
+            }
+            return content.type === 'text' && <p key={i}>{content.text}</p>
+          })}
+        </div>
+      )
+    }
+
+    if (message.tool_calls) {
+      return (
+        <div className="space-y-2">
+          <p className="text-sm text-muted-foreground">
+            Function Call: {message.tool_calls[0].function.name}
+          </p>
+          <pre className="text-xs overflow-x-auto">
+            {message.tool_calls[0].function.arguments}
+          </pre>
+        </div>
+      )
+    }
+
+    if (message.role === 'tool') {
+      try {
+        const content = message.content ? JSON.parse(message.content) : null
+        return (
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">
+              Function Result: {message.name}
+            </p>
+            <pre className="text-xs overflow-x-auto">
+              {JSON.stringify(content, null, 2)}
+            </pre>
+          </div>
+        )
+      } catch {
+        return <p>{message.content}</p>
+      }
+    }
+
+    return <p>{message.content}</p>
+  }
+
+  const handleRefresh = () => {
+    if (loading) {
+      abortController.current?.abort()
+    }
+    setMessages([])
+    setInput("")
+    setError(null)
+    console.log('🔄 Starting new conversation session')
+  }
 
   return (
     <div className="flex flex-col h-[calc(100vh-12rem)] max-w-[95%] sm:max-w-[90%] md:max-w-[85%] mx-auto">
-      {/* Add refresh button at the top */}
+      {error && (
+        <div className="p-4 mb-4 text-red-500 bg-red-50 rounded-lg">
+          {error}
+        </div>
+      )}
+
       <div className="flex justify-end p-4">
         <Button
           onClick={handleRefresh}
@@ -470,60 +265,20 @@ export function ChatInterface() {
       </div>
 
       <div className="flex-1 p-4 overflow-y-auto space-y-6 scroll-smooth">
-        <div className="max-w-2xl mx-auto w-full space-y-6">
-          {messages.map((message, index) => (
-            <div
-              key={index}
-              className="flex flex-col items-center"
-            >
-              <div className={cn(
-                "w-full sm:w-[95%] rounded-2xl px-4 py-3 shadow-sm",
-                getMessageStyle(message.role)
-              )}>
-                <div className="flex items-start gap-3">
-                  {message.role === 'user' && (
-                    <div className={cn(
-                      "w-6 h-6 rounded-full flex items-center justify-center mt-0.5",
-                      getIconStyle(message.role),
-                      "shrink-0"
-                    )}>
-                      {getMessageIcon(message.role)}
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    {renderMessageContent(message.content)}
-                  </div>
-                  {message.role !== 'user' && (
-                    <div className={cn(
-                      "w-6 h-6 rounded-full flex items-center justify-center mt-0.5",
-                      getIconStyle(message.role),
-                      "shrink-0"
-                    )}>
-                      {getMessageIcon(message.role)}
-                    </div>
-                  )}
-                </div>
+        {messages.map((message, i) => {
+          const style = MESSAGE_STYLES[message.role as keyof typeof MESSAGE_STYLES] || MESSAGE_STYLES.system
+          return (
+            <div key={i} className={cn("flex gap-3 p-4 rounded-lg", style.container)}>
+              <div className={cn("w-8 h-8 rounded-full flex items-center justify-center", style.icon)}>
+                {style.component}
+              </div>
+              <div className="flex-1 space-y-2">
+                {renderMessageContent(message)}
               </div>
             </div>
-          ))}
-          {loading && !messages.some(m => m.content === "Assistant is thinking...") && (
-            <div className="flex flex-col items-center">
-              <div className="w-full sm:w-[95%] bg-muted rounded-2xl px-4 py-3 text-muted-foreground">
-                <div className="flex items-start gap-3">
-                  <div className="flex-1">
-                    <div className="flex justify-center">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    </div>
-                  </div>
-                  <div className="w-6 h-6 rounded-full bg-muted-foreground/20 flex items-center justify-center mt-0.5">
-                    <Info className="w-4 h-4" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-          <div ref={messagesEndRef} />
-        </div>
+          )
+        })}
+        <div ref={messagesEndRef} />
       </div>
       
       <div className="p-4 border-t bg-background/50 backdrop-blur-sm">
@@ -536,8 +291,8 @@ export function ChatInterface() {
               className="min-h-[3rem] max-h-[20rem] pr-24 resize-none bg-background w-full"
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSubmit(e);
+                  e.preventDefault()
+                  handleSubmit(e)
                 }
               }}
             />
@@ -555,6 +310,7 @@ export function ChatInterface() {
                 variant="default"
                 className="h-8 w-8"
                 onClick={() => fileInputRef.current?.click()}
+                disabled={loading}
               >
                 <ImagePlus className="h-4 w-4" />
               </Button>
@@ -574,7 +330,7 @@ export function ChatInterface() {
           </div>
         </form>
       </div>
-      
+
       <Dialog open={selectedImage !== null} onOpenChange={() => setSelectedImage(null)}>
         <DialogContent className="max-w-4xl w-full p-0 overflow-hidden bg-transparent border-0">
           {selectedImage && (
@@ -587,5 +343,5 @@ export function ChatInterface() {
         </DialogContent>
       </Dialog>
     </div>
-  );
+  )
 } 

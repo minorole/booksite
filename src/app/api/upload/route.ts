@@ -2,11 +2,8 @@ import { v2 as cloudinary } from 'cloudinary'
 import { NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
-import { 
-  FILE_CONFIG, 
-  CLOUDINARY_CONFIG,
-  type AllowedMimeType
-} from '@/lib/admin/constants'
+import { type AllowedMimeType } from '@/lib/admin/types'
+import { FILE_CONFIG, CLOUDINARY_CONFIG } from '@/lib/admin/constants'
 
 // Parse Cloudinary URL from environment variable
 const cloudinaryUrl = process.env.CLOUDINARY_URL

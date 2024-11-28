@@ -69,10 +69,19 @@ model Book {
   analyses             BookAnalysis[]
   tag_history          TagHistory[]
 
+  // Basic indexes for single-field queries
   @@index([category_id])
-  @@index([similar_books])
-  @@index([search_tags])
   @@index([discontinued])
+  
+  // Optimized indexes for GPT-4o's search patterns
+  @@index([title_zh, title_en])  // Title search in both languages
+  @@index([title_zh, search_tags])  // Chinese title with tags
+  @@index([title_en, search_tags])  // English title with tags
+  @@index([category_id, search_tags])  // Category with tags
+  @@index([author_zh, author_en])  // Author search in both languages
+  
+  // Full-text search support
+  @@fulltext([title_zh, title_en, author_zh, author_en])
 }
 
 model BookAnalysis {

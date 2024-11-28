@@ -84,6 +84,10 @@ const config = {
       transitionDelay: {
         '4000': '4000ms',
       },
+      fontFamily: {
+        sans: ['var(--font-noto-sans)', 'sans-serif'],
+        serif: ['var(--font-noto-serif)', 'serif'],
+      },
     },
   },
   plugins: [require("tailwindcss-animate")],

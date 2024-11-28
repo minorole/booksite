@@ -45,7 +45,7 @@ function Lotus(props: any) {
       action.clampWhenFinished = false
       action.timeScale = 0.3
       action.setLoop(THREE.LoopPingPong, Infinity)
-      action.fadeIn(0.5)
+      action.fadeIn(0.1)
     }
 
     // Modify materials to golden color
@@ -92,10 +92,10 @@ export function LotusModel() {
             position={[-5, 5, -5]}
             intensity={2}
           />
-          <group position={[0, -0.5, 0]}>
+          <group position={[0, -0.55, 0]}>
             <Lotus 
               scale={0.4}
-              rotation={[0, 0, 0]} // Rotate 45 degrees towards the camera
+              rotation={[0, 0, 0]}
               castShadow={false}
               receiveShadow={false}
             />

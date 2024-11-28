@@ -1,34 +1,24 @@
 import type { Metadata } from "next";
-import localFont from "next/font/local";
+import { Noto_Sans_SC, Noto_Serif } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext"
 import { Toaster } from "@/components/ui/toaster"
 
-const geistSans = localFont({
-  src: [
-    {
-      path: './fonts/GeistVF.woff',
-      style: 'normal',
-    }
-  ],
-  variable: '--font-geist-sans',
-  display: 'swap',
+const notoSerif = Noto_Serif({ 
+  subsets: ['latin'],
+  weight: ['400', '700'],
+  variable: '--font-noto-serif',
 });
 
-const geistMono = localFont({
-  src: [
-    {
-      path: './fonts/GeistMonoVF.woff',
-      style: 'normal',
-    }
-  ],
-  variable: '--font-geist-mono',
-  display: 'swap',
+const notoSansSC = Noto_Sans_SC({ 
+  subsets: ['latin'],
+  weight: ['400', '500', '700'],
+  variable: '--font-noto-sans',
 });
 
 export const metadata: Metadata = {
-  title: "Free Marketplace",
-  description: "A platform for sharing and discovering free items in your community",
+  title: "AMTBCF - Amitabha Buddhist Society of Central Florida",
+  description: "Free Buddhist books and Dharma materials distribution platform",
 };
 
 export default function RootLayout({
@@ -38,7 +28,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}>
+      <body className={`${notoSerif.variable} ${notoSansSC.variable} font-sans antialiased`}>
         <AuthProvider>
           {children}
           <Toaster />

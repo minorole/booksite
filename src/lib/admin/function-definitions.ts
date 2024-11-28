@@ -1,12 +1,12 @@
-import { type CategoryType } from '@prisma/client'
 import { type ChatCompletionTool } from 'openai/resources/chat/completions'
+import { type BookSearch, type BookCreate, type BookUpdate, type OrderUpdate } from './types'
 
 export const adminTools: ChatCompletionTool[] = [
   {
     type: "function" as const,
     function: {
       name: "search_books",
-      description: "ALWAYS search before any operation. Use this to check existence and get book IDs.",
+      description: "Search books by various criteria. ALWAYS search before any operation.",
       parameters: {
         type: "object",
         properties: {
@@ -21,6 +21,22 @@ export const adminTools: ChatCompletionTool[] = [
               type: "string"
             },
             description: "Search by tags",
+            nullable: true
+          },
+          category_type: {
+            type: "string",
+            enum: ["PURE_LAND_BOOKS", "OTHER_BOOKS", "DHARMA_ITEMS", "BUDDHA_STATUES"],
+            description: "Filter by category type",
+            nullable: true
+          },
+          min_quantity: {
+            type: "integer",
+            description: "Minimum quantity filter",
+            nullable: true
+          },
+          max_quantity: {
+            type: "integer",
+            description: "Maximum quantity filter",
             nullable: true
           }
         }
@@ -37,12 +53,20 @@ export const adminTools: ChatCompletionTool[] = [
         properties: {
           title_zh: {
             type: "string",
-            description: "Chinese title of the book",
-            nullable: true
+            description: "Chinese title of the book (required)"
           },
           title_en: {
             type: "string",
             description: "English title of the book",
+            nullable: true
+          },
+          description_zh: {
+            type: "string",
+            description: "Chinese description of the book (required)"
+          },
+          description_en: {
+            type: "string",
+            description: "English description of the book",
             nullable: true
           },
           category_type: {
@@ -65,9 +89,29 @@ export const adminTools: ChatCompletionTool[] = [
           cover_image: {
             type: "string",
             description: "URL of the book cover image"
+          },
+          author_zh: {
+            type: "string",
+            description: "Chinese name of the author",
+            nullable: true
+          },
+          author_en: {
+            type: "string",
+            description: "English name of the author",
+            nullable: true
+          },
+          publisher_zh: {
+            type: "string",
+            description: "Chinese name of the publisher",
+            nullable: true
+          },
+          publisher_en: {
+            type: "string",
+            description: "English name of the publisher",
+            nullable: true
           }
         },
-        required: ["category_type", "quantity", "tags", "cover_image"]
+        required: ["title_zh", "description_zh", "category_type", "quantity", "tags", "cover_image"]
       }
     }
   },
@@ -84,21 +128,76 @@ export const adminTools: ChatCompletionTool[] = [
             description: "UUID of the book from search results",
             pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
           },
+          title_zh: {
+            type: "string",
+            description: "Updated Chinese title",
+            nullable: true
+          },
+          title_en: {
+            type: "string",
+            description: "Updated English title",
+            nullable: true
+          },
           quantity: {
             type: "integer",
-            description: "New quantity",
-            minimum: 0
+            description: "Updated quantity",
+            minimum: 0,
+            nullable: true
           },
           tags: {
             type: "array",
             items: {
               type: "string"
             },
-            description: "Complete new tag array. Will replace existing tags."
+            description: "Updated tags array. Will replace existing tags.",
+            nullable: true
+          },
+          category_type: {
+            type: "string",
+            enum: ["PURE_LAND_BOOKS", "OTHER_BOOKS", "DHARMA_ITEMS", "BUDDHA_STATUES"],
+            description: "Updated category type",
+            nullable: true
           }
         },
         required: ["book_id"]
       }
     }
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "update_order",
+      description: "Update order status and details",
+      parameters: {
+        type: "object",
+        properties: {
+          order_id: {
+            type: "string",
+            description: "UUID of the order"
+          },
+          status: {
+            type: "string",
+            enum: ["PENDING", "CONFIRMED", "PROCESSING", "SHIPPED", "COMPLETED", "CANCELLED"],
+            description: "New status for the order"
+          },
+          tracking_number: {
+            type: "string",
+            description: "Shipping tracking number",
+            nullable: true
+          },
+          admin_notes: {
+            type: "string",
+            description: "Admin notes about the order",
+            nullable: true
+          },
+          override_monthly: {
+            type: "boolean",
+            description: "Override monthly order limit",
+            nullable: true
+          }
+        },
+        required: ["order_id", "status"]
+      }
+    }
   }
-] 
+] as const 
