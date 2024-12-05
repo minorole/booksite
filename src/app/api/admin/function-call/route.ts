@@ -1,5 +1,13 @@
 import { NextResponse } from 'next/server'
-import { analyzeBookAndCheckDuplicates } from '@/lib/admin/function-handlers'
+import { 
+  analyzeBookCover,
+  checkDuplicates,
+  createBook,
+  updateBook,
+  searchBooks,
+  updateOrder,
+  analyzeBookAndCheckDuplicates
+} from '@/lib/admin/function-handlers'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { logOperation } from '@/lib/openai'
@@ -35,47 +43,47 @@ export async function POST(request: Request) {
       timestamp: new Date().toISOString()
     })
 
+    const parsedArgs = JSON.parse(args)
+    console.log('📝 Parsed arguments:', parsedArgs)
+
+    let result: AdminOperationResult
+
     switch (name) {
+      case 'analyze_book_cover':
+        console.log('🔍 Starting book cover analysis')
+        result = await analyzeBookCover(parsedArgs, user.email!)
+        break
+
+      case 'check_duplicates':
+        console.log('🔍 Starting duplicate check')
+        result = await checkDuplicates(parsedArgs, user.email!)
+        break
+
+      case 'create_book':
+        console.log('📚 Creating new book')
+        result = await createBook(parsedArgs, user.email!)
+        break
+
+      case 'update_book':
+        console.log('📝 Updating book')
+        result = await updateBook(parsedArgs, user.email!)
+        break
+
+      case 'search_books':
+        console.log('🔍 Searching books')
+        result = await searchBooks(parsedArgs)
+        break
+
+      case 'update_order':
+        console.log('🔄 Updating order')
+        result = await updateOrder(parsedArgs, user.email!)
+        break
+
+      // Keep for backward compatibility
       case 'analyze_book_and_check_duplicates':
-        console.log('🔍 Starting book analysis and duplicate check')
-        const parsedArgs = JSON.parse(args)
-        console.log('📝 Parsed arguments:', parsedArgs)
-
-        console.log('📤 Calling analyzeBookAndCheckDuplicates with:', {
-          book_info: parsedArgs.book_info,
-          image_url: parsedArgs.image_url
-        })
-
-        const result = await analyzeBookAndCheckDuplicates(
-          parsedArgs,
-          user.email!
-        ) as AdminOperationResult
-
-        console.log('📥 Analysis result:', {
-          success: result.success,
-          message: result.message,
-          error: result.error,
-          data: result.data
-        })
-
-        const hasMatches = result.data?.analysis_result?.matches?.length ?? 0 > 0
-
-        console.log('✅ Analysis complete:', {
-          success: result.success,
-          hasMatches
-        })
-
-        logOperation('FUNCTION_SUCCESS', {
-          name,
-          user: user.email,
-          timestamp: new Date().toISOString(),
-          result: {
-            success: result.success,
-            hasMatches
-          }
-        })
-
-        return NextResponse.json(result)
+        console.warn('⚠️ Using deprecated function')
+        result = await analyzeBookAndCheckDuplicates(parsedArgs, user.email!)
+        break
 
       default:
         console.log('❌ Unknown function:', name)
@@ -84,6 +92,26 @@ export async function POST(request: Request) {
           { status: 400 }
         )
     }
+
+    console.log('📥 Operation result:', {
+      success: result.success,
+      message: result.message,
+      error: result.error,
+      data: result.data
+    })
+
+    logOperation('FUNCTION_SUCCESS', {
+      name,
+      user: user.email,
+      timestamp: new Date().toISOString(),
+      result: {
+        success: result.success,
+        data: result.data ? true : false
+      }
+    })
+
+    return NextResponse.json(result)
+
   } catch (error) {
     console.error('❌ Function execution error:', error instanceof Error ? {
       name: error.name,

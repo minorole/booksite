@@ -1,0 +1,198 @@
+import { v2 as cloudinary } from 'cloudinary'
+import { FILE_CONFIG, CLOUDINARY_CONFIG } from './constants'
+import { type AllowedMimeType, type ImageUploadResult } from './types'
+
+/**
+ * Basic URL validation for any image URL
+ */
+async function validateExternalUrl(url: string): Promise<boolean> {
+  try {
+    console.log('🔍 Validating external URL:', url)
+    
+    // Basic URL validation
+    if (!url || typeof url !== 'string') {
+      console.log('❌ Invalid URL format:', url)
+      return false
+    }
+
+    // Test URL accessibility with timeout
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 5000)
+
+    try {
+      const response = await fetch(url, { 
+        method: 'HEAD',
+        signal: controller.signal
+      })
+      clearTimeout(timeoutId)
+      
+      if (!response.ok) {
+        console.log('❌ URL not accessible:', url)
+        return false
+      }
+
+      // Check content type
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !FILE_CONFIG.ALLOWED_TYPES.includes(contentType as AllowedMimeType)) {
+        console.log('❌ Invalid content type:', contentType)
+        return false
+      }
+
+      console.log('✅ External URL validated:', url)
+      return true
+    } catch (error) {
+      console.log('❌ URL fetch failed:', error)
+      return false
+    }
+  } catch (error) {
+    console.error('❌ URL validation error:', error)
+    return false
+  }
+}
+
+/**
+ * Validates Cloudinary URL format and accessibility
+ */
+export async function validateCloudinaryUrl(url: string): Promise<boolean> {
+  try {
+    console.log('🔍 Validating Cloudinary URL:', url)
+    
+    // Check if URL is from Cloudinary
+    if (!url.includes('res.cloudinary.com')) {
+      console.log('❌ Not a Cloudinary URL:', url)
+      return false
+    }
+
+    // Validate accessibility
+    return await validateExternalUrl(url)
+  } catch (error) {
+    console.error('❌ Cloudinary URL validation error:', error)
+    return false
+  }
+}
+
+/**
+ * Standardizes image URL for OpenAI compatibility
+ */
+export async function standardizeImageUrl(url: string): Promise<string> {
+  try {
+    // Basic URL validation
+    if (!url || typeof url !== 'string') {
+      throw new Error('Invalid URL format')
+    }
+
+    // Ensure HTTPS
+    const secureUrl = url.replace('http://', 'https://')
+    
+    // For Cloudinary URLs, validate specifically
+    if (secureUrl.includes('res.cloudinary.com')) {
+      if (!await validateCloudinaryUrl(secureUrl)) {
+        throw new Error('Invalid Cloudinary URL')
+      }
+    } else {
+      // For external URLs, use basic validation
+      if (!await validateExternalUrl(secureUrl)) {
+        throw new Error('Invalid image URL')
+      }
+    }
+
+    console.log('✅ URL standardized:', secureUrl)
+    return secureUrl
+  } catch (error) {
+    console.error('❌ URL standardization error:', error)
+    throw error
+  }
+}
+
+/**
+ * Validates file before upload
+ */
+export function validateImageFile(file: File): void {
+  console.log('🔍 Validating file:', {
+    name: file.name,
+    type: file.type,
+    size: `${(file.size / 1024 / 1024).toFixed(2)}MB`
+  })
+
+  if (!file) {
+    throw new Error('No file provided')
+  }
+
+  if (!FILE_CONFIG.ALLOWED_TYPES.includes(file.type as AllowedMimeType)) {
+    console.log('❌ Invalid file type:', file.type)
+    console.log('Allowed types:', FILE_CONFIG.ALLOWED_TYPES)
+    throw new Error('Invalid file type')
+  }
+
+  if (file.size > FILE_CONFIG.MAX_SIZE) {
+    console.log('❌ File too large:', `${(file.size / 1024 / 1024).toFixed(2)}MB`)
+    console.log('Max size:', `${(FILE_CONFIG.MAX_SIZE / 1024 / 1024).toFixed(2)}MB`)
+    throw new Error('File too large')
+  }
+
+  console.log('✅ File validated')
+}
+
+/**
+ * Handles complete image upload process with retries
+ */
+export async function handleImageUpload(file: File, maxRetries = 2): Promise<string> {
+  console.log('📤 Starting image upload process...')
+  
+  let lastError: Error | null = null
+  
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      if (attempt > 0) {
+        console.log(`🔄 Retry attempt ${attempt}/${maxRetries}...`)
+      }
+      
+      // 1. Validate file
+      validateImageFile(file)
+      
+      // 2. Convert to base64
+      const bytes = await file.arrayBuffer()
+      const buffer = Buffer.from(bytes)
+      const base64File = buffer.toString('base64')
+      const dataURI = `data:${file.type};base64,${base64File}`
+      
+      // 3. Upload to Cloudinary with timeout
+      const uploadPromise = cloudinary.uploader.upload(dataURI, {
+        folder: CLOUDINARY_CONFIG.FOLDER,
+        resource_type: 'auto',
+        transformation: CLOUDINARY_CONFIG.TRANSFORMATION
+      })
+
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Upload timeout')), 10000)
+      })
+
+      const result = await Promise.race([uploadPromise, timeoutPromise]) as ImageUploadResult
+
+      console.log('✅ Upload successful:', {
+        publicId: result.public_id,
+        format: result.format,
+        size: `${(result.bytes / 1024 / 1024).toFixed(2)}MB`,
+        url: result.secure_url
+      })
+
+      // 4. Validate and standardize Cloudinary URL
+      const standardizedUrl = await standardizeImageUrl(result.secure_url)
+      return standardizedUrl
+
+    } catch (error) {
+      console.error(`❌ Upload attempt ${attempt + 1} failed:`, error)
+      lastError = error as Error
+      
+      if (attempt === maxRetries) {
+        console.error('❌ All upload attempts failed')
+        throw lastError
+      }
+      
+      // Wait before retry
+      await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)))
+    }
+  }
+
+  throw lastError || new Error('Upload failed')
+} 

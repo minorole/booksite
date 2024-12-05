@@ -13,6 +13,7 @@ import {
 } from '@/lib/admin/system-prompts';
 import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 import { type ChatCompletion } from 'openai/resources/chat/completions'
+import { type CategoryType } from '@prisma/client'
 
 /**
  * Converts our Message type to OpenAI's ChatCompletionMessageParam
@@ -20,13 +21,24 @@ import { type ChatCompletion } from 'openai/resources/chat/completions'
 function convertMessage(message: Message): ChatCompletionMessageParam {
   // For array content (like image messages)
   if (Array.isArray(message.content)) {
+    console.log('📝 Converting array content message:', message)
     return {
       role: message.role === 'tool' ? 'assistant' : message.role,
-      content: message.content.map(c => ({
-        type: c.type,
-        ...(c.type === 'text' ? { text: c.text } : {}),
-        ...(c.type === 'image_url' ? { image_url: c.image_url } : {})
-      })),
+      content: message.content.map(c => {
+        if (c.type === 'text') {
+          return { type: 'text', text: c.text }
+        }
+        if (c.type === 'image_url' && c.image_url) {
+          console.log('🖼️ Processing image URL:', c.image_url.url)
+          return { 
+            type: 'image_url',
+            image_url: {
+              url: c.image_url.url
+            }
+          }
+        }
+        return c
+      }),
       ...(message.name && { name: message.name }),
       ...(message.tool_call_id && { tool_call_id: message.tool_call_id })
     } as ChatCompletionMessageParam;
@@ -93,8 +105,25 @@ export async function POST(request: Request) {
       timestamp: new Date().toISOString()
     })
 
-    const { messages }: { messages: Message[] } = await request.json()
+    const { messages, imageUrl, confirmedInfo }: { 
+      messages: Message[], 
+      imageUrl?: string,
+      confirmedInfo?: {
+        title_zh?: string
+        title_en?: string | null
+        author_zh?: string | null
+        author_en?: string | null
+        publisher_zh?: string | null
+        publisher_en?: string | null
+        category_type?: CategoryType
+      }
+    } = await request.json()
+
     console.log(' Received messages:', messages)
+    console.log(' Image URL:', imageUrl)
+    if (confirmedInfo) {
+      console.log(' Confirmed Info:', confirmedInfo)
+    }
 
     if (!Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json(
@@ -113,17 +142,34 @@ export async function POST(request: Request) {
 
     // Convert messages to OpenAI format
     const openAIMessages = messages.map(convertMessage)
-    console.log('📤 Converted messages:', openAIMessages)
+    console.log('📤 Converted messages:', JSON.stringify(openAIMessages, null, 2))
 
     // Convert tools to functions format
-    const functions = convertToolsToFunctions()
+    const tools = adminTools
+
+    // Determine analysis stage from messages
+    const lastUserMessage = messages.filter(m => m.role === 'user').pop()
+    const isConfirmation = lastUserMessage?.content === 'Yes, the information is correct. Please proceed with the analysis.'
+    
+    // If this is a confirmation message, set tool_choice to force structured analysis
+    const tool_choice = isConfirmation && confirmedInfo ? {
+      type: "function" as const,
+      function: {
+        name: "analyze_book_cover",
+        parameters: {
+          image_url: imageUrl,
+          stage: "structured" as const,
+          confirmed_info: confirmedInfo
+        }
+      }
+    } : "auto" as const
 
     // Use non-streaming completion
     const completion = await createChatCompletion({
       messages: openAIMessages,
-      functions,
-      function_call: 'auto'
-    }) as ChatCompletion
+      tools,
+      tool_choice
+    })
 
     console.log('📥 OpenAI response:', completion)
 
@@ -131,19 +177,35 @@ export async function POST(request: Request) {
     const message = completion.choices[0].message
     console.log('📝 Extracted message:', message)
 
+    // When creating chat completion, ensure tool calls use correct URL
+    if (message.tool_calls?.[0] && imageUrl && 
+        message.tool_calls[0].function.name === 'analyze_book_cover') {
+      try {
+        const toolCall = message.tool_calls[0]
+        const args = JSON.parse(toolCall.function.arguments)
+        if (args.image_url) {
+          args.image_url = imageUrl
+          toolCall.function.arguments = JSON.stringify(args)
+          console.log('🔧 Updated tool call with correct image URL:', imageUrl)
+        }
+      } catch (e) {
+        console.error('❌ Failed to update tool arguments:', e)
+      }
+    }
+
     // Format the response based on message type
     const formattedMessage: Message = {
       role: message.role,
       content: message.content,
-      ...(message.function_call && {
-        tool_calls: [{
-          id: `call_${Date.now()}`,
+      ...(message.tool_calls && {
+        tool_calls: message.tool_calls.map(toolCall => ({
+          id: toolCall.id,
           function: {
-            name: message.function_call.name,
-            arguments: message.function_call.arguments
+            name: toolCall.function.name,
+            arguments: toolCall.function.arguments
           },
           type: 'function'
-        }]
+        }))
       })
     }
 

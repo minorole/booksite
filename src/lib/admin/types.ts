@@ -6,18 +6,7 @@
 import { type CategoryType, type OrderStatus, type Role } from '@prisma/client'
 import type { ChatCompletion } from 'openai/resources/chat/completions'
 
-// File Types
-export type AllowedMimeType = 
-  | 'image/jpeg'
-  | 'image/png'
-  | 'image/webp'
-  | 'image/heic'
-  | 'image/heif'
-  | 'image/heic-sequence'
-  | 'image/heif-sequence'
-  | 'image/jpg'
-  | 'image/pjpeg'
-  | 'image/x-png'
+
 
 // LLM & Chat Types
 export type MessageRole = 'user' | 'system' | 'assistant' | 'tool'
@@ -90,7 +79,21 @@ export type AdminOperationResult = OperationResult<{
     books: BookBase[]
   }
   duplicate_detection?: DuplicateDetectionResult
-  vision_analysis?: VisionAnalysisResult
+  vision_analysis?: {
+    stage: 'initial' | 'structured'
+    natural_analysis?: {
+      title_zh?: string
+      title_en?: string
+      author_zh?: string
+      author_en?: string
+      publisher_zh?: string
+      publisher_en?: string
+      category_suggestion?: CategoryType
+      quality_issues?: string[]
+      needs_confirmation?: boolean
+    }
+    structured_data?: VisionAnalysisResult
+  }
   analysis_result?: {
     current_book: {
       title_zh: string
@@ -126,7 +129,6 @@ export interface VisionAnalysisResult {
   confidence_scores: {
     title_detection: number
     category_match: number
-    duplicate_check: number
     overall: number
   }
   language_detection: {
@@ -140,7 +142,6 @@ export interface VisionAnalysisResult {
       zh?: string
       en?: string
       confidence: number
-      position?: { x: number; y: number }  // Location on image
     }
     author: {
       zh?: string
@@ -152,17 +153,14 @@ export interface VisionAnalysisResult {
       en?: string
       confidence: number
     }
-    other_text: Array<{
-      text: string
-      language: 'zh' | 'en'
-      confidence: number
-    }>
+    other_text: string[]
   }
   visual_elements: {
     has_cover_image: boolean
     image_quality_score: number
-    notable_elements: string[]  // e.g., ["buddha statue", "lotus flower"]
+    notable_elements: string[]
   }
+  cover_url?: string
 }
 
 /**
@@ -289,5 +287,55 @@ export interface DuplicateDetectionResult {
     has_duplicates: boolean
     confidence: number
     recommendation: 'create_new' | 'update_existing' | 'needs_review'
+  }
+}
+
+/**
+ * Image Processing Types
+ */
+export type AllowedMimeType = 
+  | 'image/jpeg'
+  | 'image/png'
+  | 'image/webp'
+  | 'image/heic'
+  | 'image/heif'
+  | 'image/heic-sequence'
+  | 'image/heif-sequence'
+  | 'image/jpg'
+  | 'image/pjpeg'
+  | 'image/x-png'
+
+export interface ImageConfig {
+  readonly MAX_SIZE: number
+  readonly ALLOWED_TYPES: readonly AllowedMimeType[]
+  readonly ACCEPT_STRING: string
+}
+
+export interface CloudinaryConfig {
+  readonly FOLDER: string
+  readonly TRANSFORMATION: readonly {
+    readonly quality: string
+    readonly fetch_format: string
+  }[]
+}
+
+export interface ImageUploadResult {
+  secure_url: string
+  public_id: string
+  format: string
+  bytes: number
+}
+
+export interface BookAnalyzeParams {
+  image_url: string
+  stage: 'initial' | 'structured'
+  confirmed_info?: {
+    title_zh?: string
+    title_en?: string | null
+    author_zh?: string | null
+    author_en?: string | null
+    publisher_zh?: string | null
+    publisher_en?: string | null
+    category_type?: CategoryType
   }
 } 

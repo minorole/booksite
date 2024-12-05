@@ -10,9 +10,12 @@ import {
   type Message, 
   type MessageContent,
   type AllowedMimeType,
-  type ChatResponse 
+  type ChatResponse,
+  type ImageUploadResult,
+  type ToolCall
 } from '@/lib/admin/types'
 import { Dialog, DialogContent } from "@/components/ui/dialog"
+import { type CategoryType } from '@prisma/client'
 
 const MESSAGE_STYLES = {
   user: {
@@ -32,6 +35,114 @@ const MESSAGE_STYLES = {
   }
 } as const;
 
+// Add error message translations
+const ERROR_MESSAGES = {
+  en: {
+    upload_failed: "Failed to upload image",
+    analysis_failed: "Failed to analyze image",
+    function_failed: "Operation failed",
+    network_error: "Network error occurred",
+    unknown_error: "An unknown error occurred",
+    retry_suggestion: "Please try again",
+    invalid_file: "Invalid file type. Only images are allowed.",
+    file_too_large: "File too large. Maximum size is 10MB.",
+    no_file: "No file selected"
+  },
+  zh: {
+    upload_failed: "图片上传失败",
+    analysis_failed: "图片分析失败",
+    function_failed: "操作失败",
+    network_error: "网络连接错误",
+    unknown_error: "发生未知错误",
+    retry_suggestion: "请重试",
+    invalid_file: "文件类型无效。仅支持图片格式。",
+    file_too_large: "文件过大。最大限制为10MB。",
+    no_file: "未选择文件"
+  }
+} as const;
+
+// Add loading state messages
+const LOADING_MESSAGES = {
+  en: {
+    uploading: "Uploading image...",
+    analyzing: "Analyzing image...",
+    processing: "Processing...",
+    checking: "Checking database..."
+  },
+  zh: {
+    uploading: "正在上传图片...",
+    analyzing: "正在分析图片...",
+    processing: "处理中...",
+    checking: "正在检查数据库..."
+  }
+} as const;
+
+// Add new type for analysis state
+interface AnalysisState {
+  stage: 'initial' | 'structured' | null
+  imageUrl: string | null
+  confirmedInfo?: {
+    title_zh?: string
+    title_en?: string | null
+    author_zh?: string | null
+    author_en?: string | null
+    publisher_zh?: string | null
+    publisher_en?: string | null
+    category_type?: CategoryType
+    quality_issues?: string[]
+  }
+}
+
+// Add confirmation UI component
+const AnalysisConfirmation = ({ 
+  analysis: {
+    title_zh,
+    title_en,
+    author_zh,
+    author_en,
+    publisher_zh,
+    publisher_en,
+    category_type
+  },
+  onConfirm,
+  onEdit,
+  loading
+}: {
+  analysis: NonNullable<AnalysisState['confirmedInfo']>
+  onConfirm: () => void
+  onEdit: () => void
+  loading: boolean
+}) => (
+  <div className="mt-4 space-y-4">
+    <div className="rounded-lg bg-background/50 p-4 space-y-2">
+      <h4 className="font-medium">Please confirm the information:</h4>
+      <div className="space-y-1 text-sm">
+        <p>Title (Chinese): {title_zh}</p>
+        {title_en && <p>Title (English): {title_en}</p>}
+        {author_zh && <p>Author (Chinese): {author_zh}</p>}
+        {author_en && <p>Author (English): {author_en}</p>}
+        {publisher_zh && <p>Publisher (Chinese): {publisher_zh}</p>}
+        {publisher_en && <p>Publisher (English): {publisher_en}</p>}
+        {category_type && (
+          <p>Category: {category_type} ({
+            category_type === 'PURE_LAND_BOOKS' ? '净土佛书' :
+            category_type === 'OTHER_BOOKS' ? '其他佛书' :
+            category_type === 'DHARMA_ITEMS' ? '法宝' : '佛像'
+          })</p>
+        )}
+      </div>
+    </div>
+    <div className="flex gap-2">
+      <Button onClick={onConfirm} disabled={loading}>
+        {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Confirm'}
+      </Button>
+      <Button variant="outline" onClick={onEdit} disabled={loading}>
+        Edit
+      </Button>
+    </div>
+  </div>
+);
+
 export function ChatInterface() {
   const [input, setInput] = useState("")
   const [loading, setLoading] = useState(false)
@@ -41,6 +152,12 @@ export function ChatInterface() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [error, setError] = useState<string | null>(null)
   const abortController = useRef<AbortController | null>(null)
+  const [language, setLanguage] = useState<'en' | 'zh'>('en');
+  const [loadingState, setLoadingState] = useState<keyof typeof LOADING_MESSAGES['en'] | null>(null);
+  const [analysisState, setAnalysisState] = useState<AnalysisState>({
+    stage: null,
+    imageUrl: null
+  });
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -69,7 +186,6 @@ export function ChatInterface() {
     setError(null)
 
     try {
-      // First request - get LLM's analysis and function call
       const response = await fetch('/api/admin/ai-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -77,78 +193,44 @@ export function ChatInterface() {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to get response')
+        throw new Error(ERROR_MESSAGES[language].network_error)
       }
 
       const data = await response.json()
       console.log('📥 Received response:', data)
 
-      // Add the assistant's message
       if (data.message) {
         setMessages(prev => [...prev, data.message])
 
-        // If there's a function call, execute it and add the result
         if (data.message.tool_calls) {
-          const toolCall = data.message.tool_calls[0]
-          
-          // Execute the function
-          const functionResult = await fetch('/api/admin/function-call', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              name: toolCall.function.name,
-              arguments: toolCall.function.arguments
-            }),
-          })
-
-          if (!functionResult.ok) {
-            throw new Error('Function execution failed')
-          }
-
-          const result = await functionResult.json()
-          console.log('📥 Function result:', result)
-
-          // Add function result as tool message
-          const toolMessage: Message = {
-            role: 'tool',
-            name: toolCall.function.name,
-            content: JSON.stringify(result),
-            tool_call_id: toolCall.id
-          }
-
-          setMessages(prev => [...prev, toolMessage])
-
-          // Get final response from LLM about the function result
-          const finalResponse = await fetch('/api/admin/ai-chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              messages: [...messages, data.message, toolMessage]
-            }),
-          })
-
-          if (!finalResponse.ok) {
-            throw new Error('Failed to get final response')
-          }
-
-          const finalData = await finalResponse.json()
-          if (finalData.message) {
-            setMessages(prev => [...prev, finalData.message])
-          }
+          setLoadingState('processing')
+          await handleToolCalls(data.message.tool_calls)
         }
       }
 
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('❌ Error in chat interface:', error)
-      setError(error instanceof Error ? error.message : 'An error occurred')
+      const errorMessage = error instanceof Error ? 
+        error.message : 
+        ERROR_MESSAGES[language].unknown_error;
+      
+      setError(errorMessage)
+      setMessages(prev => [...prev, {
+        role: 'system',
+        content: errorMessage
+      }])
     } finally {
       setLoading(false)
+      setLoadingState(null)
     }
   }
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (!file) return
+    if (!file) {
+      setError(ERROR_MESSAGES[language].no_file)
+      return
+    }
 
     console.log('📁 Selected file:', {
       name: file.name,
@@ -156,19 +238,9 @@ export function ChatInterface() {
       size: `${(file.size / 1024 / 1024).toFixed(2)}MB`
     })
 
-    // Validate file
-    if (!FILE_CONFIG.ALLOWED_TYPES.includes(file.type as AllowedMimeType)) {
-      setError('Invalid file type. Only JPEG, PNG, WebP, and HEIC images are allowed.')
-      return
-    }
-
-    if (file.size > FILE_CONFIG.MAX_SIZE) {
-      setError('File too large. Maximum size is 10MB.')
-      return
-    }
-
     setLoading(true)
     setError(null)
+    setLoadingState('uploading')
 
     try {
       // Upload image
@@ -182,19 +254,25 @@ export function ChatInterface() {
 
       if (!uploadResponse.ok) {
         const errorData = await uploadResponse.json()
-        throw new Error(errorData.error || 'Upload failed')
+        throw new Error(errorData.error || ERROR_MESSAGES[language].upload_failed)
       }
 
       const { url: cloudinaryUrl } = await uploadResponse.json()
       console.log('📤 Image uploaded:', cloudinaryUrl)
       
-      // Create image message with the actual Cloudinary URL
+      setLoadingState('analyzing')
+      
+      // Store the URL for later use
+      const imageUrl = cloudinaryUrl
+      setAnalysisState({ stage: 'initial', imageUrl })
+      
+      // Create image message with validated URL
       const imageMessage: Message = {
         role: 'user',
         content: [
           {
             type: 'image_url',
-            image_url: { url: cloudinaryUrl }  // Use actual Cloudinary URL
+            image_url: { url: imageUrl }
           },
           {
             type: 'text',
@@ -205,19 +283,20 @@ export function ChatInterface() {
       
       // Add image message and get analysis
       setMessages(prev => [...prev, imageMessage])
-      console.log('🔍 Sending image analysis request')
+      console.log('🔍 Sending initial analysis request with URL:', imageUrl)
 
-      // First request - get LLM's analysis and function call
+      // First request - get LLM's natural language analysis
       const analysisResponse = await fetch('/api/admin/ai-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          messages: [...messages, imageMessage]
+          messages: [...messages, imageMessage],
+          imageUrl
         })
       })
 
       if (!analysisResponse.ok) {
-        throw new Error('Failed to analyze image')
+        throw new Error(ERROR_MESSAGES[language].analysis_failed)
       }
 
       const data = await analysisResponse.json()
@@ -227,69 +306,160 @@ export function ChatInterface() {
       if (data.message) {
         setMessages(prev => [...prev, data.message])
 
-        // If there's a function call, execute it and add the result
+        // Handle function calls
         if (data.message.tool_calls) {
-          const toolCall = data.message.tool_calls[0]
-          
-          // Execute the function
-          const functionResult = await fetch('/api/admin/function-call', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              name: toolCall.function.name,
-              arguments: toolCall.function.arguments
-            }),
-          })
+          setLoadingState('processing')
+          await handleToolCalls(data.message.tool_calls, imageUrl)
+        }
+      }
 
-          if (!functionResult.ok) {
-            throw new Error('Function execution failed')
-          }
+    } catch (error: unknown) {
+      console.error('❌ Error:', error)
+      const errorMessage = error instanceof Error ? 
+        error.message : 
+        ERROR_MESSAGES[language].unknown_error;
+      
+      setError(errorMessage)
+      setMessages(prev => [...prev, {
+        role: 'system',
+        content: errorMessage
+      }])
+    } finally {
+      setLoading(false)
+      setLoadingState(null)
+    }
+  }
 
-          const result = await functionResult.json()
-          console.log('📥 Function result:', result)
-
-          // Add function result as tool message
-          const toolMessage: Message = {
-            role: 'tool',
+  // New helper function to handle tool calls
+  const handleToolCalls = async (toolCalls: ToolCall[], imageUrl?: string) => {
+    const currentMessages = [...messages] // Capture current state
+    
+    for (const toolCall of toolCalls) {
+      try {
+        console.log('🔧 Handling tool call:', toolCall.function.name)
+        setLoadingState('processing')
+        
+        // If this is an analyze_book_cover call, ensure correct URL
+        if (toolCall.function.name === 'analyze_book_cover' && imageUrl) {
+          const args = JSON.parse(toolCall.function.arguments)
+          args.image_url = imageUrl
+          toolCall.function.arguments = JSON.stringify(args)
+          console.log('🔧 Using correct image URL for analysis:', imageUrl)
+        }
+        
+        // Execute the function
+        const functionResult = await fetch('/api/admin/function-call', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
             name: toolCall.function.name,
-            content: JSON.stringify(result),
-            tool_call_id: toolCall.id
-          }
+            arguments: toolCall.function.arguments
+          }),
+        })
 
-          setMessages(prev => [...prev, toolMessage])
+        if (!functionResult.ok) {
+          const errorData = await functionResult.json()
+          throw new Error(errorData.error || ERROR_MESSAGES[language].function_failed)
+        }
 
-          // Get final response from LLM about the function result
-          const finalResponse = await fetch('/api/admin/ai-chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              messages: [...messages, data.message, toolMessage]
-            }),
-          })
+        const result = await functionResult.json()
+        console.log('📥 Function result:', result)
 
-          if (!finalResponse.ok) {
-            throw new Error('Failed to get final response')
-          }
+        // Add function result as tool message
+        const toolMessage: Message = {
+          role: 'tool',
+          name: toolCall.function.name,
+          content: JSON.stringify(result),
+          tool_call_id: toolCall.id
+        }
 
-          const finalData = await finalResponse.json()
-          if (finalData.message) {
-            setMessages(prev => [...prev, finalData.message])
-          }
+        // Update messages with tool result
+        currentMessages.push(toolMessage)
+        setMessages([...currentMessages])
+
+        // Get final response about the function result
+        const finalResponse = await fetch('/api/admin/ai-chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ messages: currentMessages }),
+        })
+
+        if (!finalResponse.ok) {
+          throw new Error(ERROR_MESSAGES[language].network_error)
+        }
+
+        const finalData = await finalResponse.json()
+        if (finalData.message) {
+          currentMessages.push(finalData.message)
+          setMessages([...currentMessages])
+        }
+      } catch (error: unknown) {
+        console.error('❌ Tool call error:', error)
+        const errorMessage = error instanceof Error ? 
+          error.message : 
+          ERROR_MESSAGES[language].function_failed;
+        
+        setError(errorMessage)
+        throw error
+      }
+    }
+  }
+
+  const handleAnalysisConfirmation = async (confirmedInfo: AnalysisState['confirmedInfo']) => {
+    if (!analysisState.imageUrl) return;
+
+    setLoading(true)
+    setLoadingState('processing')
+
+    try {
+      const userMessage: Message = {
+        role: 'user',
+        content: 'Yes, the information is correct. Please proceed with the analysis.'
+      }
+
+      setMessages(prev => [...prev, userMessage])
+
+      // Proceed with structured analysis
+      const response = await fetch('/api/admin/ai-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [...messages, userMessage],
+          imageUrl: analysisState.imageUrl,
+          confirmedInfo
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error(ERROR_MESSAGES[language].analysis_failed)
+      }
+
+      const data = await response.json()
+      console.log('📥 Structured analysis response:', data)
+
+      if (data.message) {
+        setMessages(prev => [...prev, data.message])
+        setAnalysisState(prev => ({ ...prev, stage: 'structured' }))
+
+        if (data.message.tool_calls) {
+          await handleToolCalls(data.message.tool_calls)
         }
       }
 
     } catch (error) {
       console.error('❌ Error:', error)
-      setError(error instanceof Error ? error.message : 'Operation failed')
-      setMessages(prev => [...prev, {
-        role: 'system',
-        content: "Sorry, there was an error processing your request."
-      }])
+      const errorMessage = error instanceof Error ? 
+        error.message : 
+        ERROR_MESSAGES[language].unknown_error;
+      
+      setError(errorMessage)
     } finally {
       setLoading(false)
+      setLoadingState(null)
     }
   }
 
+  // Update the renderMessageContent function to handle tool responses
   const renderMessageContent = (message: Message) => {
     if (Array.isArray(message.content)) {
       return (
@@ -324,27 +494,55 @@ export function ChatInterface() {
 
     if (message.tool_calls) {
       const toolCall = message.tool_calls[0]
-      if (toolCall.function.name === 'analyze_book_and_check_duplicates') {
+      if (toolCall.function.name === 'analyze_book_cover') {
         try {
           const args = JSON.parse(toolCall.function.arguments)
-          return (
-            <div className="space-y-2">
-              <p>Let me analyze this book cover for you:</p>
-              <div className="pl-4 border-l-2 border-primary/20 space-y-1">
-                <p>Title (Chinese): {args.book_info.title_zh}</p>
-                {args.book_info.title_en && (
-                  <p>Title (English): {args.book_info.title_en}</p>
+          if (args.stage === 'initial') {
+            const analysis = args.natural_analysis
+            if (!analysis) return <p>Analyzing book...</p>
+
+            return (
+              <div className="space-y-2">
+                <p>I've analyzed this book cover. Here's what I found:</p>
+                <div className="pl-4 border-l-2 border-primary/20 space-y-1">
+                  {analysis.title_zh && <p>Title (Chinese): {analysis.title_zh}</p>}
+                  {analysis.title_en && <p>Title (English): {analysis.title_en}</p>}
+                  {analysis.author_zh && <p>Author (Chinese): {analysis.author_zh}</p>}
+                  {analysis.author_en && <p>Author (English): {analysis.author_en}</p>}
+                  {analysis.publisher_zh && <p>Publisher (Chinese): {analysis.publisher_zh}</p>}
+                  {analysis.publisher_en && <p>Publisher (English): {analysis.publisher_en}</p>}
+                  {analysis.category_suggestion && (
+                    <p>Suggested Category: {analysis.category_suggestion} ({
+                      analysis.category_suggestion === 'PURE_LAND_BOOKS' ? '净土佛书' :
+                      analysis.category_suggestion === 'OTHER_BOOKS' ? '其他佛书' :
+                      analysis.category_suggestion === 'DHARMA_ITEMS' ? '法宝' : '佛像'
+                    })</p>
+                  )}
+                  {analysis.quality_issues?.length > 0 && (
+                    <div className="mt-2">
+                      <p className="font-medium">Quality Issues:</p>
+                      <ul className="list-disc list-inside">
+                        {analysis.quality_issues?.map((issue: string, i: number) => (
+                          <li key={i}>{issue}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+                {analysis.needs_confirmation && (
+                  <AnalysisConfirmation
+                    analysis={analysis}
+                    onConfirm={() => handleAnalysisConfirmation(analysis)}
+                    onEdit={() => {
+                      // TODO: Implement edit UI
+                      console.log('Edit requested')
+                    }}
+                    loading={loading}
+                  />
                 )}
-                <p>Category: {args.book_info.category_type} ({
-                  args.book_info.category_type === 'PURE_LAND_BOOKS' ? '净土佛书' :
-                  args.book_info.category_type === 'OTHER_BOOKS' ? '其他佛书' :
-                  args.book_info.category_type === 'DHARMA_ITEMS' ? '法宝' : '佛像'
-                })</p>
-                <p>Tags: {args.book_info.tags.join(', ')}</p>
               </div>
-              <p>I'm checking our database for any similar books...</p>
-            </div>
-          )
+            )
+          }
         } catch (error) {
           console.error('Error parsing function arguments:', error)
           return <p>{message.content || 'Analyzing book...'}</p>
@@ -355,34 +553,17 @@ export function ChatInterface() {
     if (message.role === 'tool') {
       try {
         const content = message.content ? JSON.parse(message.content) : null
-        if (content?.analysis_result) {
+        if (content?.vision_analysis?.structured_data) {
           return (
             <div className="space-y-2">
-              {content.analysis_result.matches.length > 0 ? (
-                <>
-                  <p>I found some similar books in our database:</p>
-                  {content.analysis_result.matches.map((match: any, i: number) => (
-                    <div key={i} className="pl-4 border-l-2 border-primary/20 space-y-1">
-                      <p>Title: {match.book.title_zh}</p>
-                      {match.book.title_en && <p>English Title: {match.book.title_en}</p>}
-                      <p>Similarity: {Math.round(
-                        (match.visual_similarity.layout + match.visual_similarity.content) * 50
-                      )}%</p>
-                      {Object.entries(match.differences).map(([key, value]) => 
-                        value && <p key={key}>Different {key}</p>
-                      )}
-                    </div>
-                  ))}
-                  <p>Would you like to:</p>
-                  <ol className="list-decimal list-inside pl-4">
-                    <li>Create as new listing</li>
-                    <li>Update existing listing</li>
-                    <li>Cancel operation</li>
-                  </ol>
-                </>
-              ) : (
-                <p>No similar books found in our database. Would you like to create this as a new listing?</p>
-              )}
+              <p>Analysis complete! Here's the structured data:</p>
+              <div className="pl-4 border-l-2 border-primary/20 space-y-1">
+                <p>Confidence Score: {Math.round(content.vision_analysis.structured_data.confidence_scores.overall * 100)}%</p>
+                <p>Language: {content.vision_analysis.structured_data.language_detection.primary_language.toUpperCase()}</p>
+                {content.vision_analysis.structured_data.visual_elements.notable_elements.length > 0 && (
+                  <p>Notable Elements: {content.vision_analysis.structured_data.visual_elements.notable_elements.join(', ')}</p>
+                )}
+              </div>
             </div>
           )
         }
@@ -405,12 +586,57 @@ export function ChatInterface() {
     console.log('🔄 Starting new conversation session')
   }
 
+  // Helper function for error messages with proper typing
+  const getErrorMessage = (error: unknown): string => {
+    if (error instanceof Error) {
+      const key = error.message.toLowerCase().replace(/\s+/g, '_') as keyof typeof ERROR_MESSAGES['en'];
+      return ERROR_MESSAGES[language][key] || ERROR_MESSAGES[language].unknown_error;
+    }
+    if (typeof error === 'string') {
+      const key = error.toLowerCase().replace(/\s+/g, '_') as keyof typeof ERROR_MESSAGES['en'];
+      return ERROR_MESSAGES[language][key] || ERROR_MESSAGES[language].unknown_error;
+    }
+    return ERROR_MESSAGES[language].unknown_error;
+  };
+
+  // Update error display component with proper typing
+  const ErrorDisplay = ({ error }: { error: string | null }) => {
+    if (!error) return null;
+    
+    return (
+      <div className="p-4 mb-4 text-red-500 bg-red-50 rounded-lg flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Info className="h-4 w-4" />
+          <span>{error}</span>
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setError(null)}
+          className="hover:bg-red-100"
+        >
+          ×
+        </Button>
+      </div>
+    );
+  };
+
+  // Update loading state component
+  const LoadingIndicator = () => {
+    if (!loadingState) return null;
+
+    return (
+      <div className="flex items-center gap-2 text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        <span>{LOADING_MESSAGES[language][loadingState]}</span>
+      </div>
+    );
+  };
+
   return (
     <div className="flex flex-col h-[calc(100vh-12rem)] max-w-[95%] sm:max-w-[90%] md:max-w-[85%] mx-auto">
       {error && (
-        <div className="p-4 mb-4 text-red-500 bg-red-50 rounded-lg">
-          {error}
-        </div>
+        <ErrorDisplay error={error} />
       )}
 
       <div className="flex justify-end p-4">
@@ -504,6 +730,10 @@ export function ChatInterface() {
           )}
         </DialogContent>
       </Dialog>
+
+      {loading && (
+        <LoadingIndicator />
+      )}
     </div>
   )
 } 

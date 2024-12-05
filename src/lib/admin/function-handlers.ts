@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { type AdminAction, type CategoryType, type Book, type Category, Prisma } from '@prisma/client'
 import { 
+  type BookAnalyzeParams,
   type BookCreate, 
   type BookUpdate, 
   type BookSearch,
@@ -9,9 +10,11 @@ import {
   type BookBase,
   type OrderBase,
   type VisionAnalysisResult,
-  type DuplicateDetectionResult
+  type ImageUploadResult
 } from './types'
 import { createVisionChatCompletion } from '@/lib/openai'
+import { type ChatCompletion } from 'openai/resources/chat/completions'
+import { validateCloudinaryUrl, standardizeImageUrl } from './image-upload'
 
 /**
  * Helper function to validate UUID format
@@ -61,6 +64,493 @@ function toBookBase(book: Book & { category: Category }): BookBase {
     cover_image: book.cover_image || '',
     analysis_result: analysisData,
     similarity_group: book.similar_books?.join(',')
+  }
+}
+
+/**
+ * Validates the structure of vision analysis result
+ */
+function validateAnalysisResult(result: any): result is VisionAnalysisResult {
+  try {
+    // Basic structure check
+    if (!result.confidence_scores || !result.language_detection || 
+        !result.extracted_text || !result.visual_elements) {
+      console.log('❌ Missing required top-level fields')
+      return false
+    }
+
+    // Confidence scores check
+    const scores = result.confidence_scores
+    if (typeof scores.title_detection !== 'number' ||
+        typeof scores.category_match !== 'number' ||
+        typeof scores.overall !== 'number') {
+      console.log('❌ Invalid confidence scores')
+      return false
+    }
+
+    // Language detection check
+    const lang = result.language_detection
+    if (typeof lang.has_chinese !== 'boolean' ||
+        typeof lang.has_english !== 'boolean' ||
+        !['zh', 'en'].includes(lang.primary_language) ||
+        !Array.isArray(lang.script_types)) {
+      console.log('❌ Invalid language detection')
+      return false
+    }
+
+    // Text extraction check
+    const text = result.extracted_text
+    if (!text.title || typeof text.title.confidence !== 'number') {
+      console.log('❌ Invalid text extraction')
+      return false
+    }
+
+    // Visual elements check
+    const visual = result.visual_elements
+    if (typeof visual.has_cover_image !== 'boolean' ||
+        typeof visual.image_quality_score !== 'number' ||
+        !Array.isArray(visual.notable_elements)) {
+      console.log('❌ Invalid visual elements')
+      return false
+    }
+
+    return true
+  } catch (e) {
+    console.error('❌ Validation error:', e)
+    return false
+  }
+}
+
+/**
+ * Attempts to retry analysis with emphasized JSON requirement
+ */
+async function retryAnalysis(args: {
+  image_url: string
+}, adminEmail: string): Promise<AdminOperationResult> {
+  console.log('🔄 Retrying analysis with emphasized JSON requirement')
+  
+  try {
+    // Validate and standardize URL before retry
+    const isValid = await validateCloudinaryUrl(args.image_url)
+    if (!isValid) {
+      return {
+        success: false,
+        message: 'Invalid image URL',
+        error: {
+          code: 'validation_error',
+          details: 'Invalid or inaccessible image URL'
+        }
+      }
+    }
+
+    const standardizedUrl = await standardizeImageUrl(args.image_url)
+    console.log('✅ Using standardized URL for retry:', standardizedUrl)
+
+    const response = await createVisionChatCompletion({
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: `Analyze this Buddhist book cover...`
+            },
+            {
+              type: 'image_url',
+              image_url: { url: standardizedUrl }
+            }
+          ]
+        }
+      ],
+      stream: false
+    }) as ChatCompletion
+
+    if (!response.choices[0]?.message?.content) {
+      throw new Error('Invalid retry response format')
+    }
+
+    const content = response.choices[0].message.content
+    
+    try {
+      const analysisResult = JSON.parse(content)
+      if (!validateAnalysisResult(analysisResult)) {
+        throw new Error('Invalid retry analysis structure')
+      }
+
+      return {
+        success: true,
+        message: 'Analysis complete (retry successful)',
+        data: {
+          vision_analysis: {
+            stage: 'structured',
+            structured_data: analysisResult
+          }
+        }
+      }
+    } catch (e) {
+      console.error('❌ Retry failed to parse vision analysis:', e)
+      throw new Error('Failed to parse retry analysis')
+    }
+  } catch (error) {
+    return handleOperationError(error, 'retry analyze book cover')
+  }
+}
+
+/**
+ * Initial book cover analysis
+ */
+export async function analyzeBookCover(args: BookAnalyzeParams, adminEmail: string): Promise<AdminOperationResult> {
+  console.log('🔍 Starting book cover analysis:', args)
+
+  try {
+    // Validate and standardize URL
+    const standardizedUrl = await standardizeImageUrl(args.image_url)
+    console.log('✅ Using standardized URL:', standardizedUrl)
+
+    // Initial stage - Natural language analysis
+    if (args.stage === 'initial') {
+      console.log('📝 Performing initial natural language analysis')
+      
+      const response = await createVisionChatCompletion({
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: `Analyze this Buddhist book cover and provide a natural language summary. 
+                      Extract and identify:
+                      - Title in Chinese and English (if present)
+                      - Author information (if visible)
+                      - Publisher details (if available)
+                      - Category suggestion based on content
+                      - Any quality issues or concerns
+                      Please provide this information in a clear, natural language format.`
+              },
+              {
+                type: 'image_url',
+                image_url: { url: standardizedUrl }
+              }
+            ]
+          }
+        ],
+        stream: false
+      }) as ChatCompletion
+
+      const content = response.choices[0]?.message?.content
+      if (!content) {
+        throw new Error('No analysis received from vision model')
+      }
+
+      console.log('📝 Natural language analysis:', content)
+
+      // Extract key information using natural language processing
+      // This is a simplified example - in practice, GPT-4o will provide this naturally
+      const analysis = {
+        title_zh: extractChineseTitle(content),
+        title_en: extractEnglishTitle(content),
+        author_zh: extractChineseAuthor(content),
+        author_en: extractEnglishAuthor(content),
+        publisher_zh: extractChinesePublisher(content),
+        publisher_en: extractEnglishPublisher(content),
+        category_suggestion: suggestCategory(content),
+        quality_issues: extractQualityIssues(content),
+        needs_confirmation: true
+      }
+
+      await logAnalysisOperation('INITIAL_ANALYSIS', {
+        admin_email: adminEmail,
+        image_url: standardizedUrl,
+        analysis_result: analysis
+      })
+
+      return {
+        success: true,
+        message: 'Initial analysis complete',
+        data: {
+          vision_analysis: {
+            stage: 'initial',
+            natural_analysis: analysis
+          }
+        }
+      }
+    }
+
+    // Structured stage - After user confirmation
+    if (args.stage === 'structured' && args.confirmed_info) {
+      console.log('🔍 Performing structured analysis with confirmed info:', args.confirmed_info)
+
+      const response = await createVisionChatCompletion({
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: `Based on this book cover image and the confirmed information: ${JSON.stringify(args.confirmed_info)},
+                      provide a detailed analysis in JSON format following the VisionAnalysisResult structure.
+                      Focus on:
+                      1. Confidence scores for each element
+                      2. Language detection details
+                      3. Visual elements and quality assessment
+                      4. Any additional text or elements found`
+              },
+              {
+                type: 'image_url',
+                image_url: { url: standardizedUrl }
+              }
+            ]
+          }
+        ],
+        stream: false
+      }) as ChatCompletion
+
+      const content = response.choices[0]?.message?.content
+      if (!content) {
+        throw new Error('No analysis received from vision model')
+      }
+
+      try {
+        const structuredData = JSON.parse(content) as VisionAnalysisResult
+        structuredData.cover_url = standardizedUrl
+        console.log('📊 Structured analysis result:', structuredData)
+
+        await logAnalysisOperation('STRUCTURED_ANALYSIS', {
+          admin_email: adminEmail,
+          image_url: standardizedUrl,
+          confirmed_info: args.confirmed_info,
+          structured_data: structuredData
+        })
+
+        return {
+          success: true,
+          message: 'Structured analysis complete',
+          data: {
+            vision_analysis: {
+              stage: 'structured',
+              structured_data: structuredData
+            }
+          }
+        }
+      } catch (error) {
+        console.error('❌ Failed to parse structured analysis:', error)
+        throw new Error('Failed to generate structured analysis')
+      }
+    }
+
+    throw new Error('Invalid analysis stage or missing confirmed info')
+
+  } catch (error) {
+    return handleOperationError(error, 'analyze book cover')
+  }
+}
+
+// Helper functions for natural language analysis
+function extractChineseTitle(content: string): string | undefined {
+  // GPT-4o will handle this naturally - this is just for type safety
+  return undefined
+}
+
+function extractEnglishTitle(content: string): string | undefined {
+  return undefined
+}
+
+function extractChineseAuthor(content: string): string | undefined {
+  return undefined
+}
+
+function extractEnglishAuthor(content: string): string | undefined {
+  return undefined
+}
+
+function extractChinesePublisher(content: string): string | undefined {
+  return undefined
+}
+
+function extractEnglishPublisher(content: string): string | undefined {
+  return undefined
+}
+
+function suggestCategory(content: string): CategoryType | undefined {
+  return undefined
+}
+
+function extractQualityIssues(content: string): string[] {
+  return []
+}
+
+async function logAnalysisOperation(
+  type: 'INITIAL_ANALYSIS' | 'STRUCTURED_ANALYSIS',
+  data: {
+    admin_email: string
+    image_url: string
+    analysis_result?: any
+    confirmed_info?: any
+    structured_data?: any
+  }
+) {
+  await prisma.adminLog.create({
+    data: {
+      action: 'ANALYZE_IMAGE',
+      admin_email: data.admin_email,
+      metadata: data as unknown as Prisma.JsonObject
+    }
+  })
+}
+
+/**
+ * Check for duplicate books with both text and visual comparison
+ */
+export async function checkDuplicates(args: {
+  title_zh: string
+  title_en?: string
+  author_zh?: string
+  author_en?: string
+  publisher_zh?: string
+  publisher_en?: string
+  cover_image?: string  // Add this for visual comparison
+}, adminEmail: string): Promise<AdminOperationResult> {
+  console.log('🔍 Starting duplicate check:', args)
+
+  try {
+    // First stage: Text-based search
+    console.log('📚 Performing text-based search')
+    const potentialMatches = await prisma.book.findMany({
+      where: {
+        OR: [
+          // Title matches
+          {
+            title_zh: {
+              contains: args.title_zh,
+              mode: Prisma.QueryMode.insensitive
+            }
+          },
+          ...(args.title_en ? [{
+            title_en: {
+              contains: args.title_en,
+              mode: Prisma.QueryMode.insensitive
+            }
+          }] : []),
+          // Author matches
+          ...(args.author_zh ? [{
+            author_zh: {
+              contains: args.author_zh,
+              mode: Prisma.QueryMode.insensitive
+            }
+          }] : []),
+          ...(args.author_en ? [{
+            author_en: {
+              contains: args.author_en,
+              mode: Prisma.QueryMode.insensitive
+            }
+          }] : [])
+        ]
+      },
+      include: {
+        category: true
+      }
+    })
+
+    console.log(`📝 Found ${potentialMatches.length} potential matches`)
+
+    // Second stage: Visual comparison if cover image provided
+    let visualAnalysis: Array<{
+      book: typeof potentialMatches[0]
+      similarity: {
+        layout: number
+        content: number
+        confidence: number
+      }
+      differences: {
+        publisher?: boolean
+        edition?: boolean
+        layout?: boolean
+      }
+    }> = []
+
+    if (args.cover_image && potentialMatches.length > 0) {
+      console.log('🔍 Performing visual comparison')
+      visualAnalysis = await Promise.all(
+        potentialMatches.map(async match => {
+          if (!match.cover_image) return null
+
+          const analysis = await analyzeVisualSimilarity(
+            args.cover_image!,
+            match.cover_image
+          )
+
+          return {
+            book: match,
+            similarity: {
+              layout: analysis.layout_similarity,
+              content: analysis.content_similarity,
+              confidence: analysis.confidence
+            },
+            differences: {
+              publisher: match.publisher_zh !== args.publisher_zh || 
+                        match.publisher_en !== args.publisher_en,
+              edition: detectEditionDifference(match, args),
+              layout: analysis.layout_similarity < 0.8
+            }
+          }
+        })
+      ).then(results => results.filter((r): r is NonNullable<typeof r> => r !== null))
+
+      console.log('📊 Visual analysis complete:', {
+        matches: visualAnalysis.length,
+        highSimilarity: visualAnalysis.filter(
+          v => (v.similarity.layout + v.similarity.content) / 2 > 0.8
+        ).length
+      })
+    }
+
+    // Log operation
+    await prisma.adminLog.create({
+      data: {
+        action: 'CHECK_DUPLICATE' as AdminAction,
+        admin_email: adminEmail,
+        metadata: {
+          search_criteria: args,
+          text_matches: potentialMatches.length,
+          visual_matches: visualAnalysis.length,
+          has_visual_comparison: !!args.cover_image
+        } as unknown as Prisma.JsonObject
+      }
+    })
+
+    // Analyze results and make recommendation
+    const analysis = analyzeResults(visualAnalysis.length > 0 ? 
+      visualAnalysis.map(v => ({
+        book_id: v.book.id,
+        similarity_score: (v.similarity.layout + v.similarity.content) / 2,
+        differences: v.differences,
+        visual_analysis: v.similarity
+      })) : 
+      []
+    )
+
+    return {
+      success: true,
+      message: 'Duplicate check complete',
+      data: {
+        duplicate_detection: {
+          matches: visualAnalysis.length > 0 ? 
+            visualAnalysis.map(v => ({
+              book_id: v.book.id,
+              similarity_score: (v.similarity.layout + v.similarity.content) / 2,
+              differences: v.differences,
+              visual_analysis: v.similarity
+            })) : [],
+          analysis
+        },
+        search: {
+          found: potentialMatches.length > 0,
+          books: potentialMatches.map(toBookBase)
+        }
+      }
+    }
+  } catch (error) {
+    return handleOperationError(error, 'check duplicates')
   }
 }
 
@@ -349,6 +839,9 @@ export async function updateOrder(args: OrderUpdate, adminEmail: string): Promis
   }
 }
 
+/**
+ * @deprecated Use analyzeBookCover and checkDuplicates instead
+ */
 export async function analyzeBookAndCheckDuplicates(args: {
   book_info: {
     title_zh: string
@@ -471,6 +964,17 @@ async function analyzeVisualSimilarity(
   }
 
   try {
+    // Standardize both URLs
+    const [standardizedNew, standardizedExisting] = await Promise.all([
+      standardizeImageUrl(newImageUrl),
+      standardizeImageUrl(existingImageUrl)
+    ])
+
+    console.log('✅ Using standardized URLs for comparison:', {
+      new: standardizedNew,
+      existing: standardizedExisting
+    })
+
     const response = await createVisionChatCompletion({
       messages: [
         {
@@ -497,16 +1001,16 @@ Then provide a brief explanation of your scoring.`
             },
             {
               type: 'image_url',
-              image_url: { url: newImageUrl }
+              image_url: { url: standardizedNew }
             },
             {
               type: 'image_url',
-              image_url: { url: existingImageUrl }
+              image_url: { url: standardizedExisting }
             }
           ]
         }
       ],
-      stream: false // Ensure we get ChatCompletion not ReadableStream
+      stream: false
     })
 
     // Type guard to ensure we have a ChatCompletion

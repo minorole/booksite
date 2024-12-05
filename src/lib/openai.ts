@@ -84,8 +84,8 @@ type ChatCompletionMessage = ChatCompletionCreateParamsBase['messages'][number]
 export interface ChatOptions {
   messages: ChatCompletionMessage[]
   stream?: boolean
-  functions?: ChatCompletionCreateParamsBase['functions']
-  function_call?: ChatCompletionCreateParamsBase['function_call']
+  tools?: ChatCompletionCreateParamsBase['tools']
+  tool_choice?: ChatCompletionCreateParamsBase['tool_choice']
   temperature?: number
   max_tokens?: number
 }
@@ -157,8 +157,8 @@ async function* createResponseIterator(response: AsyncIterable<any>) {
  */
 export async function createChatCompletion({
   messages,
-  functions,
-  function_call,
+  tools,
+  tool_choice,
   temperature = 0.7,
   max_tokens = OPENAI_CONFIG.TOKENS.MAX_OUTPUT,
 }: ChatOptions): Promise<ChatCompletion> {
@@ -167,15 +167,15 @@ export async function createChatCompletion({
   try {
     logOperation('REQUEST', {
       messageCount: messages.length,
-      hasFunctions: !!functions,
+      hasTools: !!tools,
       model: OPENAI_CONFIG.MODELS.GPT4O
     })
 
     const response = await openai.chat.completions.create({
       model: OPENAI_CONFIG.MODELS.GPT4O,
       messages,
-      functions,
-      function_call,
+      tools,
+      tool_choice,
       temperature,
       max_tokens,
     })

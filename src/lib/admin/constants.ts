@@ -1,7 +1,7 @@
-import { type AllowedMimeType } from './types'
+import { type ImageConfig, type CloudinaryConfig, type AllowedMimeType } from './types'
 
 // File upload configurations
-export const FILE_CONFIG = {
+export const FILE_CONFIG: ImageConfig = {
   MAX_SIZE: 10 * 1024 * 1024, // 10MB
   ALLOWED_TYPES: [
     'image/jpeg',
@@ -14,7 +14,7 @@ export const FILE_CONFIG = {
     'image/jpg',
     'image/pjpeg',
     'image/x-png'
-  ] as AllowedMimeType[],
+  ] as const,
   ACCEPT_STRING: "image/jpeg,image/jpg,image/pjpeg,image/png,image/x-png,image/webp,image/heic,image/heif,image/heic-sequence,image/heif-sequence"
 } as const
 
@@ -28,10 +28,9 @@ export const ANALYSIS_MESSAGES = [
 ] as const
 
 // Cloudinary config
-export const CLOUDINARY_CONFIG = {
+export const CLOUDINARY_CONFIG: CloudinaryConfig = {
   FOLDER: 'book-covers',
   TRANSFORMATION: [
-    { quality: 'auto:best' },
-    { fetch_format: 'auto' }
+    { quality: 'auto:best', fetch_format: 'auto' }
   ]
 } as const 
