@@ -17,11 +17,9 @@ export function Navbar() {
           
           {/* Navigation Links */}
           <div className="flex items-center space-x-4 ml-4">
-            <Link href="/products">Products</Link>
             {user && (
               <>
-                <Link href="/orders">Orders</Link>
-                <Link href="/profile">Profile</Link>
+                <Link href="/users/orders">Orders</Link>
               </>
             )}
             {isAdmin && (

@@ -14,7 +14,7 @@ import { createClient } from "@/lib/supabase"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/AuthContext"
 import Link from "next/link"
-import { LogOut, User as UserIcon, Package, Settings, Shield } from "lucide-react"
+import { LogOut, Package, Settings, Shield } from "lucide-react"
 
 export function UserMenu() {
   const router = useRouter()
@@ -59,13 +59,7 @@ export function UserMenu() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Link href="/profile" className="cursor-pointer flex items-center">
-            <UserIcon className="mr-2 h-4 w-4" />
-            Profile
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/orders" className="cursor-pointer flex items-center">
+          <Link href="/users/orders" className="cursor-pointer flex items-center">
             <Package className="mr-2 h-4 w-4" />
             My Orders
           </Link>

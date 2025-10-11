@@ -49,7 +49,7 @@ export async function middleware(req: NextRequest) {
   }
 
   // Protected pages
-  const protectedPaths = ['/dashboard', '/profile', '/orders']
+  const protectedPaths = ['/dashboard', '/profile', '/orders', '/users']
   if (protectedPaths.some(path => req.nextUrl.pathname.startsWith(path))) {
     if (!session) {
       return NextResponse.redirect(new URL('/auth/signin', req.url))
