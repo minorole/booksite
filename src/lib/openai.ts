@@ -1,6 +1,7 @@
 import OpenAI from 'openai'
 import { type ChatCompletion } from 'openai/resources/chat/completions'
 import { type ChatCompletionCreateParamsBase } from 'openai/resources/chat/completions'
+import { env } from '@/lib/config/env'
 
 /**
  * OpenAI Configuration Constants - Single source of truth for all OpenAI related configs
@@ -69,15 +70,27 @@ export class OpenAIError extends Error {
   }
 }
 
-if (!process.env.OPENAI_API_KEY) {
-  throw new OpenAIError('OPENAI_API_KEY is not defined', 'config_error')
-}
+// Lazy, role-aware client factory
+function getOpenAIClient(role: 'ADMIN' | 'USER' = 'ADMIN') {
+  const apiKey = role === 'ADMIN'
+    ? (() => { try { return env.openaiApiKeyAdmin() } catch { return undefined } })()
+    : env.openaiApiKeyUser()
 
-export const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-  maxRetries: OPENAI_CONFIG.MAX_RETRIES,
-  timeout: OPENAI_CONFIG.TIMEOUT
-})
+  if (!apiKey) {
+    throw new OpenAIError(
+      role === 'ADMIN'
+        ? 'Missing OPENAI_API_KEY'
+        : 'Missing OPENAI_API_KEY_USER',
+      'config_error'
+    )
+  }
+
+  return new OpenAI({
+    apiKey,
+    maxRetries: OPENAI_CONFIG.MAX_RETRIES,
+    timeout: OPENAI_CONFIG.TIMEOUT
+  })
+}
 
 type ChatCompletionMessage = ChatCompletionCreateParamsBase['messages'][number]
 
@@ -171,7 +184,8 @@ export async function createChatCompletion({
       model: OPENAI_CONFIG.MODELS.GPT4O
     })
 
-    const response = await openai.chat.completions.create({
+    const client = getOpenAIClient('ADMIN')
+    const response = await client.chat.completions.create({
       model: OPENAI_CONFIG.MODELS.GPT4O,
       messages,
       tools,
@@ -238,7 +252,8 @@ export async function createVisionChatCompletion({
       model: OPENAI_CONFIG.MODELS.GPT4O
     })
 
-    const response = await openai.chat.completions.create({
+    const client = getOpenAIClient('ADMIN')
+    const response = await client.chat.completions.create({
       model: OPENAI_CONFIG.MODELS.GPT4O,
       messages,
       stream,

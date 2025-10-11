@@ -1,8 +1,7 @@
 import { prisma } from '@/lib/prisma'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { type AdminAction } from '@prisma/client'
+import { assertAdmin, UnauthorizedError } from '@/lib/security/guards'
 
 export async function PUT(
   request: Request,
@@ -10,11 +9,14 @@ export async function PUT(
 ) {
   try {
     // Verify admin access
-    const supabase = createRouteHandlerClient({ cookies })
-    const { data: { user } } = await supabase.auth.getUser()
-    
-    if (!user || !['ADMIN', 'SUPER_ADMIN'].includes(user.user_metadata?.role)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    let user
+    try {
+      user = await assertAdmin()
+    } catch (e) {
+      if (e instanceof UnauthorizedError) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+      throw e
     }
 
     const data = await request.json()
@@ -70,11 +72,14 @@ export async function DELETE(
 ) {
   try {
     // Verify admin access
-    const supabase = createRouteHandlerClient({ cookies })
-    const { data: { user } } = await supabase.auth.getUser()
-    
-    if (!user || !['ADMIN', 'SUPER_ADMIN'].includes(user.user_metadata?.role)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    let user
+    try {
+      user = await assertAdmin()
+    } catch (e) {
+      if (e instanceof UnauthorizedError) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+      throw e
     }
 
     const book = await prisma.book.delete({

@@ -1,9 +1,9 @@
-import { openai, createChatCompletion, logOperation } from '@/lib/openai';
+import { createChatCompletion, logOperation } from '@/lib/openai';
 import { NextResponse } from 'next/server';
+import { getAuthUser, isAdmin } from '@/lib/security/guards'
+import { checkRateLimit, rateLimitHeaders, acquireConcurrency, releaseConcurrency } from '@/lib/security/ratelimit'
 import { 
-  type Message, 
-  type ChatResponse, 
-  type OpenAIMessage 
+  type Message
 } from '@/lib/admin/types';
 import { adminTools } from '@/lib/admin/function-definitions';
 import { 
@@ -12,7 +12,6 @@ import {
   ORDER_PROCESSING_PROMPT 
 } from '@/lib/admin/system-prompts';
 import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
-import { type ChatCompletion } from 'openai/resources/chat/completions'
 import { type CategoryType } from '@prisma/client'
 
 /**
@@ -23,7 +22,7 @@ function convertMessage(message: Message): ChatCompletionMessageParam {
   if (Array.isArray(message.content)) {
     console.log('📝 Converting array content message:', message)
     return {
-      role: message.role === 'tool' ? 'assistant' : message.role,
+      role: message.role,
       content: message.content.map(c => {
         if (c.type === 'text') {
           return { type: 'text', text: c.text }
@@ -50,9 +49,8 @@ function convertMessage(message: Message): ChatCompletionMessageParam {
       throw new Error('Tool messages must have a name');
     }
     return {
-      role: 'assistant',
-      content: message.content || '',
-      name: message.name,
+      role: 'tool',
+      content: (message.content || '') as string,
       ...(message.tool_call_id && { tool_call_id: message.tool_call_id })
     } as ChatCompletionMessageParam;
   }
@@ -66,16 +64,7 @@ function convertMessage(message: Message): ChatCompletionMessageParam {
   } as ChatCompletionMessageParam;
 }
 
-/**
- * Convert tools to functions format for OpenAI API
- */
-function convertToolsToFunctions() {
-  return adminTools.map(tool => ({
-    name: tool.function.name,
-    description: tool.function.description,
-    parameters: tool.function.parameters
-  }))
-}
+// (removed unused convertToolsToFunctions helper)
 
 function getSystemPrompt(messages: Message[]): string {
   const hasImage = messages.some(msg => 
@@ -101,6 +90,27 @@ function getSystemPrompt(messages: Message[]): string {
 
 export async function POST(request: Request) {
   try {
+    // Auth + rate limit
+    const user = await getAuthUser()
+    if (!user || !isAdmin(user)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    const rl = await checkRateLimit({ route: '/api/admin/ai-chat', userId: user.id })
+    if (rl.enabled && !rl.allowed) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded' },
+        { status: 429, headers: rateLimitHeaders(rl) }
+      )
+    }
+
+    const sem = await acquireConcurrency({ route: '/api/admin/ai-chat', userId: user.id, ttlSeconds: 30 })
+    if (sem.enabled && !sem.acquired) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded' },
+        { status: 429, headers: rateLimitHeaders(rl) }
+      )
+    }
+
     logOperation('CHAT_REQUEST', {
       timestamp: new Date().toISOString()
     })
@@ -211,7 +221,10 @@ export async function POST(request: Request) {
 
     console.log('📤 Formatted response message:', formattedMessage)
 
-    return NextResponse.json({ message: formattedMessage })
+    return NextResponse.json(
+      { message: formattedMessage },
+      { headers: rl.enabled ? rateLimitHeaders(rl) : undefined }
+    )
 
   } catch (error) {
     console.error('❌ Chat API Error:', error)
@@ -224,5 +237,12 @@ export async function POST(request: Request) {
       { error: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )
+  } finally {
+    try {
+      const user = await getAuthUser()
+      if (user) {
+        await releaseConcurrency({ route: '/api/admin/ai-chat', userId: user.id, ttlSeconds: 30 })
+      }
+    } catch {}
   }
 } 

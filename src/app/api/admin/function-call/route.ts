@@ -8,31 +8,27 @@ import {
   updateOrder,
   analyzeBookAndCheckDuplicates
 } from '@/lib/admin/function-handlers'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
 import { logOperation } from '@/lib/openai'
 import { type AdminOperationResult } from '@/lib/admin/types'
+import { assertAdmin, UnauthorizedError } from '@/lib/security/guards'
 
 export async function POST(request: Request) {
   try {
     console.log('📥 Function call request received')
     
     // Verify admin access
-    const supabase = createRouteHandlerClient({ cookies })
-    const { data: { user } } = await supabase.auth.getUser()
-    
-    if (!user || !['ADMIN', 'SUPER_ADMIN'].includes(user.user_metadata?.role)) {
-      console.log('❌ Unauthorized access attempt:', {
-        email: user?.email,
-        role: user?.user_metadata?.role
-      })
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    let user
+    try {
+      user = await assertAdmin()
+    } catch (e) {
+      if (e instanceof UnauthorizedError) {
+        console.log('❌ Unauthorized access attempt')
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+      throw e
     }
 
-    console.log('✅ User authorized:', {
-      email: user.email,
-      role: user.user_metadata?.role
-    })
+    console.log('✅ User authorized:', { email: user.email })
 
     const { name, arguments: args } = await request.json()
     console.log('📝 Function call details:', { name, args })

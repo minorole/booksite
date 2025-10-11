@@ -1,27 +1,43 @@
 import { NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
 import { handleImageUpload } from '@/lib/admin/image-upload'
+import { getAuthUser, isAdmin } from '@/lib/security/guards'
+import { checkRateLimit, rateLimitHeaders, acquireConcurrency, releaseConcurrency } from '@/lib/security/ratelimit'
 
 export async function POST(request: Request) {
   try {
     console.log('📥 Starting file upload process...')
     
     // Verify admin access
-    const supabase = createRouteHandlerClient({ cookies })
-    const { data: { user } } = await supabase.auth.getUser()
-    
-    if (!user || !['ADMIN', 'SUPER_ADMIN'].includes(user.user_metadata?.role)) {
+    const user = await getAuthUser()
+    if (!user || !isAdmin(user)) {
       console.log('❌ Unauthorized access attempt:', {
         email: user?.email,
-        role: user?.user_metadata?.role
+        role: (user as any)?.user_metadata?.role
       })
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Apply rate limit
+    const rl = await checkRateLimit({ route: '/api/upload', userId: user.id })
+    if (rl.enabled && !rl.allowed) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded' },
+        { status: 429, headers: rateLimitHeaders(rl) }
+      )
+    }
+
+    // Concurrency control for uploads
+    const sem = await acquireConcurrency({ route: '/api/upload', userId: user.id, ttlSeconds: 60 })
+    if (sem.enabled && !sem.acquired) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded' },
+        { status: 429, headers: rateLimitHeaders(rl) }
+      )
+    }
+
     console.log('✅ User authorized:', {
       email: user.email,
-      role: user.user_metadata?.role
+      role: (user as any).user_metadata?.role
     })
 
     const formData = await request.formData()
@@ -31,10 +47,13 @@ export async function POST(request: Request) {
     const secureUrl = await handleImageUpload(file)
     console.log('📤 Upload complete:', secureUrl)
 
-    return NextResponse.json({
-      url: secureUrl,
-      publicId: secureUrl.split('/').pop()?.split('.')[0]
-    })
+    return NextResponse.json(
+      {
+        url: secureUrl,
+        publicId: secureUrl.split('/').pop()?.split('.')[0]
+      },
+      { headers: rl.enabled ? rateLimitHeaders(rl) : undefined }
+    )
 
   } catch (error) {
     console.error('❌ Upload error:', error instanceof Error ? {
@@ -72,5 +91,13 @@ export async function POST(request: Request) {
       { error: 'Failed to upload image' },
       { status: 500 }
     )
+  }
+  finally {
+    try {
+      const user = await getAuthUser()
+      if (user) {
+        await releaseConcurrency({ route: '/api/upload', userId: user.id, ttlSeconds: 60 })
+      }
+    } catch {}
   }
 } 
