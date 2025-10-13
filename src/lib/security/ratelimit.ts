@@ -63,13 +63,23 @@ export async function checkRateLimit(opts: RateLimitCheckOptions): Promise<RateL
     return { allowed: true, remaining: policy.limit, limit: policy.limit, reset: resetMs, enabled: false }
   }
 
-  const result = await limiter.limit(key, { cost: weight as any }) as any
-  // Result shape: { success, limit, remaining, reset }
+  // Consume tokens; some versions of @upstash/ratelimit do not support 'cost'
+  let last: any = null
+  let allowed = true
+  for (let i = 0; i < weight; i++) {
+    const r = await (limiter as any).limit(key)
+    last = r
+    if (!r?.success) {
+      allowed = false
+      break
+    }
+  }
+
   return {
-    allowed: !!result.success,
-    remaining: result.remaining ?? 0,
-    limit: result.limit ?? policy.limit,
-    reset: (result.reset ?? Math.ceil(resetMs / 1000)) * 1000,
+    allowed,
+    remaining: last?.remaining ?? 0,
+    limit: last?.limit ?? policy.limit,
+    reset: ((last?.reset ?? Math.ceil(resetMs / 1000)) as number) * 1000,
     enabled: true,
   }
 }

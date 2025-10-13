@@ -1,20 +1,21 @@
 import { NextResponse } from 'next/server'
 import { handleImageUpload } from '@/lib/admin/image-upload'
-import { getAuthUser, isAdmin } from '@/lib/security/guards'
+import { assertAdmin, UnauthorizedError, getAuthUser } from '@/lib/security/guards'
 import { checkRateLimit, rateLimitHeaders, acquireConcurrency, releaseConcurrency } from '@/lib/security/ratelimit'
 
 export async function POST(request: Request) {
   try {
     console.log('📥 Starting file upload process...')
     
-    // Verify admin access
-    const user = await getAuthUser()
-    if (!user || !isAdmin(user)) {
-      console.log('❌ Unauthorized access attempt:', {
-        email: user?.email,
-        role: (user as any)?.user_metadata?.role
-      })
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // Verify admin access (DB authoritative)
+    let user
+    try {
+      user = await assertAdmin()
+    } catch (e) {
+      if (e instanceof UnauthorizedError) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+      throw e
     }
 
     // Apply rate limit
@@ -101,3 +102,6 @@ export async function POST(request: Request) {
     } catch {}
   }
 } 
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+export const revalidate = 0

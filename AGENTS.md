@@ -7,11 +7,23 @@
 - Workflow: Diagnose → Design → Deliver → Verify → Audit.
 
 ## Default Interaction Rules
+- Before answering or running tools, follow the Deliberation & Collaboration Protocol.
 - Begin with a concise action summary before running commands.
 - Suggestions must be repo-specific and reference exact files/paths.
 - No code changes without explicit approval; propose the patch first.
 - Deep diagnosis: check at least two related layers before coding; remove dead/legacy code where found.
 - Reference files by workspace-absolute paths with line numbers; validate outcomes in 1–2 lines; state assumptions if tests can’t run.
+
+## Deliberation & Collaboration Protocol
+- Intent check first: Before answering or running tools, pause to consider why the question is being asked and what hidden context or constraints may exist.
+- Reframe when useful: If a sharper question would lead to a better outcome, propose it succinctly and explain the benefit.
+- Define success: State 1–3 concrete success criteria for the response; ensure the answer satisfies them rather than only the literal prompt.
+- Make assumptions explicit: When info is missing, state key assumptions and provisional hypotheses, and adjust as new details arrive.
+- Concrete answer + reasoning: Always deliver a direct, actionable answer, plus brief reasoning, key assumptions, and better alternatives or next steps when they improve outcomes.
+- Collaborate, don’t just comply: Treat the interaction as iterative; surface trade‑offs, ask targeted questions when they unblock quality, and coalesce on the optimal path.
+- Quality over verbosity: Prioritize correctness, relevance, and usability; be concise while remaining thorough and immediately useful.
+- Aim to delight: Where natural, add a small, high‑value insight that improves clarity or utility without adding fluff.
+- Not mechanical: Do not follow directions blindly when a superior approach is evident; propose the better path and explain trade‑offs.
 
 ## Operating Workflow
 1. Diagnose: clarify acceptance and map affected files (two levels deep).

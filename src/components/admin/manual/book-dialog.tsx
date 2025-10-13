@@ -29,8 +29,27 @@ import {
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
-import { CategoryType } from '@prisma/client'
-import type { Book, Category } from "@prisma/client"
+import { CategoryType, CATEGORY_TYPES } from '@/lib/db/enums'
+// Align dialog props with Supabase-based API shapes
+type Category = {
+  id: string
+  type: CategoryType
+  name_zh: string
+  name_en: string
+  description_zh: string | null
+  description_en: string | null
+}
+type Book = {
+  id: string
+  title_zh: string
+  title_en: string | null
+  description_zh: string
+  description_en: string | null
+  cover_image: string | null
+  quantity: number
+  search_tags: string[]
+  category: Category
+}
 
 const CATEGORY_LABELS: Record<CategoryType, string> = {
   PURE_LAND_BOOKS: "净土佛书",
@@ -44,14 +63,12 @@ const formSchema = z.object({
   title_en: z.string().optional(),
   description_zh: z.string().optional(),
   description_en: z.string().optional(),
-  category_type: z.nativeEnum(CategoryType),
+  category_type: z.enum(CATEGORY_TYPES),
   quantity: z.number().min(0),
   tags: z.string(),
 })
 
-type BookWithCategory = Book & {
-  category: Category
-}
+type BookWithCategory = Book
 
 interface BookDialogProps {
   open: boolean

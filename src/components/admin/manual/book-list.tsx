@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { 
@@ -21,18 +21,35 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { Edit2, Trash2, Plus } from "lucide-react"
 import { BookDialog } from "./book-dialog"
-import type { Book, Category } from "@prisma/client"
+// Define the shape returned by the Supabase-based API
+type Category = {
+  id: string
+  type: import('@/lib/db/enums').CategoryType
+  name_zh: string
+  name_en: string
+  description_zh: string | null
+  description_en: string | null
+}
+type Book = {
+  id: string
+  title_zh: string
+  title_en: string | null
+  description_zh: string
+  description_en: string | null
+  cover_image: string | null
+  quantity: number
+  search_tags: string[]
+  category: Category
+}
 import Image from "next/image"
 import {
   Dialog,
   DialogContent,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { CategoryType } from '@prisma/client'
+import { CategoryType } from '@/lib/db/enums'
 
-type BookWithCategory = Book & {
-  category: Category
-}
+type BookWithCategory = Book
 
 // Add the category display mapping
 const CATEGORY_LABELS: Record<CategoryType, string> = {
@@ -51,11 +68,7 @@ export function BookList() {
   const [selectedBook, setSelectedBook] = useState<BookWithCategory | null>(null)
   const { toast } = useToast()
 
-  useEffect(() => {
-    fetchBooks()
-  }, [])
-
-  const fetchBooks = async () => {
+  const fetchBooks = useCallback(async () => {
     try {
       const response = await fetch('/api/admin/manual/books')
       const data = await response.json()
@@ -70,7 +83,11 @@ export function BookList() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [toast])
+
+  useEffect(() => {
+    fetchBooks()
+  }, [fetchBooks])
 
   const handleDelete = async (bookId: string) => {
     if (!confirm("Are you sure you want to delete this book?")) return

@@ -1,13 +1,14 @@
-"use client"
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Mail } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { useSearchParams } from 'next/navigation'
 
-export default function VerifyPage() {
-  const searchParams = useSearchParams()
-  const email = searchParams.get('email')
+export default function VerifyPage({
+  searchParams,
+}: {
+  searchParams: { [key: string]: string | string[] | undefined }
+}) {
+  const raw = searchParams?.email
+  const email = Array.isArray(raw) ? raw[0] : raw
 
   return (
     <Card>
@@ -19,7 +20,7 @@ export default function VerifyPage() {
           <div className="text-center">
             <CardTitle>Check your email</CardTitle>
             <CardDescription className="mt-2">
-              We've sent you a magic link to sign in
+              We’ve sent you a magic link to sign in
             </CardDescription>
           </div>
         </div>
@@ -38,7 +39,7 @@ export default function VerifyPage() {
           
           <Alert className="bg-muted/50 border-muted-foreground/20">
             <AlertDescription>
-              <p className="font-medium">Can't find the email?</p>
+              <p className="font-medium">Can’t find the email?</p>
               <ul className="mt-2 text-sm list-disc list-inside space-y-1">
                 <li>Check your spam or junk folder</li>
                 <li>Wait a few minutes and refresh your inbox</li>
@@ -54,4 +55,4 @@ export default function VerifyPage() {
       </CardContent>
     </Card>
   )
-} 
+}

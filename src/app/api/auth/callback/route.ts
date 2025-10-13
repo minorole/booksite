@@ -1,8 +1,6 @@
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
-import { Prisma } from '@prisma/client'
-import { prisma } from '@/lib/prisma'
 
 export async function GET(request: Request) {
   try {
@@ -21,43 +19,39 @@ export async function GET(request: Request) {
       throw new Error(authError?.message || 'Authentication failed')
     }
 
-    // Check if this is the super admin email
+    // Determine role based on configured super admin email
     const isSuperAdmin = user.email === process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL
-    const userRole = isSuperAdmin ? 'SUPER_ADMIN' : 'USER'
+    const userRole: 'USER' | 'ADMIN' | 'SUPER_ADMIN' = isSuperAdmin ? 'SUPER_ADMIN' : 'USER'
 
-    try {
-      // Create or update user in database
-      await prisma.user.upsert({
-        where: { 
-          id: user.id 
-        },
-        create: {
+    // Mirror role in Supabase user metadata for client convenience
+    await supabase.auth.updateUser({ data: { role: userRole } })
+
+    // Upsert profile row (source of truth for role)
+    // RLS policy allows insert/update when id = auth.uid()
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .upsert(
+        {
           id: user.id,
-          email: user.email,
-          role: userRole as 'USER' | 'ADMIN' | 'SUPER_ADMIN',
+          name: user.user_metadata?.name ?? null,
+          role: userRole,
         },
-        update: {
-          email: user.email,
-          role: isSuperAdmin ? (userRole as 'SUPER_ADMIN') : undefined,
-        },
-      })
+        { onConflict: 'id' }
+      )
 
-      // Update user metadata in Supabase
-      await supabase.auth.updateUser({
-        data: { role: userRole }
-      })
-
-      return NextResponse.redirect(new URL('/', requestUrl.origin))
-    } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        console.error('Database error:', error.message)
-      }
-      throw error
+    if (profileError) {
+      // Do not block login on profile upsert issues; log and continue
+      console.error('Profile upsert error:', profileError)
     }
+
+    return NextResponse.redirect(new URL('/', requestUrl.origin))
   } catch (error) {
     console.error('Auth error:', error)
     return NextResponse.redirect(
       new URL('/auth/signin?error=AuthError', request.url)
     )
   }
-} 
+}
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+export const revalidate = 0

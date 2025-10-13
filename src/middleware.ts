@@ -34,8 +34,11 @@ export async function middleware(req: NextRequest) {
   // Admin routes
   if (req.nextUrl.pathname.startsWith('/admin')) {
     const { data: { user } } = await supabase.auth.getUser()
-    const role = user?.user_metadata?.role
-    if (role !== 'ADMIN' && role !== 'SUPER_ADMIN') {
+    if (!user) return NextResponse.redirect(new URL('/', req.url))
+
+    // Check DB-authored role via RPC
+    const { data: isAdmin, error } = await supabase.rpc('is_admin')
+    if (error || !isAdmin) {
       return NextResponse.redirect(new URL('/', req.url))
     }
   }
@@ -43,7 +46,15 @@ export async function middleware(req: NextRequest) {
   // Super Admin routes
   if (req.nextUrl.pathname.startsWith('/super-admin')) {
     const { data: { user } } = await supabase.auth.getUser()
-    if (user?.user_metadata?.role !== 'SUPER_ADMIN') {
+    if (!user) return NextResponse.redirect(new URL('/', req.url))
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (!profile || profile.role !== 'SUPER_ADMIN') {
       return NextResponse.redirect(new URL('/', req.url))
     }
   }

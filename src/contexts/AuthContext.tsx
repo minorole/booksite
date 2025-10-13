@@ -31,20 +31,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
-        const isAdmin = session.user.user_metadata?.role === 'ADMIN';
-        const isSuperAdmin = session.user.user_metadata?.role === 'SUPER_ADMIN';
+        // Authoritative role from profiles
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', session.user.id)
+          .single()
+        const role = profile?.role as 'USER' | 'ADMIN' | 'SUPER_ADMIN' | undefined
+        const isSuperAdmin = role === 'SUPER_ADMIN'
+        const isAdmin = role === 'ADMIN' || isSuperAdmin
         setAuthState({
           user: session.user,
-          isAdmin: isAdmin || isSuperAdmin, // Ensure SUPER_ADMIN also has admin privileges
+          isAdmin,
           isSuperAdmin,
           loading: false,
-        });
+        })
       } else {
-        setAuthState(prev => ({ ...prev, loading: false }));
+        setAuthState(prev => ({ ...prev, loading: false }))
       }
-    });
+    })
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -61,14 +68,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         if (session?.user) {
-          const isAdmin = session.user.user_metadata?.role === 'ADMIN';
-          const isSuperAdmin = session.user.user_metadata?.role === 'SUPER_ADMIN';
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', session.user.id)
+            .single()
+          const role = profile?.role as 'USER' | 'ADMIN' | 'SUPER_ADMIN' | undefined
+          const isSuperAdmin = role === 'SUPER_ADMIN'
+          const isAdmin = role === 'ADMIN' || isSuperAdmin
           setAuthState({
             user: session.user,
-            isAdmin: isAdmin || isSuperAdmin, // Ensure SUPER_ADMIN also has admin privileges
+            isAdmin,
             isSuperAdmin,
             loading: false,
-          });
+          })
           router.refresh();
         } else {
           setAuthState({

@@ -1,5 +1,5 @@
 import { type ChatCompletionTool } from 'openai/resources/chat/completions'
-import { type CategoryType } from '@prisma/client'
+import { type CategoryType } from '@/lib/db/enums'
 
 export const adminTools: ChatCompletionTool[] = [
   {

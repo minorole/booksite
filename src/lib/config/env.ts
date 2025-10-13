@@ -2,8 +2,6 @@ import { z } from 'zod'
 
 // Define environment variable schema (strings only; validate at access time)
 const RequiredKeys = [
-  'DATABASE_URL',
-  'DIRECT_URL',
   'OPENAI_API_KEY',
   'NEXT_PUBLIC_SUPABASE_URL',
   'NEXT_PUBLIC_SUPABASE_ANON_KEY',
@@ -12,6 +10,8 @@ const RequiredKeys = [
 ] as const
 
 const OptionalKeys = [
+  'DATABASE_URL',
+  'DIRECT_URL',
   'OPENAI_API_KEY_USER',
   'UPSTASH_REDIS_REST_URL',
   'UPSTASH_REDIS_REST_TOKEN',
@@ -40,8 +40,6 @@ export function getOptionalEnv(key: OptionalEnvKey): string | undefined {
 
 export const env = {
   // Required getters
-  databaseUrl: () => getEnv('DATABASE_URL'),
-  directUrl: () => getEnv('DIRECT_URL'),
   openaiApiKeyAdmin: () => getEnv('OPENAI_API_KEY'),
   supabaseUrl: () => getEnv('NEXT_PUBLIC_SUPABASE_URL'),
   supabaseAnonKey: () => getEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY'),
@@ -49,8 +47,9 @@ export const env = {
   cloudinaryUrl: () => getEnv('CLOUDINARY_URL'),
 
   // Optional getters
+  databaseUrl: () => getOptionalEnv('DATABASE_URL'),
+  directUrl: () => getOptionalEnv('DIRECT_URL'),
   openaiApiKeyUser: () => getOptionalEnv('OPENAI_API_KEY_USER'),
   upstashUrl: () => getOptionalEnv('UPSTASH_REDIS_REST_URL'),
   upstashToken: () => getOptionalEnv('UPSTASH_REDIS_REST_TOKEN'),
 }
-

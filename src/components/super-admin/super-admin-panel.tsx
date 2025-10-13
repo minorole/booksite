@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import {
   Table,
@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useToast } from '@/hooks/use-toast'
-import { Role } from '@prisma/client'
+import { type Role } from '@/lib/db/enums'
 import { useRouter } from 'next/navigation'
 
 type User = {
@@ -36,17 +36,7 @@ export function SuperAdminPanel() {
   const [updating, setUpdating] = useState<string | null>(null)
   const router = useRouter()
 
-  useEffect(() => {
-    if (!loading && !isSuperAdmin) {
-      router.push('/')
-      return
-    }
-    if (!loading && isSuperAdmin) {
-      fetchUsers()
-    }
-  }, [loading, isSuperAdmin, router])
-
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       const response = await fetch('/api/users')
       const data = await response.json()
@@ -59,7 +49,17 @@ export function SuperAdminPanel() {
         description: "Failed to fetch users"
       })
     }
-  }
+  }, [toast])
+
+  useEffect(() => {
+    if (!loading && !isSuperAdmin) {
+      router.push('/')
+      return
+    }
+    if (!loading && isSuperAdmin) {
+      fetchUsers()
+    }
+  }, [loading, isSuperAdmin, router, fetchUsers])
 
   const handleRoleChange = async (userId: string, newRole: Role) => {
     setUpdating(userId)

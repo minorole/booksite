@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
 import { getAuthUser } from '@/lib/security/guards'
+import { getUserOrders } from '@/lib/db/orders'
 
 export async function GET() {
   try {
@@ -9,45 +9,13 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const orders = await prisma.order.findMany({
-      where: { user_id: user.id },
-      include: {
-        order_items: {
-          include: {
-            book: {
-              select: { title_en: true, title_zh: true }
-            }
-          }
-        },
-        address: true,
-      },
-      orderBy: { created_at: 'desc' }
-    })
-
-    const mapped = orders.map(o => ({
-      id: o.id,
-      status: o.status,
-      total_items: o.total_items,
-      created_at: o.created_at.toISOString(),
-      shipping_address: [
-        o.address?.address1,
-        o.address?.address2,
-        [o.address?.city, o.address?.state].filter(Boolean).join(', '),
-        [o.address?.zip, o.address?.country].filter(Boolean).join(' ')
-      ].filter(Boolean).join('\n'),
-      order_items: o.order_items.map(oi => ({
-        book: {
-          title_en: oi.book.title_en || '',
-          title_zh: oi.book.title_zh || ''
-        },
-        quantity: oi.quantity
-      }))
-    }))
-
-    return NextResponse.json({ orders: mapped })
+    const orders = await getUserOrders(user.id)
+    return NextResponse.json({ orders })
   } catch (error) {
     console.error('❌ Failed to fetch user orders:', error)
     return NextResponse.json({ error: 'Failed to fetch orders' }, { status: 500 })
   }
 }
-
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+export const revalidate = 0

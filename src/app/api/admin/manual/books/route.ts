@@ -1,7 +1,8 @@
-import { prisma } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
-import { type AdminAction } from '@prisma/client'
 import { assertAdmin, UnauthorizedError } from '@/lib/security/guards'
+import { listBooks } from '@/lib/db/books'
+import { CATEGORY_TYPES, type CategoryType } from '@/lib/db/enums'
+import { createBookDb, logAdminAction } from '@/lib/db/admin'
 
 export async function GET() {
   try {
@@ -16,14 +17,7 @@ export async function GET() {
       throw e
     }
 
-    const books = await prisma.book.findMany({
-      include: {
-        category: true
-      },
-      orderBy: {
-        updated_at: 'desc'
-      }
-    })
+    const books = await listBooks()
 
     return NextResponse.json({ books })
   } catch (error) {
@@ -58,36 +52,41 @@ export async function POST(request: Request) {
       )
     }
 
-    const book = await prisma.book.create({
-      data: {
-        title_zh: data.title_zh || '',
-        title_en: data.title_en,
-        description_zh: data.description_zh || '',
-        description_en: data.description_en,
-        category: {
-          connect: {
-            type: data.category_type
-          }
-        },
-        quantity: data.quantity,
-        search_tags: data.tags,
-        content_summary_zh: '',
-        content_summary_en: null
-      }
+    // Resolve category by type
+    const categoryType = data.category_type as CategoryType | undefined
+    if (!categoryType || !CATEGORY_TYPES.includes(categoryType)) {
+      return NextResponse.json(
+        { error: 'Invalid or missing category_type' },
+        { status: 400 }
+      )
+    }
+
+    // Delegate to db helper to insert and normalize tags
+    const created = await createBookDb({
+      title_zh: data.title_zh || '',
+      title_en: data.title_en ?? null,
+      description_zh: data.description_zh || '',
+      description_en: data.description_en ?? null,
+      category_type: categoryType,
+      quantity: typeof data.quantity === 'number' ? data.quantity : 0,
+      cover_image: typeof data.cover_image === 'string' ? data.cover_image : '',
+      tags: Array.isArray(data.tags)
+        ? data.tags.filter(Boolean)
+        : (typeof data.tags === 'string'
+            ? data.tags.split(',').map((t: string) => t.trim()).filter(Boolean)
+            : []),
     })
 
-    // Log the action
-    await prisma.adminLog.create({
-      data: {
-        action: 'CREATE_BOOK' as AdminAction,
-        book_id: book.id,
-        book_title: data.title_en || data.title_zh,
-        admin_email: user.email!,
-        metadata: data
-      }
+    // Admin log via helper
+    await logAdminAction({
+      action: 'CREATE_BOOK',
+      admin_email: user.email!,
+      book_id: created.id,
+      book_title: data.title_en || data.title_zh || null,
+      metadata: data,
     })
 
-    return NextResponse.json({ book })
+    return NextResponse.json({ book: { id: created.id } })
   } catch (error) {
     console.error('❌ Failed to create book:', error)
     return NextResponse.json(
@@ -96,3 +95,6 @@ export async function POST(request: Request) {
     )
   }
 } 
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+export const revalidate = 0

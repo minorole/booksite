@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { OrderStatus } from '@prisma/client'
+import { type OrderStatus } from '@/lib/db/enums'
 
 type Order = {
   id: string

@@ -8,7 +8,7 @@ export default function SignInPage() {
         <CardTitle>Welcome to Free Marketplace</CardTitle>
         <CardDescription>
           New or returning? Simply enter your email below to continue.
-          We'll send you a secure magic link to sign in.
+          We’ll send you a secure magic link to sign in.
         </CardDescription>
       </CardHeader>
       <CardContent>
