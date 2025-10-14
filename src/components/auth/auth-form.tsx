@@ -16,6 +16,16 @@ export function AuthForm() {
   const supabase = createClient()
   const searchParams = useSearchParams()
 
+  const mapAuthError = (msg?: string) => {
+    const m = (msg || '').toLowerCase()
+    if (!m) return '发生未知错误，请重试。 · An unexpected error occurred. Please try again.'
+    if (m.includes('email is required')) return '需要邮箱 · Email is required'
+    if (m.includes('too many requests')) return '请求过多，请稍后再试 · Too many requests'
+    if (m.includes('failed to send magic link')) return '发送魔法链接失败 · Failed to send magic link'
+    if (m.includes('failed to start google sign in')) return '无法启动 Google 登录 · Failed to start Google sign in'
+    return `${msg} · ${msg}`
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
@@ -33,8 +43,8 @@ export function AuthForm() {
       }
 
       toast({
-        title: "Magic link sent",
-        description: "Check your email for the login link. Be sure to check your spam folder too.",
+        title: "魔法链接已发送 · Magic link sent",
+        description: "请到邮箱查收登录链接，同时检查垃圾邮件文件夹。 · Check your email for the login link. Be sure to check your spam folder too.",
       })
       const ts = Date.now()
       const qp = new URLSearchParams({ email })
@@ -44,8 +54,8 @@ export function AuthForm() {
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: error instanceof Error ? error.message : "An unexpected error occurred. Please try again.",
+        title: "错误 · Error",
+        description: mapAuthError(error instanceof Error ? error.message : undefined),
       })
     } finally {
       setLoading(false)
@@ -67,8 +77,8 @@ export function AuthForm() {
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to start Google sign in",
+        title: "错误 · Error",
+        description: mapAuthError(error instanceof Error ? error.message : 'Failed to start Google sign in'),
       })
       setLoading(false)
     }
@@ -79,7 +89,7 @@ export function AuthForm() {
       <form onSubmit={handleSubmit} className="space-y-4">
         <Input
           type="email"
-          placeholder="Enter your email"
+          placeholder="输入邮箱 · Enter your email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           disabled={loading}
@@ -92,10 +102,10 @@ export function AuthForm() {
               <div className="mr-2">
                 <LoadingSpinner />
               </div>
-              Sending magic link...
+              正在发送魔法链接… · Sending magic link...
             </>
           ) : (
-            "Continue with Email"
+            "通过邮箱继续 · Continue with Email"
           )}
         </Button>
       </form>
@@ -103,10 +113,10 @@ export function AuthForm() {
         <div className="my-4 h-px bg-border" />
       </div>
       <Button type="button" variant="outline" disabled={loading} onClick={handleGoogle} className="w-full">
-        Continue with Google
+        通过 Google 继续 · Continue with Google
       </Button>
       <p className="text-sm text-muted-foreground text-center">
-        By continuing, you agree to our Terms of Service and Privacy Policy.
+        继续即表示你同意我们的《服务条款》和《隐私政策》。 · By continuing, you agree to our Terms of Service and Privacy Policy.
       </p>
     </div>
   )

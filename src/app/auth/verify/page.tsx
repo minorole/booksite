@@ -57,17 +57,32 @@ function VerifyPageInner() {
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data?.error || 'Failed to resend link')
-      toast({ title: 'Magic link resent', description: 'Check your inbox again in a moment.' })
+      toast({ title: '魔法链接已重新发送 · Magic link resent', description: '请稍等片刻后再次查看收件箱。 · Check your inbox again in a moment.' })
       setCooldown(60)
       setIssuedAt(Date.now())
     } catch (e) {
-      toast({ variant: 'destructive', title: 'Error', description: e instanceof Error ? e.message : 'Failed to resend' })
+      const mapAuthError = (msg?: string) => {
+        const m = (msg || '').toLowerCase()
+        if (!m) return '发生未知错误，请重试。 · An unexpected error occurred. Please try again.'
+        if (m.includes('too many requests')) return '请求过多，请稍后再试 · Too many requests'
+        if (m.includes('failed to resend link')) return '重新发送失败 · Failed to resend link'
+        if (m.includes('failed to send magic link')) return '发送魔法链接失败 · Failed to send magic link'
+        return `${msg} · ${msg}`
+      }
+      toast({ variant: 'destructive', title: '错误 · Error', description: mapAuthError(e instanceof Error ? e.message : undefined) })
     } finally {
       setSending(false)
     }
   }, [cooldown, email, returnTo, sending, toast])
 
-  const label = cooldown > 0 ? `Resend in ${Math.floor(cooldown / 60)}:${String(cooldown % 60).padStart(2, '0')}` : 'Resend link'
+  const label = useMemo(() => {
+    if (cooldown > 0) {
+      const mm = Math.floor(cooldown / 60)
+      const ss = String(cooldown % 60).padStart(2, '0')
+      return `${mm}:${ss} 后可重发 · Resend in ${mm}:${ss}`
+    }
+    return '重新发送链接 · Resend link'
+  }, [cooldown])
   const expiryLabel = useMemo(() => {
     const totalSec = Math.ceil(remainingMs / 1000)
     const m = Math.floor(totalSec / 60)
@@ -83,9 +98,9 @@ function VerifyPageInner() {
             <Mail className="h-6 w-6 text-primary" />
           </div>
           <div className="text-center">
-            <CardTitle>Check your email</CardTitle>
+            <CardTitle>请查收邮箱 · Check your email</CardTitle>
             <CardDescription className="mt-2">
-              We’ve sent you a magic link to sign in
+              我们已发送登录魔法链接 · We’ve sent you a magic link to sign in
             </CardDescription>
           </div>
         </div>
@@ -94,30 +109,30 @@ function VerifyPageInner() {
         <div className="space-y-4">
           {email && (
             <p className="text-center text-sm">
-              Magic link sent to: <span className="font-medium">{email}</span>
+              魔法链接已发送至：<span className="font-medium">{email}</span> · Magic link sent to: <span className="font-medium">{email}</span>
               <br />
               <span className="text-xs text-muted-foreground">
-                (Wrong email? <a href="/auth/signin" className="text-primary hover:underline">Try again</a>)
+                （邮箱不正确？<a href="/auth/signin" className="text-primary hover:underline">重新填写</a>） · (Wrong email? <a href="/auth/signin" className="text-primary hover:underline">Try again</a>)
               </span>
             </p>
           )}
           
           <Alert className="bg-muted/50 border-muted-foreground/20">
             <AlertDescription>
-              <p className="font-medium">Can’t find the email?</p>
+              <p className="font-medium">找不到邮件？ · Can’t find the email?</p>
               <ul className="mt-2 text-sm list-disc list-inside space-y-1">
-                <li>Check your spam or junk folder</li>
-                <li>Wait a few minutes and refresh your inbox</li>
-                <li>Make sure you entered the correct email</li>
+                <li>检查垃圾邮件或广告邮件夹 · Check your spam or junk folder</li>
+                <li>等待几分钟后刷新收件箱 · Wait a few minutes and refresh your inbox</li>
+                <li>确认你输入了正确的邮箱地址 · Make sure you entered the correct email</li>
               </ul>
             </AlertDescription>
           </Alert>
 
           <div className="text-center text-xs text-muted-foreground">
             {remainingMs > 0 ? (
-              <span>Link expires in {expiryLabel}</span>
+              <span>链接将在 {expiryLabel} 后过期 · Link expires in {expiryLabel}</span>
             ) : (
-              <span>The link may have expired. You can resend a new link below.</span>
+              <span>链接可能已过期，你可以在下方重新发送。 · The link may have expired. You can resend a new link below.</span>
             )}
           </div>
 
@@ -140,7 +155,7 @@ function VerifyPageInner() {
 
 export default function VerifyPage() {
   return (
-    <Suspense fallback={<div className="p-4 text-sm text-muted-foreground">Loading…</div>}>
+    <Suspense fallback={<div className="p-4 text-sm text-muted-foreground">加载中… · Loading…</div>}>
       <VerifyPageInner />
     </Suspense>
   )

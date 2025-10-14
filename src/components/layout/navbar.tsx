@@ -18,12 +18,12 @@ export function Navbar() {
           <div className="flex items-center space-x-4 ml-4">
             {user && (
               <>
-                <Link href="/users/orders">Orders</Link>
+                <Link href="/users/orders">订单 · Orders</Link>
               </>
             )}
             {isAdmin && (
               <Link href="/admin/ai-chat" className="text-blue-600">
-                Admin
+                管理 · Admin
               </Link>
             )}
           </div>

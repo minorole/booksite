@@ -10,21 +10,20 @@ export default function SignInPage({
 }) {
   const err = (typeof searchParams?.error === 'string') ? searchParams?.error : undefined
   const message = err === 'LinkExpired'
-    ? 'Your magic link has expired. Please request a new one.'
+    ? '你的魔法链接已过期，请重新请求一封。 · Your magic link has expired. Please request a new one.'
     : err === 'AuthError'
-    ? 'We couldn’t sign you in. Please try again.'
+    ? '未能为你完成登录，请再试一次。 · We couldn’t sign you in. Please try again.'
     : undefined
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-3">
-          <span>Welcome to</span>
+          <span>欢迎来到 · Welcome to</span>
           <Logo height={40} />
         </CardTitle>
         <CardDescription>
-          New or returning? Simply enter your email below to continue.
-          We’ll send you a secure magic link to sign in.
+          新用户或老用户？在下方输入你的邮箱继续。我们会发送一封安全的登录魔法链接。 · New or returning? Simply enter your email below to continue. We’ll send you a secure magic link to sign in.
         </CardDescription>
       </CardHeader>
       <CardContent>

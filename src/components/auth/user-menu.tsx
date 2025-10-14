@@ -25,7 +25,7 @@ export function UserMenu() {
     return (
       <Button asChild variant="outline">
         <Link href="/auth/signin">
-          Sign In
+          登录 · Sign In
         </Link>
       </Button>
     )
@@ -51,7 +51,7 @@ export function UserMenu() {
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">Account</p>
+            <p className="text-sm font-medium leading-none">账号 · Account</p>
             <p className="text-xs leading-none text-muted-foreground">
               {user.email}
             </p>
@@ -61,14 +61,14 @@ export function UserMenu() {
         <DropdownMenuItem asChild>
           <Link href="/users/orders" className="cursor-pointer flex items-center">
             <Package className="mr-2 h-4 w-4" />
-            My Orders
+            我的订单 · My Orders
           </Link>
         </DropdownMenuItem>
         {(isAdmin || isSuperAdmin) && (
           <DropdownMenuItem asChild>
             <Link href="/admin" className="cursor-pointer flex items-center">
               <Settings className="mr-2 h-4 w-4" />
-              Admin Panel
+              管理后台 · Admin Panel
             </Link>
           </DropdownMenuItem>
         )}
@@ -76,7 +76,7 @@ export function UserMenu() {
           <DropdownMenuItem asChild>
             <Link href="/super-admin" className="cursor-pointer flex items-center">
               <Shield className="mr-2 h-4 w-4" />
-              User Management
+              用户管理 · User Management
             </Link>
           </DropdownMenuItem>
         )}
@@ -86,7 +86,7 @@ export function UserMenu() {
           onClick={handleSignOut}
         >
           <LogOut className="mr-2 h-4 w-4" />
-          Sign out
+          退出登录 · Sign out
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
