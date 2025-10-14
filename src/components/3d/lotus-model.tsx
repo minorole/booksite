@@ -37,18 +37,21 @@ function Lotus(props: any) {
   const { actions } = useAnimations(animations, scene)
   const { theme } = useTheme()
 
+  // Start animation once when actions are ready
   useEffect(() => {
-    // Play the animation once loaded but slow it down
-    const action = actions[Object.keys(actions)[0]]
+    const firstKey = Object.keys(actions)[0]
+    const action = firstKey ? actions[firstKey] : undefined
     if (action) {
       action.reset().play()
       action.clampWhenFinished = false
-      action.timeScale = 0.3
+      action.timeScale = 0.5
       action.setLoop(THREE.LoopPingPong, Infinity)
       action.fadeIn(0.1)
     }
+  }, [actions])
 
-    // Modify materials to golden color
+  // Update materials on theme change without restarting animation
+  useEffect(() => {
     scene.traverse((child: any) => {
       if (child.isMesh) {
         const newMaterial = new THREE.MeshStandardMaterial({
@@ -61,7 +64,7 @@ function Lotus(props: any) {
         child.material = newMaterial
       }
     })
-  }, [actions, scene, theme])
+  }, [scene, theme])
 
   return <primitive object={scene} {...props} />
 }
@@ -104,7 +107,7 @@ export function LotusModel() {
           </group>
           <OrbitControls
             autoRotate
-            autoRotateSpeed={1}
+            autoRotateSpeed={2}
             enableZoom={false}
             enablePan={false}
             enableRotate={false}
