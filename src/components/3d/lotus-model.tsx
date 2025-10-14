@@ -70,7 +70,7 @@ function Lotus(props: any) {
 }
 export function LotusModel() {
   return (
-    <div className="w-[430px] h-[400px] mx-auto -mt-6">
+    <div className="w-[430px] h-[400px] mx-auto -mt-8 md:-mt-10">
       <Suspense fallback={<CssLotus />}>
         <Canvas 
           shadows={false}

@@ -112,7 +112,7 @@ export default function Home() {
       )}>
         <Navbar />
         
-        <main className="relative flex-1 flex flex-col items-center justify-center p-4">
+        <main className="relative flex-1 flex flex-col items-center justify-center px-4 pt-2 pb-4">
           {/* subtle hero glow */}
           <div className="pointer-events-none absolute -z-10 inset-x-0 top-[-60px] h-[240px] bg-[radial-gradient(60%_40%_at_50%_0%,hsl(var(--primary)/0.10),transparent)] blur-3xl" />
           <div className="w-full max-w-4xl mx-auto text-center space-y-4">
