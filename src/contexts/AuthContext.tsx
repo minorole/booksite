@@ -38,7 +38,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .from('profiles')
           .select('role')
           .eq('id', session.user.id)
-          .single()
+          .single<{ role: string }>()
         const role = profile?.role as 'USER' | 'ADMIN' | 'SUPER_ADMIN' | undefined
         const isSuperAdmin = role === 'SUPER_ADMIN'
         const isAdmin = role === 'ADMIN' || isSuperAdmin
@@ -72,7 +72,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             .from('profiles')
             .select('role')
             .eq('id', session.user.id)
-            .single()
+            .single<{ role: string }>()
           const role = profile?.role as 'USER' | 'ADMIN' | 'SUPER_ADMIN' | undefined
           const isSuperAdmin = role === 'SUPER_ADMIN'
           const isAdmin = role === 'ADMIN' || isSuperAdmin

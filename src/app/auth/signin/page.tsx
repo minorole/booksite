@@ -3,12 +3,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Logo } from "@/components/common/logo"
 
-export default function SignInPage({
+export default async function SignInPage({
   searchParams,
 }: {
-  searchParams?: { [key: string]: string | string[] | undefined }
+  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
-  const err = (typeof searchParams?.error === 'string') ? searchParams?.error : undefined
+  const params = await searchParams
+  const err = (typeof params?.error === 'string') ? params?.error : undefined
   const message = err === 'LinkExpired'
     ? '你的魔法链接已过期，请重新请求一封。 · Your magic link has expired. Please request a new one.'
     : err === 'AuthError'

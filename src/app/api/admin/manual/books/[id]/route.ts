@@ -6,7 +6,7 @@ import { updateBookDb, logAdminAction } from '@/lib/db/admin'
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     // Verify admin access
@@ -21,7 +21,8 @@ export async function PUT(
     }
 
     const data = await request.json()
-    console.log('📝 Updating book:', { id: params.id, ...data })
+    const { id } = await context.params
+    console.log('📝 Updating book:', { id, ...data })
 
     // Validate category type when provided
     if (data.category_type) {
@@ -32,7 +33,7 @@ export async function PUT(
     }
 
     // Delegate to db helper to perform update and tag replacement
-    await updateBookDb(params.id, {
+    await updateBookDb(id, {
       title_zh: data.title_zh,
       title_en: data.title_en,
       description_zh: data.description_zh,
@@ -50,12 +51,12 @@ export async function PUT(
     await logAdminAction({
       action: 'EDIT_BOOK',
       admin_email: user.email!,
-      book_id: params.id,
+      book_id: id,
       book_title: null,
       metadata: data,
     })
 
-    const book = await getBook(params.id)
+    const book = await getBook(id)
     return NextResponse.json({ book })
   } catch (error) {
     console.error('❌ Failed to update book:', error)
@@ -68,7 +69,7 @@ export async function PUT(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     // Verify admin access
@@ -83,12 +84,13 @@ export async function DELETE(
     }
 
     // Delete and log via helper + thin supabase call
-    const existing = await getBook(params.id)
+    const { id } = await context.params
+    const existing = await getBook(id)
     const dbmod = await (await import('@/lib/db/client')).getServerDb()
     const { error: delErr } = await dbmod
       .from('books')
       .delete()
-      .eq('id', params.id)
+      .eq('id', id)
     if (delErr) {
       return NextResponse.json({ error: 'Failed to delete book' }, { status: 500 })
     }
@@ -96,9 +98,9 @@ export async function DELETE(
     await logAdminAction({
       action: 'DELETE_BOOK',
       admin_email: user.email!,
-      book_id: params.id,
+      book_id: id,
       book_title: existing?.title_en || existing?.title_zh || null,
-      metadata: { id: params.id },
+      metadata: { id },
     })
 
     return NextResponse.json({ success: true })
