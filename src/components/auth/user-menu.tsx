@@ -15,6 +15,7 @@ import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/AuthContext"
 import Link from "next/link"
 import { LogOut, Package, Settings, Shield } from "lucide-react"
+import { Bilingual } from "@/components/common/bilingual"
 
 function GlowSignIn() {
   return (
@@ -22,7 +23,7 @@ function GlowSignIn() {
       href="/auth/signin"
       className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 rounded-full bg-white shadow-sm transition-all duration-200 ease-out hover:shadow-md hover:-translate-y-0.5 hover:bg-neutral-50 active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-300"
     >
-      登录 · Sign In
+      <Bilingual cnText="登录" enText="Sign In" />
     </Link>
   )
 }
@@ -56,7 +57,9 @@ export function UserMenu() {
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">账号 · Account</p>
+            <p className="text-sm font-medium leading-none">
+              <Bilingual as="span" cnText="账号" enText="Account" />
+            </p>
             <p className="text-xs leading-none text-muted-foreground">
               {user.email}
             </p>
@@ -66,14 +69,14 @@ export function UserMenu() {
         <DropdownMenuItem asChild>
           <Link href="/users/orders" className="cursor-pointer flex items-center">
             <Package className="mr-2 h-4 w-4" />
-            我的订单 · My Orders
+            <Bilingual as="span" cnText="我的订单" enText="My Orders" />
           </Link>
         </DropdownMenuItem>
         {(isAdmin || isSuperAdmin) && (
           <DropdownMenuItem asChild>
             <Link href="/admin" className="cursor-pointer flex items-center">
               <Settings className="mr-2 h-4 w-4" />
-              管理后台 · Admin Panel
+              <Bilingual as="span" cnText="管理后台" enText="Admin Panel" />
             </Link>
           </DropdownMenuItem>
         )}
@@ -81,7 +84,7 @@ export function UserMenu() {
           <DropdownMenuItem asChild>
             <Link href="/super-admin" className="cursor-pointer flex items-center">
               <Shield className="mr-2 h-4 w-4" />
-              用户管理 · User Management
+              <Bilingual as="span" cnText="用户管理" enText="User Management" />
             </Link>
           </DropdownMenuItem>
         )}
@@ -91,7 +94,7 @@ export function UserMenu() {
           onClick={handleSignOut}
         >
           <LogOut className="mr-2 h-4 w-4" />
-          退出登录 · Sign out
+          <Bilingual as="span" cnText="退出登录" enText="Sign out" />
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

@@ -2,11 +2,13 @@
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { useState } from "react"
+import { useState, type ReactNode } from "react"
 import { createClient } from "@/lib/supabase"
 import { useToast } from "@/hooks/use-toast"
 import { useRouter, useSearchParams } from "next/navigation"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
+import { Bilingual } from "@/components/common/bilingual"
+import { BilingualInput } from "@/components/common/bilingual-input"
 
 export function AuthForm() {
   const [email, setEmail] = useState("")
@@ -16,14 +18,14 @@ export function AuthForm() {
   const supabase = createClient()
   const searchParams = useSearchParams()
 
-  const mapAuthError = (msg?: string) => {
+  const mapAuthError = (msg?: string): ReactNode => {
     const m = (msg || '').toLowerCase()
-    if (!m) return '发生未知错误，请重试。 · An unexpected error occurred. Please try again.'
-    if (m.includes('email is required')) return '需要邮箱 · Email is required'
-    if (m.includes('too many requests')) return '请求过多，请稍后再试 · Too many requests'
-    if (m.includes('failed to send magic link')) return '发送魔法链接失败 · Failed to send magic link'
-    if (m.includes('failed to start google sign in')) return '无法启动 Google 登录 · Failed to start Google sign in'
-    return `${msg} · ${msg}`
+    if (!m) return (<Bilingual cnText="发生未知错误，请重试。" enText="An unexpected error occurred. Please try again." />)
+    if (m.includes('email is required')) return (<Bilingual cnText="需要邮箱" enText="Email is required" />)
+    if (m.includes('too many requests')) return (<Bilingual cnText="请求过多，请稍后再试" enText="Too many requests" />)
+    if (m.includes('failed to send magic link')) return (<Bilingual cnText="发送魔法链接失败" enText="Failed to send magic link" />)
+    if (m.includes('failed to start google sign in')) return (<Bilingual cnText="无法启动 Google 登录" enText="Failed to start Google sign in" />)
+    return (<Bilingual cnText={msg} enText={msg} />)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -43,8 +45,8 @@ export function AuthForm() {
       }
 
       toast({
-        title: "魔法链接已发送 · Magic link sent",
-        description: "请到邮箱查收登录链接，同时检查垃圾邮件文件夹。 · Check your email for the login link. Be sure to check your spam folder too.",
+        title: (<Bilingual cnText="魔法链接已发送" enText="Magic link sent" />),
+        description: (<Bilingual cnText="请到邮箱查收登录链接，同时检查垃圾邮件文件夹。" enText="Check your email for the login link. Be sure to check your spam folder too." />),
       })
       const ts = Date.now()
       const qp = new URLSearchParams({ email })
@@ -54,7 +56,7 @@ export function AuthForm() {
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "错误 · Error",
+        title: (<Bilingual cnText="错误" enText="Error" />),
         description: mapAuthError(error instanceof Error ? error.message : undefined),
       })
     } finally {
@@ -77,7 +79,7 @@ export function AuthForm() {
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "错误 · Error",
+        title: (<Bilingual cnText="错误" enText="Error" />),
         description: mapAuthError(error instanceof Error ? error.message : 'Failed to start Google sign in'),
       })
       setLoading(false)
@@ -103,29 +105,24 @@ export function AuthForm() {
             <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303c-.792 2.238-2.231 4.166-4.094 5.566l.003-.002 6.191 5.238C35.064 40.322 40 36 42 28c.667-2.667 1.611-6.917 1.611-7.917z"/>
           </svg>
         </span>
-        <span className="flex flex-col gap-0 leading-none">
-          <span className="font-bold">使用谷歌</span>
-          <span className="text-xs text-white/70 font-bold">With Google</span>
-        </span>
+        <Bilingual as="span" cnText={<span className="font-bold">使用谷歌</span>} enText={<span className="font-bold">With Google</span>} enClassName="text-white/70" />
       </Button>
 
       {/* Divider bilingual */}
       <div className="text-center text-xs text-white/50 font-semibold">
         <div className="flex items-center gap-3">
           <div className="h-px flex-1 bg-white/10" />
-          <div>
-            <div>或者</div>
-            <div className="text-white/40">or</div>
-          </div>
+          <Bilingual as="div" align="center" cnText="或者" enText="or" enClassName="text-white/40" />
           <div className="h-px flex-1 bg-white/10" />
         </div>
       </div>
 
       {/* Email form */}
       <form onSubmit={handleSubmit} className="space-y-3">
-        <Input
+        <BilingualInput
           type="email"
-          placeholder="输入邮箱 · Enter your email"
+          cnPlaceholder="输入邮箱"
+          enPlaceholder="Enter your email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           disabled={loading}
@@ -143,13 +140,10 @@ export function AuthForm() {
               <div className="mr-2">
                 <LoadingSpinner />
               </div>
-              正在发送魔法链接… · Sending magic link...
+              <Bilingual as="span" cnText="正在发送魔法链接…" enText="Sending magic link..." enClassName="text-white/70" />
             </>
           ) : (
-            <span className="flex flex-col gap-0 leading-none">
-              <span className="font-bold">使用邮箱</span>
-              <span className="text-xs text-white/70 font-bold">With Email</span>
-            </span>
+            <Bilingual as="span" cnText={<span className="font-bold">使用邮箱</span>} enText={<span className="font-bold">With Email</span>} enClassName="text-white/70" />
           )}
         </Button>
       </form>

@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { ChatInterface } from "@/components/admin/ai-chat/chat-interface";
 import { Card } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
+import { Bilingual } from "@/components/common/bilingual";
 
 export default function AdminAIChatPage() {
   const router = useRouter();
@@ -22,7 +23,9 @@ export default function AdminAIChatPage() {
       <div className="p-4">
         <Card className="flex flex-col h-[calc(100vh-10rem)] w-full max-w-4xl mx-auto items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          <p className="mt-2 text-muted-foreground">正在检查权限… · Checking authorization...</p>
+          <p className="mt-2 text-muted-foreground">
+            <Bilingual as="span" cnText="正在检查权限…" enText="Checking authorization..." />
+          </p>
         </Card>
       </div>
     );

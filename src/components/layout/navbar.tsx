@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react"
 import { UserMenu } from "@/components/auth/user-menu"
 import { useAuth } from "@/contexts/AuthContext"
 import { Logo } from "@/components/common/logo"
+import { Bilingual } from "@/components/common/bilingual"
 
 function AnimatedNavLink({ href, children }: { href: string; children: React.ReactNode }) {
   return (
@@ -58,9 +59,19 @@ export function Navbar() {
             </div>
 
             <nav className="hidden md:flex items-center gap-6">
-              <AnimatedNavLink href="/">首页 · Home</AnimatedNavLink>
-              {user && <AnimatedNavLink href="/users/orders">订单 · Orders</AnimatedNavLink>}
-              {isAdmin && <AnimatedNavLink href="/admin/ai-chat">管理 · Admin</AnimatedNavLink>}
+              <Link href="/" className="text-sm sm:text-base">
+                <Bilingual cnText="首页" enText="Home" />
+              </Link>
+              {user && (
+                <Link href="/users/orders" className="text-sm sm:text-base">
+                  <Bilingual cnText="订单" enText="Orders" />
+                </Link>
+              )}
+              {isAdmin && (
+                <Link href="/admin/ai-chat" className="text-sm sm:text-base">
+                  <Bilingual cnText="管理" enText="Admin" />
+                </Link>
+              )}
             </nav>
 
             <div className="hidden md:flex items-center">
@@ -92,15 +103,17 @@ export function Navbar() {
             }`}
           >
             <nav className="flex flex-col items-center gap-4">
-              <Link href="/" className="text-gray-700 hover:text-gray-900">首页 · Home</Link>
+              <Link href="/" className="text-gray-700 hover:text-gray-900">
+                <Bilingual cnText="首页" enText="Home" />
+              </Link>
               {user && (
                 <Link href="/users/orders" className="text-gray-700 hover:text-gray-900">
-                  订单 · Orders
+                  <Bilingual cnText="订单" enText="Orders" />
                 </Link>
               )}
               {isAdmin && (
                 <Link href="/admin/ai-chat" className="text-gray-700 hover:text-gray-900">
-                  管理 · Admin
+                  <Bilingual cnText="管理" enText="Admin" />
                 </Link>
               )}
               <div className="pt-2">

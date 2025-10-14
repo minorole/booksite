@@ -1,11 +1,12 @@
 "use client"
 
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react"
+import { Suspense, useCallback, useEffect, useMemo, useState, type ReactNode } from "react"
 import { useSearchParams } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Mail } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
+import { Bilingual } from "@/components/common/bilingual"
 import { useToast } from "@/hooks/use-toast"
 
 const EXP_MS = 15 * 60 * 1000
@@ -57,31 +58,42 @@ function VerifyPageInner() {
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data?.error || 'Failed to resend link')
-      toast({ title: '魔法链接已重新发送 · Magic link resent', description: '请稍等片刻后再次查看收件箱。 · Check your inbox again in a moment.' })
+      toast({
+        title: (<Bilingual cnText="魔法链接已重新发送" enText="Magic link resent" />),
+        description: (<Bilingual cnText="请稍等片刻后再次查看收件箱。" enText="Check your inbox again in a moment." />),
+      })
       setCooldown(60)
       setIssuedAt(Date.now())
     } catch (e) {
-      const mapAuthError = (msg?: string) => {
+      const mapAuthError = (msg?: string): ReactNode => {
         const m = (msg || '').toLowerCase()
-        if (!m) return '发生未知错误，请重试。 · An unexpected error occurred. Please try again.'
-        if (m.includes('too many requests')) return '请求过多，请稍后再试 · Too many requests'
-        if (m.includes('failed to resend link')) return '重新发送失败 · Failed to resend link'
-        if (m.includes('failed to send magic link')) return '发送魔法链接失败 · Failed to send magic link'
-        return `${msg} · ${msg}`
+        if (!m) return (<Bilingual cnText="发生未知错误，请重试。" enText="An unexpected error occurred. Please try again." />)
+        if (m.includes('too many requests')) return (<Bilingual cnText="请求过多，请稍后再试" enText="Too many requests" />)
+        if (m.includes('failed to resend link')) return (<Bilingual cnText="重新发送失败" enText="Failed to resend link" />)
+        if (m.includes('failed to send magic link')) return (<Bilingual cnText="发送魔法链接失败" enText="Failed to send magic link" />)
+        return (<Bilingual cnText={msg} enText={msg} />)
       }
-      toast({ variant: 'destructive', title: '错误 · Error', description: mapAuthError(e instanceof Error ? e.message : undefined) })
+      toast({ variant: 'destructive', title: (<Bilingual cnText='错误' enText='Error' />), description: mapAuthError(e instanceof Error ? e.message : undefined) })
     } finally {
       setSending(false)
     }
   }, [cooldown, email, returnTo, sending, toast])
 
-  const label = useMemo(() => {
+  const label: ReactNode = useMemo(() => {
     if (cooldown > 0) {
       const mm = Math.floor(cooldown / 60)
       const ss = String(cooldown % 60).padStart(2, '0')
-      return `${mm}:${ss} 后可重发 · Resend in ${mm}:${ss}`
+      return (
+        <Bilingual
+          cnText={`${mm}:${ss} 后可重发`}
+          enText={<>Resend in {mm}:{ss}</>}
+          enClassName="text-white/70"
+        />
+      )
     }
-    return '重新发送链接 · Resend link'
+    return (
+      <Bilingual cnText="重新发送链接" enText="Resend link" enClassName="text-white/70" />
+    )
   }, [cooldown])
   const expiryLabel = useMemo(() => {
     const totalSec = Math.ceil(remainingMs / 1000)
@@ -98,9 +110,11 @@ function VerifyPageInner() {
             <Mail className="h-6 w-6 text-primary" />
           </div>
           <div className="text-center">
-            <CardTitle className="text-white/90 text-3xl sm:text-4xl font-extrabold tracking-tight">请查收邮箱 · Check your email</CardTitle>
+            <CardTitle className="text-white/90 text-3xl sm:text-4xl font-extrabold tracking-tight">
+              <Bilingual as="span" cnText="请查收邮箱" enText="Check your email" />
+            </CardTitle>
             <CardDescription className="mt-2 text-white/80 text-base sm:text-lg leading-relaxed">
-              我们已发送登录魔法链接 · We’ve sent you a magic link to sign in
+              <Bilingual as="span" cnText="我们已发送登录魔法链接" enText="We’ve sent you a magic link to sign in" />
             </CardDescription>
           </div>
         </div>
@@ -109,30 +123,46 @@ function VerifyPageInner() {
         <div className="space-y-4">
           {email && (
             <p className="text-center text-sm">
-              魔法链接已发送至：<span className="font-semibold text-white">{email}</span> · Magic link sent to: <span className="font-semibold text-white">{email}</span>
+              <Bilingual
+                as="span"
+                cnText={<><span>魔法链接已发送至：</span><span className="font-semibold text-white">{email}</span></>}
+                enText={<><span>Magic link sent to: </span><span className="font-semibold text-white">{email}</span></>}
+              />
               <br />
               <span className="text-xs text-muted-foreground">
-                （邮箱不正确？<a href="/auth/signin" className="text-primary hover:underline">重新填写</a>） · (Wrong email? <a href="/auth/signin" className="text-primary hover:underline">Try again</a>)
+                <Bilingual
+                  as="span"
+                  cnText={<><span>（邮箱不正确？</span><a href="/auth/signin" className="text-primary hover:underline">重新填写</a><span>）</span></>}
+                  enText={<><span>(Wrong email? </span><a href="/auth/signin" className="text-primary hover:underline">Try again</a><span>)</span></>}
+                />
               </span>
             </p>
           )}
           
           <Alert className="bg-muted/50 border-muted-foreground/20">
             <AlertDescription>
-              <p className="font-medium">找不到邮件？ · Can’t find the email?</p>
+              <p className="font-medium">
+                <Bilingual as="span" cnText="找不到邮件？" enText="Can’t find the email?" />
+              </p>
               <ul className="mt-2 text-sm list-disc list-inside space-y-1">
-                <li>检查垃圾邮件或广告邮件夹 · Check your spam or junk folder</li>
-                <li>等待几分钟后刷新收件箱 · Wait a few minutes and refresh your inbox</li>
-                <li>确认你输入了正确的邮箱地址 · Make sure you entered the correct email</li>
+                <li>
+                  <Bilingual as="span" cnText="检查垃圾邮件或广告邮件夹" enText="Check your spam or junk folder" />
+                </li>
+                <li>
+                  <Bilingual as="span" cnText="等待几分钟后刷新收件箱" enText="Wait a few minutes and refresh your inbox" />
+                </li>
+                <li>
+                  <Bilingual as="span" cnText="确认你输入了正确的邮箱地址" enText="Make sure you entered the correct email" />
+                </li>
               </ul>
             </AlertDescription>
           </Alert>
 
           <div className="text-center text-xs text-white/60">
             {remainingMs > 0 ? (
-              <span>链接将在 {expiryLabel} 后过期 · Link expires in {expiryLabel}</span>
+              <Bilingual as="span" cnText={<>链接将在 {expiryLabel} 后过期</>} enText={<>Link expires in {expiryLabel}</>} />
             ) : (
-              <span>链接可能已过期，你可以在下方重新发送。 · The link may have expired. You can resend a new link below.</span>
+              <Bilingual as="span" cnText="链接可能已过期，你可以在下方重新发送。" enText="The link may have expired. You can resend a new link below." />
             )}
           </div>
 
@@ -156,7 +186,13 @@ function VerifyPageInner() {
 
 export default function VerifyPage() {
   return (
-    <Suspense fallback={<div className="p-4 text-sm text-muted-foreground">加载中… · Loading…</div>}>
+    <Suspense
+      fallback={
+        <div className="p-4 text-sm text-muted-foreground">
+          <Bilingual as="span" cnText="加载中…" enText="Loading…" />
+        </div>
+      }
+    >
       <VerifyPageInner />
     </Suspense>
   )
