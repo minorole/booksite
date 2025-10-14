@@ -4,48 +4,33 @@ import { Navbar } from "@/components/layout/navbar"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
-import { Suspense, useState, useEffect } from "react"
-import { LotusModel } from "@/components/3d/lotus-model"
+import { useState, useEffect, useCallback } from "react"
+import dynamic from 'next/dynamic'
 import Typewriter from 'typewriter-effect';
+import { useProgress } from '@react-three/drei'
 
-// Loading screen component
-function LoadingScreen({ onLoadingComplete }: { onLoadingComplete: () => void }) {
-  const [progress, setProgress] = useState(0)
+const LotusModel = dynamic(
+  () => import('@/components/3d/lotus-model').then(m => m.LotusModel),
+  { ssr: false }
+)
 
-  useEffect(() => {
-    let mounted = true;
-
-    const timer = setInterval(() => {
-      if (mounted) {
-        setProgress(prev => {
-          if (prev >= 100) {
-            clearInterval(timer)
-            onLoadingComplete()
-            return 100
-          }
-          return Math.min(prev + 1, 100)
-        })
-      }
-    }, 20)
-
-    // Cleanup function
-    return () => {
-      mounted = false;
-      clearInterval(timer)
-    }
-  }, [onLoadingComplete])
-
+// Full-screen loading overlay driven by actual 3D loading progress
+function LoadingOverlay({ progress, fading }: { progress: number; fading: boolean }) {
+  const pct = Math.max(0, Math.min(Math.round(progress), 100))
   return (
-    <div className="fixed inset-0 bg-background flex items-center justify-center z-50">
+    <div className={cn(
+      "fixed inset-0 bg-background flex items-center justify-center z-50 transition-opacity duration-300",
+      fading ? "opacity-0" : "opacity-100"
+    )}>
       <div className="w-[300px] text-center">
         <div className="h-1 w-full bg-muted rounded-full overflow-hidden mb-4">
-          <div 
+          <div
             className="h-full bg-primary transition-all duration-300 ease-out"
-            style={{ width: `${progress}%` }}
+            style={{ width: `${pct}%` }}
           />
         </div>
         <p className="text-sm text-muted-foreground">
-          Loading... {progress}%
+          Loading… {pct}%
         </p>
       </div>
     </div>
@@ -127,16 +112,35 @@ function QuickLinks() {
 }
 
 export default function Home() {
+  // Track real asset loading state from drei
+  const { active, progress } = useProgress()
   const [isLoading, setIsLoading] = useState(true)
+  const [isFadingOut, setIsFadingOut] = useState(false)
+
+  const completeOverlay = useCallback(() => {
+    if (isFadingOut || !isLoading) return
+    setIsFadingOut(true)
+    const t = setTimeout(() => setIsLoading(false), 250)
+    return () => clearTimeout(t)
+  }, [isFadingOut, isLoading])
+
+  // Hide overlay as soon as 3D assets are done (with a safety cap)
+  useEffect(() => {
+    if (!active && progress >= 100) completeOverlay()
+  }, [active, progress, completeOverlay])
+
+  useEffect(() => {
+    // Safety timeout in case progress cannot be determined on some devices
+    const timeout = setTimeout(() => completeOverlay(), 8000)
+    if (!isLoading) clearTimeout(timeout)
+    return () => clearTimeout(timeout)
+  }, [isLoading, completeOverlay])
 
   return (
     <>
-      {isLoading && (
-        <LoadingScreen onLoadingComplete={() => setIsLoading(false)} />
-      )}
+      {isLoading && <LoadingOverlay progress={progress} fading={isFadingOut} />}
       <div className={cn(
-        "min-h-screen flex flex-col",
-        isLoading && "hidden" // Hide content while loading
+        "min-h-screen flex flex-col"
       )}>
         <Navbar />
         

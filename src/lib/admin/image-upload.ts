@@ -1,6 +1,11 @@
-import { v2 as cloudinary } from 'cloudinary'
 import { FILE_CONFIG, CLOUDINARY_CONFIG } from './constants'
 import { type AllowedMimeType, type ImageUploadResult } from './types'
+
+// Lazy-load Cloudinary only when needed to avoid build-time env validation
+async function getCloudinary() {
+  const mod = await import('cloudinary')
+  return mod.v2
+}
 
 /**
  * Basic URL validation for any image URL
@@ -157,6 +162,7 @@ export async function handleImageUpload(file: File, maxRetries = 2): Promise<str
       const dataURI = `data:${file.type};base64,${base64File}`
       
       // 3. Upload to Cloudinary with timeout
+      const cloudinary = await getCloudinary()
       const uploadPromise = cloudinary.uploader.upload(dataURI, {
         folder: CLOUDINARY_CONFIG.FOLDER,
         resource_type: 'auto',

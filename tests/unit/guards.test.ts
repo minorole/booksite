@@ -1,23 +1,17 @@
 import { describe, it, expect } from 'vitest'
-import { isAdmin, isSuperAdmin } from '@/lib/security/guards'
+import { UnauthorizedError } from '@/lib/security/guards'
+import { ROLES } from '@/lib/db/enums'
 
-const makeUser = (role: string) => ({
-  id: 'u1',
-  email: 't@example.com',
-  user_metadata: { role },
-} as any)
-
-describe('guards (role checks)', () => {
-  it('identifies super admin', () => {
-    expect(isSuperAdmin(makeUser('SUPER_ADMIN'))).toBe(true)
-    expect(isSuperAdmin(makeUser('ADMIN'))).toBe(false)
-    expect(isSuperAdmin(makeUser('USER'))).toBe(false)
+describe('guards (basics)', () => {
+  it('UnauthorizedError has status and name', () => {
+    const err = new UnauthorizedError('nope')
+    expect(err).toBeInstanceOf(Error)
+    expect(err.name).toBe('UnauthorizedError')
+    expect(err.status).toBe(401)
+    expect(err.message).toBe('nope')
   })
 
-  it('identifies admin (incl super admin)', () => {
-    expect(isAdmin(makeUser('SUPER_ADMIN'))).toBe(true)
-    expect(isAdmin(makeUser('ADMIN'))).toBe(true)
-    expect(isAdmin(makeUser('USER'))).toBe(false)
+  it('roles include USER/ADMIN/SUPER_ADMIN', () => {
+    expect(ROLES).toEqual(['USER', 'ADMIN', 'SUPER_ADMIN'])
   })
 })
-

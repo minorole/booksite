@@ -1,7 +1,7 @@
 "use client"
 
 import { Canvas } from "@react-three/fiber"
-import { useGLTF, OrbitControls, useAnimations } from "@react-three/drei"
+import { useGLTF, OrbitControls, useAnimations, AdaptiveDpr } from "@react-three/drei"
 import { Suspense, useEffect } from "react"
 import { useTheme } from "next-themes"
 import * as THREE from 'three'
@@ -33,7 +33,7 @@ function CssLotus() {
 }
 
 function Lotus(props: any) {
-  const { scene, animations } = useGLTF('/models/lotus_compressed.glb')
+  const { scene, animations } = useGLTF('/models/lotus_compressed.glb', '/draco/', false)
   const { actions } = useAnimations(animations, scene)
   const { theme } = useTheme()
 
@@ -71,7 +71,7 @@ export function LotusModel() {
       <Suspense fallback={<CssLotus />}>
         <Canvas 
           shadows={false}
-          dpr={[1, 2]} 
+          dpr={[1, 1.5]} 
           camera={{ 
             fov: 45, 
             position: [0, 0, 2],
@@ -80,9 +80,11 @@ export function LotusModel() {
           }}
           gl={{ 
             alpha: true,
-            antialias: true
+            antialias: true,
+            powerPreference: 'high-performance'
           }}
         >
+          <AdaptiveDpr />
           <ambientLight intensity={0.7} />
           <directionalLight 
             position={[5, 5, 5]}
@@ -115,4 +117,4 @@ export function LotusModel() {
   )
 }
 
-useGLTF.preload('/models/lotus_compressed.glb') 
+useGLTF.preload('/models/lotus_compressed.glb', '/draco/', false)

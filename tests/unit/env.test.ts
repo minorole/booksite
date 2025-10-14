@@ -12,13 +12,13 @@ describe('env getters', () => {
   })
 
   it('returns required vars via getEnv', () => {
-    process.env.DATABASE_URL = 'postgres://example'
-    expect(getEnv('DATABASE_URL')).toBe('postgres://example')
+    process.env.SUPER_ADMIN_EMAIL = 'admin@example.com'
+    expect(getEnv('SUPER_ADMIN_EMAIL')).toBe('admin@example.com')
   })
 
   it('throws for missing required env', () => {
-    delete process.env.DIRECT_URL
-    expect(() => getEnv('DIRECT_URL')).toThrowError(/Missing required environment variable: DIRECT_URL/)
+    delete process.env.OPENAI_API_KEY
+    expect(() => getEnv('OPENAI_API_KEY')).toThrowError(/Missing required environment variable: OPENAI_API_KEY/)
   })
 
   it('returns undefined for missing optional env', () => {
@@ -27,8 +27,7 @@ describe('env getters', () => {
   })
 
   it('exposes helpers that validate lazily', () => {
-    process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL = 'admin@example.com'
+    process.env.SUPER_ADMIN_EMAIL = 'admin@example.com'
     expect(env.superAdminEmail()).toBe('admin@example.com')
   })
 })
-

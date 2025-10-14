@@ -92,6 +92,6 @@
 - DB changes must include migrations and, if applicable, seed updates.
 
 ## Security & Configuration Tips
-- Required envs: `DATABASE_URL`, `DIRECT_URL`, `OPENAI_API_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SUPER_ADMIN_EMAIL`.
+- Required envs: `DATABASE_URL`, `DIRECT_URL`, `OPENAI_API_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPER_ADMIN_EMAIL`.
 - Use `.env.local`; never commit secrets. Client envs must start with `NEXT_PUBLIC_`.
 - Images: remote patterns configured in `next.config.js`.

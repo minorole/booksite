@@ -5,7 +5,7 @@ const RequiredKeys = [
   'OPENAI_API_KEY',
   'NEXT_PUBLIC_SUPABASE_URL',
   'NEXT_PUBLIC_SUPABASE_ANON_KEY',
-  'NEXT_PUBLIC_SUPER_ADMIN_EMAIL',
+  'SUPER_ADMIN_EMAIL',
   'CLOUDINARY_URL',
 ] as const
 
@@ -43,7 +43,7 @@ export const env = {
   openaiApiKeyAdmin: () => getEnv('OPENAI_API_KEY'),
   supabaseUrl: () => getEnv('NEXT_PUBLIC_SUPABASE_URL'),
   supabaseAnonKey: () => getEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY'),
-  superAdminEmail: () => getEnv('NEXT_PUBLIC_SUPER_ADMIN_EMAIL'),
+  superAdminEmail: () => getEnv('SUPER_ADMIN_EMAIL'),
   cloudinaryUrl: () => getEnv('CLOUDINARY_URL'),
 
   // Optional getters

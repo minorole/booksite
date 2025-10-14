@@ -7,8 +7,9 @@ export async function middleware(req: NextRequest) {
   const supabase = createMiddlewareClient({ req, res })
   const { data: { session } } = await supabase.auth.getSession()
 
-  // Allow auth callback route
-  if (req.nextUrl.pathname.startsWith('/api/auth/callback')) {
+  // Allow auth callback and magic-link routes
+  if (req.nextUrl.pathname.startsWith('/api/auth/callback') ||
+      req.nextUrl.pathname.startsWith('/api/auth/magic-link')) {
     return res
   }
 
@@ -34,7 +35,10 @@ export async function middleware(req: NextRequest) {
   // Admin routes
   if (req.nextUrl.pathname.startsWith('/admin')) {
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.redirect(new URL('/', req.url))
+    if (!user) {
+      const returnTo = `${req.nextUrl.pathname}${req.nextUrl.search}`
+      return NextResponse.redirect(new URL(`/auth/signin?returnTo=${encodeURIComponent(returnTo)}`, req.url))
+    }
 
     // Check DB-authored role via RPC
     const { data: isAdmin, error } = await supabase.rpc('is_admin')
@@ -46,7 +50,10 @@ export async function middleware(req: NextRequest) {
   // Super Admin routes
   if (req.nextUrl.pathname.startsWith('/super-admin')) {
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.redirect(new URL('/', req.url))
+    if (!user) {
+      const returnTo = `${req.nextUrl.pathname}${req.nextUrl.search}`
+      return NextResponse.redirect(new URL(`/auth/signin?returnTo=${encodeURIComponent(returnTo)}`, req.url))
+    }
 
     const { data: profile } = await supabase
       .from('profiles')
@@ -63,7 +70,8 @@ export async function middleware(req: NextRequest) {
   const protectedPaths = ['/dashboard', '/profile', '/orders', '/users']
   if (protectedPaths.some(path => req.nextUrl.pathname.startsWith(path))) {
     if (!session) {
-      return NextResponse.redirect(new URL('/auth/signin', req.url))
+      const returnTo = `${req.nextUrl.pathname}${req.nextUrl.search}`
+      return NextResponse.redirect(new URL(`/auth/signin?returnTo=${encodeURIComponent(returnTo)}`, req.url))
     }
   }
 
@@ -72,6 +80,13 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|public/).*)',
+    '/api/:path*',
+    '/admin/:path*',
+    '/super-admin/:path*',
+    '/dashboard/:path*',
+    '/profile/:path*',
+    '/orders/:path*',
+    '/users/:path*',
+    '/auth/:path*',
   ],
-} 
+}

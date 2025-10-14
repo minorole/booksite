@@ -1,14 +1,79 @@
+"use client"
+
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react"
+import { useSearchParams } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Mail } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Button } from "@/components/ui/button"
+import { useToast } from "@/hooks/use-toast"
 
-export default function VerifyPage({
-  searchParams,
-}: {
-  searchParams: { [key: string]: string | string[] | undefined }
-}) {
-  const raw = searchParams?.email
-  const email = Array.isArray(raw) ? raw[0] : raw
+const EXP_MS = 15 * 60 * 1000
+
+function VerifyPageInner() {
+  const params = useSearchParams()
+  const { toast } = useToast()
+  const email = useMemo(() => {
+    const raw = params?.get('email') || undefined
+    return raw || ''
+  }, [params])
+  const returnTo = useMemo(() => params?.get('returnTo') || undefined, [params])
+  const [cooldown, setCooldown] = useState<number>(60)
+  const [sending, setSending] = useState<boolean>(false)
+  const initialIssuedAt = useMemo(() => {
+    const rawTs = params?.get('ts')
+    const parsed = rawTs ? Number(rawTs) : undefined
+    return parsed && !isNaN(parsed) ? parsed : Date.now()
+  }, [params])
+  const [issuedAt, setIssuedAt] = useState<number>(initialIssuedAt)
+
+  const [remainingMs, setRemainingMs] = useState<number>(Math.max(0, EXP_MS - (Date.now() - issuedAt)))
+
+  useEffect(() => {
+    setCooldown(60)
+  }, [])
+
+  useEffect(() => {
+    if (cooldown <= 0) return
+    const t = setInterval(() => setCooldown((c) => Math.max(0, c - 1)), 1000)
+    return () => clearInterval(t)
+  }, [cooldown])
+
+  useEffect(() => {
+    const t = setInterval(() => {
+      setRemainingMs(Math.max(0, EXP_MS - (Date.now() - issuedAt)))
+    }, 1000)
+    return () => clearInterval(t)
+  }, [issuedAt])
+
+  const onResend = useCallback(async () => {
+    if (!email || sending || cooldown > 0) return
+    setSending(true)
+    try {
+      const res = await fetch('/api/auth/magic-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, returnTo }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data?.error || 'Failed to resend link')
+      toast({ title: 'Magic link resent', description: 'Check your inbox again in a moment.' })
+      setCooldown(60)
+      setIssuedAt(Date.now())
+    } catch (e) {
+      toast({ variant: 'destructive', title: 'Error', description: e instanceof Error ? e.message : 'Failed to resend' })
+    } finally {
+      setSending(false)
+    }
+  }, [cooldown, email, returnTo, sending, toast])
+
+  const label = cooldown > 0 ? `Resend in ${Math.floor(cooldown / 60)}:${String(cooldown % 60).padStart(2, '0')}` : 'Resend link'
+  const expiryLabel = useMemo(() => {
+    const totalSec = Math.ceil(remainingMs / 1000)
+    const m = Math.floor(totalSec / 60)
+    const s = totalSec % 60
+    return `${m}:${String(s).padStart(2, '0')}`
+  }, [remainingMs])
 
   return (
     <Card>
@@ -48,11 +113,38 @@ export default function VerifyPage({
             </AlertDescription>
           </Alert>
 
-          <p className="text-xs text-muted-foreground text-center">
-            The magic link will expire in 24 hours
-          </p>
+          <div className="text-center text-xs text-muted-foreground">
+            {remainingMs > 0 ? (
+              <span>Link expires in {expiryLabel}</span>
+            ) : (
+              <span>The link may have expired. You can resend a new link below.</span>
+            )}
+          </div>
+
+          <div className="flex justify-center">
+            <Button
+              type="button"
+              onClick={onResend}
+              disabled={!email || sending || cooldown > 0}
+              variant="outline"
+            >
+              {label}
+            </Button>
+          </div>
+
         </div>
       </CardContent>
     </Card>
   )
 }
+
+export default function VerifyPage() {
+  return (
+    <Suspense fallback={<div className="p-4 text-sm text-muted-foreground">Loading…</div>}>
+      <VerifyPageInner />
+    </Suspense>
+  )
+}
+
+export const dynamic = 'force-dynamic'
+export const revalidate = 0

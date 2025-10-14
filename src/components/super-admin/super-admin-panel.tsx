@@ -116,8 +116,7 @@ export function SuperAdminPanel() {
               <TableCell>
                 <Select
                   disabled={
-                    updating === user.id || 
-                    user.email === process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL
+                    updating === user.id || user.role === 'SUPER_ADMIN'
                   }
                   value={user.role}
                   onValueChange={(value: Role) => handleRoleChange(user.id, value)}
