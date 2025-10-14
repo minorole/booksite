@@ -3,7 +3,6 @@
 import { Navbar } from "@/components/layout/navbar"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
-import Link from "next/link"
 import { useState, useEffect, useCallback } from "react"
 import dynamic from 'next/dynamic'
 import Typewriter from 'typewriter-effect';
@@ -79,41 +78,6 @@ function ChatInput() {
   )
 }
 
-// Quick links section
-function QuickLinks() {
-  return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-5 sm:gap-6 max-w-3xl mx-auto mt-10">
-      <Link
-        href="/books/pure-land"
-        className="group p-6 sm:p-8 text-center rounded-2xl border border-border/60 bg-card/60 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md hover:bg-accent/40"
-      >
-        <span className="block text-2xl font-medium tracking-wide text-foreground">净土佛书</span>
-        <span className="block mt-2 text-base text-muted-foreground">Pure Land</span>
-      </Link>
-      <Link
-        href="/books/others"
-        className="group p-6 sm:p-8 text-center rounded-2xl border border-border/60 bg-card/60 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md hover:bg-accent/40"
-      >
-        <span className="block text-2xl font-medium tracking-wide text-foreground">其他佛书</span>
-        <span className="block mt-2 text-base text-muted-foreground">Other Books</span>
-      </Link>
-      <Link
-        href="/items/dharma"
-        className="group p-6 sm:p-8 text-center rounded-2xl border border-border/60 bg-card/60 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md hover:bg-accent/40"
-      >
-        <span className="block text-2xl font-medium tracking-wide text-foreground">法宝</span>
-        <span className="block mt-2 text-base text-muted-foreground">Dharma Items</span>
-      </Link>
-      <Link
-        href="/items/statues"
-        className="group p-6 sm:p-8 text-center rounded-2xl border border-border/60 bg-card/60 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md hover:bg-accent/40"
-      >
-        <span className="block text-2xl font-medium tracking-wide text-foreground">佛像</span>
-        <span className="block mt-2 text-base text-muted-foreground">Buddha Statues</span>
-      </Link>
-    </div>
-  )
-}
 
 export default function Home() {
   // Track real asset loading state from drei
@@ -165,7 +129,7 @@ export default function Home() {
               <ChatInput />
             </div>
 
-            <QuickLinks />
+            {/* Quick links moved to navbar */}
           </div>
         </main>
 

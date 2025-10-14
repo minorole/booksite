@@ -7,15 +7,53 @@ import { useAuth } from "@/contexts/AuthContext"
 import { Logo } from "@/components/common/logo"
 import { Bilingual } from "@/components/common/bilingual"
 
-function AnimatedNavLink({ href, children }: { href: string; children: React.ReactNode }) {
+function AnimatedBilingualNavLink({
+  href,
+  cnText,
+  enText,
+  className,
+}: {
+  href: string
+  cnText: React.ReactNode
+  enText: React.ReactNode
+  className?: string
+}) {
+  const measureRef = useRef<HTMLDivElement | null>(null)
+  const [measuredHeight, setMeasuredHeight] = useState<number | null>(null)
+
+  useEffect(() => {
+    const el = measureRef.current
+    if (!el) return
+    const update = () => setMeasuredHeight(el.offsetHeight)
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [cnText, enText])
+
   return (
-    <Link
-      href={href}
-      className="group relative inline-block overflow-hidden h-6 flex items-center text-sm sm:text-base"
-    >
-      <div className="flex flex-col transition-transform duration-300 ease-out group-hover:-translate-y-1/2">
-        <span className="text-gray-600">{children}</span>
-        <span className="text-gray-900">{children}</span>
+    <Link href={href} className="group relative inline-block">
+      <div
+        className="relative overflow-hidden h-10 sm:h-11"
+        style={measuredHeight ? { height: measuredHeight } : undefined}
+      >
+        <div className="flex flex-col transition-transform duration-300 ease-out group-hover:-translate-y-1/2">
+          <div ref={measureRef}>
+            <Bilingual
+              cnText={cnText}
+              enText={enText}
+              className={["text-sm sm:text-base", className].filter(Boolean).join(" ")}
+              cnClassName="text-gray-600"
+            />
+          </div>
+          <Bilingual
+            cnText={cnText}
+            enText={enText}
+            className={["text-sm sm:text-base", className].filter(Boolean).join(" ")}
+            cnClassName="text-gray-900"
+            enClassName="text-gray-900 -mt-0.5"
+          />
+        </div>
       </div>
     </Link>
   )
@@ -55,22 +93,20 @@ export function Navbar() {
         >
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <Logo height={28} />
+              <Logo height={34} />
             </div>
 
             <nav className="hidden md:flex items-center gap-6">
-              <Link href="/" className="text-sm sm:text-base">
-                <Bilingual cnText="首页" enText="Home" />
-              </Link>
+              <AnimatedBilingualNavLink href="/" cnText="首页" enText="Home" />
+              <AnimatedBilingualNavLink href="/books/pure-land" cnText="净土佛书" enText="Pure Land" />
+              <AnimatedBilingualNavLink href="/books/others" cnText="其他佛书" enText="Other Books" />
+              <AnimatedBilingualNavLink href="/items/dharma" cnText="法宝" enText="Dharma Items" />
+              <AnimatedBilingualNavLink href="/items/statues" cnText="佛像" enText="Buddha Statues" />
               {user && (
-                <Link href="/users/orders" className="text-sm sm:text-base">
-                  <Bilingual cnText="订单" enText="Orders" />
-                </Link>
+                <AnimatedBilingualNavLink href="/users/orders" cnText="订单" enText="Orders" />
               )}
               {isAdmin && (
-                <Link href="/admin/ai-chat" className="text-sm sm:text-base">
-                  <Bilingual cnText="管理" enText="Admin" />
-                </Link>
+                <AnimatedBilingualNavLink href="/admin/ai-chat" cnText="管理" enText="Admin" />
               )}
             </nav>
 
@@ -103,18 +139,16 @@ export function Navbar() {
             }`}
           >
             <nav className="flex flex-col items-center gap-4">
-              <Link href="/" className="text-gray-700 hover:text-gray-900">
-                <Bilingual cnText="首页" enText="Home" />
-              </Link>
+              <AnimatedBilingualNavLink href="/" cnText="首页" enText="Home" />
+              <AnimatedBilingualNavLink href="/books/pure-land" cnText="净土佛书" enText="Pure Land" />
+              <AnimatedBilingualNavLink href="/books/others" cnText="其他佛书" enText="Other Books" />
+              <AnimatedBilingualNavLink href="/items/dharma" cnText="法宝" enText="Dharma Items" />
+              <AnimatedBilingualNavLink href="/items/statues" cnText="佛像" enText="Buddha Statues" />
               {user && (
-                <Link href="/users/orders" className="text-gray-700 hover:text-gray-900">
-                  <Bilingual cnText="订单" enText="Orders" />
-                </Link>
+                <AnimatedBilingualNavLink href="/users/orders" cnText="订单" enText="Orders" />
               )}
               {isAdmin && (
-                <Link href="/admin/ai-chat" className="text-gray-700 hover:text-gray-900">
-                  <Bilingual cnText="管理" enText="Admin" />
-                </Link>
+                <AnimatedBilingualNavLink href="/admin/ai-chat" cnText="管理" enText="Admin" />
               )}
               <div className="pt-2">
                 <UserMenu />
