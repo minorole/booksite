@@ -6,6 +6,8 @@ import { UserMenu } from "@/components/auth/user-menu"
 import { useAuth } from "@/contexts/AuthContext"
 import { Logo } from "@/components/common/logo"
 import { Bilingual } from "@/components/common/bilingual"
+import { useLocale } from "@/contexts/LocaleContext"
+import { LanguageSwitch } from "@/components/layout/LanguageSwitch"
 
 function AnimatedBilingualNavLink({
   href,
@@ -61,6 +63,7 @@ function AnimatedBilingualNavLink({
 
 export function Navbar() {
   const { user, isAdmin } = useAuth()
+  const { locale } = useLocale()
   const [isOpen, setIsOpen] = useState(false)
   const [shapeClass, setShapeClass] = useState("rounded-full")
   const shapeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -93,15 +96,15 @@ export function Navbar() {
         >
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <Logo height={34} />
+              <Logo height={34} href={`/${locale}`} />
             </div>
 
             <nav className="hidden md:flex items-center gap-6">
-              <AnimatedBilingualNavLink href="/" cnText="首页" enText="Home" />
-              <AnimatedBilingualNavLink href="/books/pure-land" cnText="净土佛书" enText="Pure Land" />
-              <AnimatedBilingualNavLink href="/books/others" cnText="其他佛书" enText="Other Books" />
-              <AnimatedBilingualNavLink href="/items/dharma" cnText="法宝" enText="Dharma Items" />
-              <AnimatedBilingualNavLink href="/items/statues" cnText="佛像" enText="Buddha Statues" />
+              <AnimatedBilingualNavLink href={`/${locale}`} cnText="首页" enText="Home" />
+              <AnimatedBilingualNavLink href={`/${locale}/books/pure-land`} cnText="净土佛书" enText="Pure Land" />
+              <AnimatedBilingualNavLink href={`/${locale}/books/others`} cnText="其他佛书" enText="Other Books" />
+              <AnimatedBilingualNavLink href={`/${locale}/items/dharma`} cnText="法宝" enText="Dharma Items" />
+              <AnimatedBilingualNavLink href={`/${locale}/items/statues`} cnText="佛像" enText="Buddha Statues" />
               {user && (
                 <AnimatedBilingualNavLink href="/users/orders" cnText="订单" enText="Orders" />
               )}
@@ -110,7 +113,8 @@ export function Navbar() {
               )}
             </nav>
 
-            <div className="hidden md:flex items-center">
+            <div className="hidden md:flex items-center gap-2">
+              <LanguageSwitch />
               <UserMenu />
             </div>
 
@@ -139,17 +143,20 @@ export function Navbar() {
             }`}
           >
             <nav className="flex flex-col items-center gap-4">
-              <AnimatedBilingualNavLink href="/" cnText="首页" enText="Home" />
-              <AnimatedBilingualNavLink href="/books/pure-land" cnText="净土佛书" enText="Pure Land" />
-              <AnimatedBilingualNavLink href="/books/others" cnText="其他佛书" enText="Other Books" />
-              <AnimatedBilingualNavLink href="/items/dharma" cnText="法宝" enText="Dharma Items" />
-              <AnimatedBilingualNavLink href="/items/statues" cnText="佛像" enText="Buddha Statues" />
+              <AnimatedBilingualNavLink href={`/${locale}`} cnText="首页" enText="Home" />
+              <AnimatedBilingualNavLink href={`/${locale}/books/pure-land`} cnText="净土佛书" enText="Pure Land" />
+              <AnimatedBilingualNavLink href={`/${locale}/books/others`} cnText="其他佛书" enText="Other Books" />
+              <AnimatedBilingualNavLink href={`/${locale}/items/dharma`} cnText="法宝" enText="Dharma Items" />
+              <AnimatedBilingualNavLink href={`/${locale}/items/statues`} cnText="佛像" enText="Buddha Statues" />
               {user && (
                 <AnimatedBilingualNavLink href="/users/orders" cnText="订单" enText="Orders" />
               )}
               {isAdmin && (
                 <AnimatedBilingualNavLink href="/admin/ai-chat" cnText="管理" enText="Admin" />
               )}
+              <div className="pt-2">
+                <LanguageSwitch />
+              </div>
               <div className="pt-2">
                 <UserMenu />
               </div>

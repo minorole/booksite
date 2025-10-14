@@ -2,6 +2,7 @@
 
 import React from "react"
 import { cn } from "@/lib/utils"
+import { useLocale } from "@/contexts/LocaleContext"
 
 export type BilingualProps = {
   as?: "span" | "div"
@@ -25,11 +26,13 @@ export function Bilingual({
   tight = true,
   ...rest
 }: BilingualProps) {
+  const { locale } = useLocale()
   const Component: "span" | "div" = as === "div" ? "div" : "span"
+  const showZh = locale === 'zh'
   return (
     <Component
       className={cn(
-        "inline-flex flex-col",
+        "inline-flex",
         tight && "leading-tight",
         align === "center" && "text-center",
         align === "right" && "text-right",
@@ -37,8 +40,11 @@ export function Bilingual({
       )}
       {...rest}
     >
-      <span className={cn(cnClassName)}>{cnText}</span>
-      <span className={cn("text-muted-foreground -mt-0.5", enClassName)}>{enText}</span>
+      {showZh ? (
+        <span className={cn(cnClassName)}>{cnText}</span>
+      ) : (
+        <span className={cn(enClassName)}>{enText}</span>
+      )}
     </Component>
   )
 }
