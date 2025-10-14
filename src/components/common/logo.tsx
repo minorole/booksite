@@ -8,16 +8,39 @@ type LogoProps = {
   className?: string
   href?: string
   alt?: string
+  src?: string
+  variant?: 'plain' | 'badge'
 }
 
-export function Logo({ height = 32, className, href = "/", alt = "AMTBCF" }: LogoProps) {
+export function Logo({
+  height = 32,
+  className,
+  href = "/",
+  alt = "AMTBCF",
+  src = "/favicon.ico",
+  variant = 'plain',
+}: LogoProps) {
   const size = { height, width: height }
+  const img = (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt={alt}
+      height={size.height}
+      width={size.width}
+      className={cn("select-none", variant === 'badge' && "rounded-full")}
+    />
+  )
+
   return (
     <Link href={href} aria-label="Go to homepage" className={cn("inline-flex items-center", className)}>
-      {/* Using favicon.ico as the mark; consider swapping to SVG/PNG later */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/favicon.ico" alt={alt} height={size.height} width={size.width} className="select-none" />
+      {variant === 'badge' ? (
+        <span className="inline-flex items-center justify-center rounded-full p-1 bg-white/5 ring-1 ring-white/10 backdrop-blur-sm">
+          {img}
+        </span>
+      ) : (
+        img
+      )}
     </Link>
   )
 }
-

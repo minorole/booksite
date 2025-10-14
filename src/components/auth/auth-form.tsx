@@ -86,7 +86,43 @@ export function AuthForm() {
 
   return (
     <div className="space-y-4">
-      <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Google first */}
+      <Button
+        type="button"
+        variant="ghost"
+        disabled={loading}
+        onClick={handleGoogle}
+        className="w-full h-12 rounded-full border border-white/10 bg-white/5 text-white hover:bg-white/10 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        <span className="mr-3 inline-flex items-center justify-center">
+          {/* Google G icon */}
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 43 43" className="h-7 w-7 md:h-8 md:w-8">
+            <path fill="#FFC107" d="M43.611 20.083h-1.829V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.06 0 5.842 1.153 7.957 3.043l5.657-5.657C34.884 6.053 29.702 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.651-.389-3.917z"/>
+            <path fill="#FF3D00" d="M6.306 14.691l6.571 4.818C14.69 15.281 18.994 12 24 12c3.06 0 5.842 1.153 7.957 3.043l5.657-5.657C34.884 6.053 29.702 4 24 4c-7.94 0-14.733 4.64-17.694 10.691z"/>
+            <path fill="#4CAF50" d="M24 44c5.167 0 9.86-1.977 13.409-5.196l-6.191-5.238C29.208 35.091 26.751 36 24 36c-5.202 0-9.621-3.317-11.283-7.958l-6.54 5.036C9.095 39.261 16.017 44 24 44z"/>
+            <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303c-.792 2.238-2.231 4.166-4.094 5.566l.003-.002 6.191 5.238C35.064 40.322 40 36 42 28c.667-2.667 1.611-6.917 1.611-7.917z"/>
+          </svg>
+        </span>
+        <span className="flex flex-col gap-0 leading-none">
+          <span className="font-bold">使用谷歌</span>
+          <span className="text-xs text-white/70 font-bold">With Google</span>
+        </span>
+      </Button>
+
+      {/* Divider bilingual */}
+      <div className="text-center text-xs text-white/50 font-semibold">
+        <div className="flex items-center gap-3">
+          <div className="h-px flex-1 bg-white/10" />
+          <div>
+            <div>或者</div>
+            <div className="text-white/40">or</div>
+          </div>
+          <div className="h-px flex-1 bg-white/10" />
+        </div>
+      </div>
+
+      {/* Email form */}
+      <form onSubmit={handleSubmit} className="space-y-3">
         <Input
           type="email"
           placeholder="输入邮箱 · Enter your email"
@@ -96,7 +132,12 @@ export function AuthForm() {
           required
           className="w-full"
         />
-        <Button type="submit" disabled={loading} className="w-full">
+        <Button
+          type="submit"
+          disabled={loading}
+          variant="ghost"
+          className="w-full h-12 rounded-full border border-white/10 bg-white/5 text-white hover:bg-white/10 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+        >
           {loading ? (
             <>
               <div className="mr-2">
@@ -105,18 +146,19 @@ export function AuthForm() {
               正在发送魔法链接… · Sending magic link...
             </>
           ) : (
-            "通过邮箱继续 · Continue with Email"
+            <span className="flex flex-col gap-0 leading-none">
+              <span className="font-bold">使用邮箱</span>
+              <span className="text-xs text-white/70 font-bold">With Email</span>
+            </span>
           )}
         </Button>
       </form>
-      <div className="relative">
-        <div className="my-4 h-px bg-border" />
-      </div>
-      <Button type="button" variant="outline" disabled={loading} onClick={handleGoogle} className="w-full">
-        通过 Google 继续 · Continue with Google
-      </Button>
-      <p className="text-sm text-muted-foreground text-center">
-        继续即表示你同意我们的《服务条款》和《隐私政策》。 · By continuing, you agree to our Terms of Service and Privacy Policy.
+
+      {/* Legal bilingual */}
+      <p className="text-xs text-white/50 text-center leading-relaxed font-semibold">
+        继续即表示你同意我们的《服务条款》和《隐私政策》。
+        <br />
+        By continuing, you agree to our Terms of Service and Privacy Policy.
       </p>
     </div>
   )

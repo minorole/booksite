@@ -51,14 +51,14 @@ function ChatInput() {
     <div className="relative w-full max-w-2xl mx-auto group">
       <Input 
         placeholder=""
-        className="pl-4 pr-12 py-8 text-lg shadow-md border-2 text-center focus-visible:ring-0 focus-visible:ring-offset-0"
+        className="h-16 rounded-2xl text-lg text-center bg-background/60 border border-border/60 shadow-sm backdrop-blur-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-0"
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
       />
       {!isFocused && (
         <div className="absolute inset-0 pointer-events-none">
           <div className="relative h-full flex items-center justify-center px-4">
-            <div className="w-full text-muted-foreground text-center">
+            <div className="w-full text-center text-base sm:text-lg text-muted-foreground">
               <Typewriter
                 options={{
                   autoStart: true,
@@ -82,30 +82,34 @@ function ChatInput() {
 // Quick links section
 function QuickLinks() {
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-2xl mx-auto mt-8">
-      <Link 
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-5 sm:gap-6 max-w-3xl mx-auto mt-10">
+      <Link
         href="/books/pure-land"
-        className="p-4 text-center rounded-lg border hover:bg-accent transition-colors"
+        className="group p-6 sm:p-8 text-center rounded-2xl border border-border/60 bg-card/60 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md hover:bg-accent/40"
       >
-        净土佛书<br/>Pure Land
+        <span className="block text-2xl font-medium tracking-wide text-foreground">净土佛书</span>
+        <span className="block mt-2 text-base text-muted-foreground">Pure Land</span>
       </Link>
-      <Link 
+      <Link
         href="/books/others"
-        className="p-4 text-center rounded-lg border hover:bg-accent transition-colors"
+        className="group p-6 sm:p-8 text-center rounded-2xl border border-border/60 bg-card/60 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md hover:bg-accent/40"
       >
-        其他佛书<br/>Other Books
+        <span className="block text-2xl font-medium tracking-wide text-foreground">其他佛书</span>
+        <span className="block mt-2 text-base text-muted-foreground">Other Books</span>
       </Link>
-      <Link 
+      <Link
         href="/items/dharma"
-        className="p-4 text-center rounded-lg border hover:bg-accent transition-colors"
+        className="group p-6 sm:p-8 text-center rounded-2xl border border-border/60 bg-card/60 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md hover:bg-accent/40"
       >
-        法宝<br/>Dharma Items
+        <span className="block text-2xl font-medium tracking-wide text-foreground">法宝</span>
+        <span className="block mt-2 text-base text-muted-foreground">Dharma Items</span>
       </Link>
-      <Link 
-        href="/items/statues" 
-        className="p-4 text-center rounded-lg border hover:bg-accent transition-colors"
+      <Link
+        href="/items/statues"
+        className="group p-6 sm:p-8 text-center rounded-2xl border border-border/60 bg-card/60 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md hover:bg-accent/40"
       >
-        佛像<br/>Buddha Statues
+        <span className="block text-2xl font-medium tracking-wide text-foreground">佛像</span>
+        <span className="block mt-2 text-base text-muted-foreground">Buddha Statues</span>
       </Link>
     </div>
   )
@@ -144,14 +148,16 @@ export default function Home() {
       )}>
         <Navbar />
         
-        <main className="flex-1 flex flex-col items-center justify-center p-4">
+        <main className="relative flex-1 flex flex-col items-center justify-center p-4">
+          {/* subtle hero glow */}
+          <div className="pointer-events-none absolute -z-10 inset-x-0 top-[-60px] h-[240px] bg-[radial-gradient(60%_40%_at_50%_0%,hsl(var(--primary)/0.10),transparent)] blur-3xl" />
           <div className="w-full max-w-4xl mx-auto text-center space-y-4">
             <LotusModel />
 
             <div className="space-y-4">
-              <h1 className="text-4xl font-bold">
-                <span className="block">中佛州净宗学会</span>
-                <span className="block text-2xl text-muted-foreground mt-2">
+              <h1 className="font-bold">
+                <span className="block font-serif text-5xl sm:text-6xl md:text-7xl tracking-tight leading-[1.1]">中佛州净宗学会</span>
+                <span className="block text-xl sm:text-2xl text-muted-foreground mt-2">
                   Amitabha Buddhist Society of Central Florida
                 </span>
               </h1>
