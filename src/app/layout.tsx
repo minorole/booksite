@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Archivo } from "next/font/google";
-import localFont from "next/font/local";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext"
 import { Toaster } from "@/components/ui/toaster"
@@ -13,14 +12,9 @@ const archivo = Archivo({
   weight: ['400', '500', '600', '700', '800'],
   variable: '--font-archivo',
   display: 'swap',
-});
-
-const maShanZheng = localFont({
-  src: [
-    { path: "../../public/fonts/ma-shan-zheng/MaShanZheng-Regular.ttf", weight: "400", style: "normal" },
-  ],
-  variable: '--font-mashanzheng',
-  display: 'swap',
+  adjustFontFallback: false,
+  fallback: [],
+  preload: false,
 });
 
 export const metadata: Metadata = {
@@ -37,7 +31,7 @@ export default async function RootLayout({
   const cookieLocale = (c.get('ui_locale')?.value === 'zh' ? 'zh' : 'en') as Locale
   return (
     <html lang={cookieLocale} suppressHydrationWarning>
-      <body className={`${archivo.variable} ${maShanZheng.variable} font-sans antialiased`}>
+      <body className={`${archivo.variable} font-sans antialiased`}>
         <LocaleProvider initialLocale={cookieLocale}>
           <AuthProvider>
             {children}

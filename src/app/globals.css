@@ -28,6 +28,8 @@
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
+    /* Font variables (Archivo via next/font, MaShanZheng via manual @font-face) */
+    --font-mashanzheng: "MaShanZhengZh";
   }
   .dark {
     --background: 222.2 84% 4.9%;
@@ -126,11 +128,7 @@
     - To keep Chinese text in Ma Shan Zheng reliably, we prefer the same stack
       and explicitly cap heading weight for zh content to 400.
   */
-  :lang(zh) {
-    /* Prefer Ma Shan Zheng in zh context to avoid any Latin-first fallback quirks */
-    font-family: var(--font-mashanzheng), var(--font-archivo);
-  }
-  html:lang(zh) body { font-family: var(--font-mashanzheng), var(--font-archivo); }
+  /* Use per-glyph fallback instead of forcing zh pages to Chinese-first */
   :lang(zh) h1,
   :lang(zh) h2,
   :lang(zh) h3 {
@@ -138,6 +136,18 @@
     font-weight: 400 !important;
     font-synthesis-weight: none;
   }
+}
+
+/* Self-hosted Chinese font with unicode-range so it only loads when needed */
+@font-face {
+  font-family: 'MaShanZhengZh';
+  src: url('/fonts/ma-shan-zheng/MaShanZheng-Regular.woff2') format('woff2'),
+       url('/fonts/ma-shan-zheng/MaShanZheng-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  /* Core CJK ranges + fullwidth forms */
+  unicode-range: U+3000-303F, U+3400-4DBF, U+4E00-9FFF, U+FF00-FFEF;
 }
 
 @layer utilities {
