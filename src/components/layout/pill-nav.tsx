@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils"
 import { DesktopMenu } from "./pill/DesktopMenu"
 import { MobileMenu } from "./pill/MobileMenu"
 import { LogoButton } from "./pill/LogoButton"
+import { IconCircle } from "./pill/IconCircle"
 export type { PillNavItem } from "./pill/types"
 // Using the standalone LogoButton for desktop to match the original style and avoid image sizing quirks
 
@@ -101,9 +102,9 @@ export function PillNav({
         <div className="md:hidden flex items-center gap-2">
           <LogoButton logoSrc={logoSrc} logoAlt={logoAlt} logoHref={logoHref} ease={ease} />
           {mobileUserCustom ? (
-            <span className="inline-flex items-center" style={{ height: 'var(--nav-h)' }}>
+            <IconCircle scale={0.86}>
               {mobileUserCustom}
-            </span>
+            </IconCircle>
           ) : null}
         </div>
         <MobileMenu
