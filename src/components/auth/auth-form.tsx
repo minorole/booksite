@@ -107,7 +107,7 @@ export function AuthForm() {
             <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303c-.792 2.238-2.231 4.166-4.094 5.566l.003-.002 6.191 5.238C35.064 40.322 40 36 42 28c.667-2.667 1.611-6.917 1.611-7.917z"/>
           </svg>
         </span>
-        <Bilingual as="span" cnText={<span className="font-bold">使用谷歌</span>} enText={<span className="font-bold">With Google</span>} enClassName="text-white/70" />
+        <Bilingual as="span" cnText={<span className="font-bold">使用谷歌</span>} enText={<span className="font-bold">With Google</span>} enClassName="text-white" />
       </Button>
 
       {/* Divider bilingual */}
@@ -142,10 +142,10 @@ export function AuthForm() {
               <div className="mr-2">
                 <LoadingSpinner />
               </div>
-              <Bilingual as="span" cnText="正在发送魔法链接…" enText="Sending magic link..." enClassName="text-white/70" />
+              <Bilingual as="span" cnText="正在发送魔法链接…" enText="Sending magic link..." enClassName="text-white" />
             </>
           ) : (
-            <Bilingual as="span" cnText={<span className="font-bold">使用邮箱</span>} enText={<span className="font-bold">With Email</span>} enClassName="text-white/70" />
+            <Bilingual as="span" cnText={<span className="font-bold">使用邮箱</span>} enText={<span className="font-bold">With Email</span>} enClassName="text-white" />
           )}
         </Button>
       </form>

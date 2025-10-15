@@ -26,8 +26,8 @@ export default async function SignInPage({
   return (
     <Card className="bg-transparent border-0 shadow-none backdrop-blur-0 p-0">
       <CardHeader className="relative pb-2 flex items-center justify-center">
-        <Link href={`/${locale}`} className="absolute left-0 top-2 text-white/80 hover:text-white text-sm font-semibold leading-tight">
-          <Bilingual as="span" cnText="返回" enText="Back" enClassName="text-white/60" />
+        <Link href={`/${locale}`} className="absolute left-0 top-2 text-white hover:text-white text-sm font-semibold leading-tight">
+          <Bilingual as="span" cnText="返回" enText="Back" enClassName="text-white" />
         </Link>
         <CardTitle className="text-center">
           <Logo height={56} variant="badge" />
@@ -35,7 +35,7 @@ export default async function SignInPage({
       </CardHeader>
       <CardContent>
         <div className="text-center mb-4">
-          <Bilingual as="div" align="center" cnText="使用以下方式登录/注册" enText="Use one of the following to sign in or sign up" cnClassName="text-white/80 text-base sm:text-lg" enClassName="text-white/60 text-sm sm:text-base" />
+          <Bilingual as="div" align="center" cnText="使用以下方式登录/注册" enText="Use one of the following to sign in or sign up" cnClassName="text-white text-base sm:text-lg" enClassName="text-white text-sm sm:text-base" />
         </div>
         {message && (
           <Alert className="mb-4">
