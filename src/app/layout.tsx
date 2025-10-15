@@ -30,8 +30,8 @@ export default async function RootLayout({
   const c = await cookies()
   const cookieLocale = (c.get('ui_locale')?.value === 'zh' ? 'zh' : 'en') as Locale
   return (
-    <html lang={cookieLocale} suppressHydrationWarning>
-      <body className={`${archivo.variable} font-sans antialiased`}>
+    <html lang={cookieLocale} className={`${archivo.className} ${archivo.variable}`} suppressHydrationWarning>
+      <body className={`font-sans antialiased`}>
         <LocaleProvider initialLocale={cookieLocale}>
           <AuthProvider>
             {children}

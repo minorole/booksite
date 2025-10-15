@@ -29,6 +29,7 @@
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
     /* Font variables (Archivo via next/font, MaShanZheng via manual @font-face) */
+    --font-archivo: 'Archivo';
     --font-mashanzheng: "MaShanZhengZh";
   }
   .dark {
@@ -133,6 +134,12 @@
   :lang(zh) h2,
   :lang(zh) h3 {
     /* Force a weight Ma Shan Zheng supports to prevent family fallback */
+    font-weight: 400 !important;
+    font-synthesis-weight: none;
+  }
+
+  /* Normalize common UI weights on zh pages so MaShanZheng (400 only) stays applied */
+  :lang(zh) :where(a, button, label, nav, .font-medium, .font-semibold) {
     font-weight: 400 !important;
     font-synthesis-weight: none;
   }
