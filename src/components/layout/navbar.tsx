@@ -19,7 +19,7 @@ export function Navbar() {
     const arr: PillNavItem[] = [
       { href: `/${locale}`, label: <Bilingual cnText="首页" enText="Home" /> },
       {
-        label: <Bilingual cnText="书籍与法物" enText="Books & Items" />,
+        label: <Bilingual cnText="书籍与法宝" enText="Books & Items" />,
         children: [
           { href: `/${locale}/books/pure-land`, label: <Bilingual cnText="净土佛书" enText="Pure Land" /> },
           { href: `/${locale}/books/others`, label: <Bilingual cnText="其他佛书" enText="Other Books" /> },
@@ -41,7 +41,7 @@ export function Navbar() {
 
     // Auth control at the end
     if (user) {
-      arr.push({ custom: <UserMenu /> })
+      arr.push({ custom: <UserMenu />, shape: 'circle' })
     } else {
       arr.push({ href: `/${locale}/auth/signin`, label: <Bilingual cnText="登录" enText="Sign In" /> })
     }

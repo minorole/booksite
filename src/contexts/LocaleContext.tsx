@@ -14,6 +14,11 @@ const LocaleContext = createContext<LocaleContextType | null>(null)
 export function LocaleProvider({ initialLocale = 'en', children }: { initialLocale?: Locale; children: React.ReactNode }) {
   const [locale, setLocale] = useState<Locale>(initialLocale)
 
+  // Keep internal state in sync if the prop changes across navigations
+  useEffect(() => {
+    setLocale(initialLocale)
+  }, [initialLocale])
+
   // Keep document language in sync on client navigations
   useEffect(() => {
     if (typeof document !== 'undefined') {

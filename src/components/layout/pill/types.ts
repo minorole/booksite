@@ -8,4 +8,5 @@ export type PillNavItem = {
   ariaLabel?: string
   custom?: ReactNode
   children?: { label: ReactNode; href: string; ariaLabel?: string }[]
+  shape?: 'pill' | 'circle'
 }

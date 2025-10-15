@@ -128,8 +128,8 @@ function VerifyPageInner() {
             <p className="text-center text-sm">
               <Bilingual
                 as="span"
-                cnText={<><span>魔法链接已发送至：</span><span className="font-semibold text-white">{email}</span></>}
-                enText={<><span>Magic link sent to: </span><span className="font-semibold text-white">{email}</span></>}
+                cnText={<><span className="text-white/80">魔法链接已发送至：</span><span className="font-semibold text-white">{email}</span></>}
+                enText={<><span className="text-white/80">Magic link sent to: </span><span className="font-semibold text-white">{email}</span></>}
               />
               <br />
               <span className="text-xs text-muted-foreground">
@@ -142,8 +142,8 @@ function VerifyPageInner() {
             </p>
           )}
           
-          <Alert className="bg-muted/50 border-muted-foreground/20">
-            <AlertDescription>
+          <Alert className="bg-white/10 border-white/20">
+            <AlertDescription className="text-white/90">
               <p className="font-medium">
                 <Bilingual as="span" cnText="找不到邮件？" enText="Can’t find the email?" />
               </p>
@@ -161,7 +161,7 @@ function VerifyPageInner() {
             </AlertDescription>
           </Alert>
 
-          <div className="text-center text-xs text-white/60">
+          <div className="text-center text-sm text-white/80">
             {remainingMs > 0 ? (
               <Bilingual as="span" cnText={<>链接将在 {expiryLabel} 后过期</>} enText={<>Link expires in {expiryLabel}</>} />
             ) : (
@@ -189,13 +189,7 @@ function VerifyPageInner() {
 
 export default function VerifyPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="p-4 text-sm text-muted-foreground">
-          <Bilingual as="span" cnText="加载中…" enText="Loading…" />
-        </div>
-      }
-    >
+    <Suspense fallback={<div className="p-4 text-sm text-muted-foreground">Loading…</div>}>
       <VerifyPageInner />
     </Suspense>
   )

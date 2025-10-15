@@ -136,8 +136,17 @@ export function DesktopPillItem({ item, activeHref, ease = "power3.easeOut", ind
     paddingLeft: "var(--pill-pad-x)",
     paddingRight: "var(--pill-pad-x)",
   }
+  const isCircle = item.shape === 'circle'
+  const pillStyleCustom: React.CSSProperties = {
+    background: "var(--pill-bg, #fff)",
+    color: "var(--pill-text, var(--base, #000))",
+    paddingLeft: isCircle ? 0 : ("var(--pill-pad-x)" as any),
+    paddingRight: isCircle ? 0 : ("var(--pill-pad-x)" as any),
+  }
   const basePillClasses = "relative overflow-hidden inline-flex items-center justify-center h-full no-underline rounded-full box-border font-semibold text-[16px] leading-[0] uppercase tracking-[0.2px] whitespace-nowrap cursor-pointer px-0"
-  const basePillClassesCustom = "relative overflow-hidden inline-flex items-center justify-center h-full no-underline rounded-full box-border font-medium text-[14px] tracking-[0.2px] whitespace-nowrap cursor-pointer px-2"
+  const basePillClassesCustom = isCircle
+    ? "relative overflow-hidden inline-flex items-center justify-center h-full no-underline rounded-full box-border font-medium text-[14px] tracking-[0.2px] whitespace-nowrap cursor-pointer p-0 aspect-square"
+    : "relative overflow-hidden inline-flex items-center justify-center h-full no-underline rounded-full box-border font-medium text-[14px] tracking-[0.2px] whitespace-nowrap cursor-pointer px-2"
 
   const PillContent = (
     <>
@@ -168,7 +177,7 @@ export function DesktopPillItem({ item, activeHref, ease = "power3.easeOut", ind
       }}
     >
       {item.custom && !isLink ? (
-        <div role="menuitem" tabIndex={0} className={basePillClassesCustom} style={pillStyle} onMouseEnter={handleEnter} onMouseLeave={handleLeave} data-pill>
+        <div role="menuitem" tabIndex={0} className={basePillClassesCustom} style={pillStyleCustom} onMouseEnter={handleEnter} onMouseLeave={handleLeave} data-pill>
           {PillContent}
         </div>
       ) : item.children && item.children.length > 0 ? (

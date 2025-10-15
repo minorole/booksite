@@ -55,6 +55,39 @@ export async function finalizePostLogin(
   if (error) {
     console.error('Profile upsert error:', error)
   }
+
+  // Opportunistically ensure a Cloudinary-hosted avatar for Google users.
+  // Never block login if this fails.
+  try {
+    const provider = (user.app_metadata as any)?.provider as string | undefined
+    const umeta = (user.user_metadata ?? {}) as Record<string, unknown>
+    const candidate =
+      (typeof umeta.avatar_url === 'string' && (umeta.avatar_url as string)) ||
+      (typeof (umeta as any).picture === 'string' && ((umeta as any).picture as string)) ||
+      undefined
+
+    if (provider === 'google' && candidate && !candidate.includes('res.cloudinary.com')) {
+      // Ensure Cloudinary env exists; SDK reads CLOUDINARY_URL
+      env.cloudinaryUrl()
+      const cloudinary = (await import('cloudinary')).v2
+      const uploaded = await cloudinary.uploader.upload(candidate, {
+        folder: 'avatars',
+        resource_type: 'image',
+        transformation: [
+          { width: 256, height: 256, crop: 'thumb', gravity: 'face', quality: 'auto:good', fetch_format: 'auto' },
+        ],
+      })
+      await supabase.auth.updateUser({
+        data: {
+          avatar_url: uploaded.secure_url,
+          avatar_provider: 'google',
+          avatar_uploaded_at: new Date().toISOString(),
+        },
+      })
+    }
+  } catch (e) {
+    console.error('Avatar ensure failed:', e)
+  }
 }
 
 export function computeRedirect(returnTo: string | undefined, origin: string): URL {

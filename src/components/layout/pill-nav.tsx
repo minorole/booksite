@@ -86,6 +86,9 @@ export function PillNav({
     return arr
   })()
 
+  // Mobile: render the user custom (avatar dropdown) next to the logo if present
+  const mobileUserCustom = items.find((i) => i.shape === 'circle' && i.custom)?.custom
+
   return (
     <div className={cn("w-full", className)}>
       <nav className="relative w-full md:w-full flex items-center justify-between md:justify-center gap-2 md:gap-4 box-border" aria-label="Primary" style={cssVars}>
@@ -95,8 +98,13 @@ export function PillNav({
             <DesktopMenu items={desktopItems} activeHref={activeHref} ease={ease} initialLoadAnimation={initialLoadAnimation} />
           </div>
         </div>
-        <div className="md:hidden">
+        <div className="md:hidden flex items-center gap-2">
           <LogoButton logoSrc={logoSrc} logoAlt={logoAlt} logoHref={logoHref} ease={ease} />
+          {mobileUserCustom ? (
+            <span className="inline-flex items-center" style={{ height: 'var(--nav-h)' }}>
+              {mobileUserCustom}
+            </span>
+          ) : null}
         </div>
         <MobileMenu
           items={items}

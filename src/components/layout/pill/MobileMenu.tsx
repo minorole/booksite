@@ -321,15 +321,17 @@ export function MobileMenu({ items, activeHref, ease = "power3.easeOut", onToggl
             {/* Main navigation items */}
             <MainList items={mainItems} activeHref={activeHref} onClose={() => setIsOpen(false)} />
 
-            {/* Account group at bottom */}
-            <AccountSection
-              ordersItem={ordersItem}
-              adminItem={adminItem}
-              signInItem={signInItem}
-              hasUserCustom={hasUserCustom}
-              onClose={() => setIsOpen(false)}
-              onSignOut={handleSignOut}
-            />
+            {/* Account group at bottom (hidden when avatar/custom is present) */}
+            {!hasUserCustom && (
+              <AccountSection
+                ordersItem={ordersItem}
+                adminItem={adminItem}
+                signInItem={signInItem}
+                hasUserCustom={hasUserCustom}
+                onClose={() => setIsOpen(false)}
+                onSignOut={handleSignOut}
+              />
+            )}
           </nav>
         </div>
       </aside>

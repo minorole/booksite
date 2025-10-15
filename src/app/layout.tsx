@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Archivo } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext"
+import { LocaleProvider } from "@/contexts/LocaleContext"
 import { Toaster } from "@/components/ui/toaster"
 import { cookies, headers } from "next/headers"
 import type { Locale } from "@/lib/i18n/config"
@@ -36,10 +37,12 @@ export default async function RootLayout({
   return (
     <html lang={cookieLocale} className={`${archivo.className} ${archivo.variable}`} suppressHydrationWarning>
       <body className={`font-sans antialiased`}>
-        <AuthProvider>
-          {children}
-          <Toaster />
-        </AuthProvider>
+        <LocaleProvider initialLocale={cookieLocale}>
+          <AuthProvider>
+            {children}
+            <Toaster />
+          </AuthProvider>
+        </LocaleProvider>
       </body>
     </html>
   );
