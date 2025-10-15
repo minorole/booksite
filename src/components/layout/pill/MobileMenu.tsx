@@ -1,9 +1,12 @@
 "use client"
 
-import Link from "next/link"
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
 import { gsap } from "gsap"
 import type { PillNavItem } from "./types"
+import { createClient } from "@/lib/supabase"
+import { useRouter } from "next/navigation"
+import { useLocale } from "@/contexts/LocaleContext"
+import { LanguageRow, MainList, AccountSection } from "./mobile/Sections"
 
 type Props = {
   items: PillNavItem[]
@@ -15,101 +18,191 @@ type Props = {
   toggleOpenLabel?: React.ReactNode
 }
 
-const isExternalLink = (href: string) =>
-  href.startsWith("http://") ||
-  href.startsWith("https://") ||
-  href.startsWith("//") ||
-  href.startsWith("mailto:") ||
-  href.startsWith("tel:") ||
-  href.startsWith("#")
-
-const isRouterLink = (href: string) => href && !isExternalLink(href)
-const hrefMatches = (base?: string, current?: string) => !!base && !!current && (current === base || current.startsWith(base + "/"))
+// Link helpers moved to ./mobile/utils
 
 export function MobileMenu({ items, activeHref, ease = "power3.easeOut", onToggle, menuId: providedMenuId, toggleLabel, toggleOpenLabel }: Props) {
   const [isOpen, setIsOpen] = useState(false)
-  const hamburgerRef = useRef<HTMLButtonElement | null>(null)
-  const menuRef = useRef<HTMLDivElement | null>(null)
+  const router = useRouter()
+  const supabase = createClient()
+  const { locale } = useLocale()
+
+  const toggleBtnRef = useRef<HTMLButtonElement | null>(null)
   const overlayRef = useRef<HTMLDivElement | null>(null)
+  const panelRef = useRef<HTMLDivElement | null>(null)
+  const preLayersRef = useRef<HTMLDivElement | null>(null)
+  const preLayerElsRef = useRef<HTMLDivElement[]>([])
   const previousFocusRef = useRef<HTMLElement | null>(null)
   const menuId = providedMenuId || 'mobile-menu-root'
 
-  const toggle = () => {
-    const newState = !isOpen
-    setIsOpen(newState)
-    onToggle?.()
-  }
+  // Toggle text wrapper (animated vertical slide)
+  const textInnerRef = useRef<HTMLSpanElement | null>(null)
 
-  // Animate menu/overlay visibility and lock page scroll while open
-  useEffect(() => {
-    const menu = menuRef.current
-    const ov = overlayRef.current
-    if (!menu || !ov) return
+  // Timelines
+  const openTlRef = useRef<gsap.core.Timeline | null>(null)
+  const closeTweenRef = useRef<gsap.core.Tween | null>(null)
+  const textTweenRef = useRef<gsap.core.Tween | null>(null)
+
+  // Initial setup for prelayers and text
+  useLayoutEffect(() => {
+    const panel = panelRef.current
+    const preContainer = preLayersRef.current
+    const textInner = textInnerRef.current
+    if (!panel || !textInner) return
+
+    let preLayers: HTMLDivElement[] = []
+    if (preContainer) {
+      preLayers = Array.from(preContainer.querySelectorAll<HTMLDivElement>('.sm-prelayer'))
+    }
+    preLayerElsRef.current = preLayers
+
+    // Offscreen to the right
+    gsap.set([panel, ...preLayers], { xPercent: 100 })
+    // Text stack initial position
+    gsap.set(textInner, { yPercent: 0 })
+  }, [])
+
+  const buildOpenTimeline = useCallback(() => {
+    const panel = panelRef.current
+    const overlay = overlayRef.current
+    const layers = preLayerElsRef.current
+    if (!panel || !overlay) return null
+
+    openTlRef.current?.kill()
+    closeTweenRef.current?.kill()
+    textTweenRef.current?.kill()
+
+    const itemEls = Array.from(panel.querySelectorAll<HTMLElement>('.sm-item'))
+    const layerStates = layers.map(el => ({ el, start: Number(gsap.getProperty(el, 'xPercent')) }))
+    const panelStart = Number(gsap.getProperty(panel, 'xPercent'))
+
     const reduce = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+    const tl = gsap.timeline({ paused: true })
+
+    // Overlay fade in
+    tl.fromTo(overlay, { opacity: 0 }, { opacity: 1, duration: 0.2, ease }, 0)
+
+    // Layers slide
+    layerStates.forEach((ls, i) => {
+      tl.fromTo(ls.el, { xPercent: ls.start }, { xPercent: 0, duration: reduce ? 0 : 0.5, ease: 'power4.out' }, i * 0.07)
+    })
+
+    const lastTime = layerStates.length ? (layerStates.length - 1) * 0.07 : 0
+    const panelInsertTime = lastTime + (layerStates.length ? 0.08 : 0)
+    const panelDur = reduce ? 0 : 0.6
+
+    // Panel slide
+    tl.fromTo(panel, { xPercent: panelStart }, { xPercent: 0, duration: panelDur, ease: 'power4.out' }, panelInsertTime)
+
+    // Items entrance
+    if (itemEls.length) {
+      if (!reduce) gsap.set(itemEls, { yPercent: 140, rotate: 10 })
+      const itemsStart = panelInsertTime + (reduce ? 0 : panelDur * 0.2)
+      tl.to(itemEls, {
+        yPercent: 0,
+        rotate: 0,
+        duration: reduce ? 0 : 0.8,
+        ease: 'power4.out',
+        stagger: reduce ? 0 : { each: 0.08, from: 'start' },
+      }, itemsStart)
+    }
+
+    openTlRef.current = tl
+    return tl
+  }, [ease])
+
+  const animateText = useCallback((opening: boolean) => {
+    const inner = textInnerRef.current
+    if (!inner) return
+    textTweenRef.current?.kill()
+    const reduce = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (reduce) return
+    const target = opening ? -50 : 0 // 2 lines, 0% is first line, -50% shows second
+    textTweenRef.current = gsap.to(inner, { yPercent: target, duration: 0.45, ease: 'power3.out' })
+  }, [])
+
+  // Handle open/close: overlay/panel/layers/items + body lock + focus
+  useEffect(() => {
+    const overlay = overlayRef.current
+    const panel = panelRef.current
+    if (!overlay || !panel) return
+    const reduce = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
     if (isOpen) {
-      gsap.set([menu, ov], { visibility: 'visible', pointerEvents: 'auto' })
-      if (!reduce) {
-        gsap.fromTo(menu, { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.25, ease })
-        gsap.fromTo(ov, { opacity: 0 }, { opacity: 1, duration: 0.2, ease })
-      } else {
-        gsap.set(menu, { opacity: 1, y: 0 })
-        gsap.set(ov, { opacity: 1 })
-      }
+      // visibility & pointer events (prelayers stay pointer-events: none)
+      gsap.set([overlay, panel], { visibility: 'visible', pointerEvents: 'auto' })
+      if (preLayersRef.current) gsap.set(preLayersRef.current, { visibility: 'visible', pointerEvents: 'none' })
+
+      // scroll lock
       document.body.classList.add('overflow-hidden')
-      // focus management: capture previous focus and move focus to first item
+
+      // focus restore target
       previousFocusRef.current = (document.activeElement as HTMLElement | null) ?? null
-      const firstFocusable = menu.querySelector<HTMLElement>(
-        'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"]), input, select, textarea'
-      )
+
+      // play open timeline
+      const tl = buildOpenTimeline()
+      tl?.play(0)
+
+      // toggle text animation
+      animateText(true)
+
+      // focus first focusable
+      const firstFocusable = panel.querySelector<HTMLElement>('a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"]), input, select, textarea')
       firstFocusable?.focus()
     } else {
-      const onDone = () => { gsap.set([menu, ov], { visibility: 'hidden', pointerEvents: 'none' }) }
-      if (!reduce) {
-        gsap.to(menu, { opacity: 0, y: 10, duration: 0.2, ease, onComplete: onDone })
-        gsap.to(ov, { opacity: 0, duration: 0.15, ease })
-      } else {
-        gsap.set(menu, { opacity: 0, y: 10 })
-        gsap.set(ov, { opacity: 0 })
-        onDone()
-      }
+      // close timeline to slide out
+      const layers = preLayerElsRef.current
+      const all = [...layers, panel]
+      openTlRef.current?.kill()
+
+      const off = 100
+      closeTweenRef.current?.kill()
+      closeTweenRef.current = gsap.to(all, {
+        xPercent: off,
+        duration: reduce ? 0 : 0.32,
+        ease: 'power3.in',
+        overwrite: 'auto',
+        onComplete: () => {
+          // hide and reset
+          const itemEls = Array.from(panel.querySelectorAll<HTMLElement>('.sm-item'))
+          if (!reduce) gsap.set(itemEls, { yPercent: 140, rotate: 10 })
+          gsap.set([overlay, panel], { visibility: 'hidden', pointerEvents: 'none' })
+          if (preLayersRef.current) gsap.set(preLayersRef.current, { visibility: 'hidden', pointerEvents: 'none' })
+          gsap.set(overlay, { opacity: 0 })
+          
+        }
+      })
+
+      // release scroll
       document.body.classList.remove('overflow-hidden')
-      // restore focus to hamburger or previous focus
-      const hb = hamburgerRef.current
+
+      // toggle text back
+      animateText(false)
+
+      // focus restoration
+      const hb = toggleBtnRef.current
       if (hb) hb.focus()
       else previousFocusRef.current?.focus()
     }
-  }, [isOpen, ease])
+  }, [isOpen, buildOpenTimeline, animateText])
 
-  // No hamburger icon animation; button shows text label instead.
-
-  // Focus trap and keyboard close (Esc)
+  // Keyboard: ESC close + focus trap within panel
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (!isOpen) return
       if (e.key === 'Escape') {
-        e.preventDefault()
-        e.stopPropagation()
-        setIsOpen(false)
-        return
+        e.preventDefault(); e.stopPropagation(); setIsOpen(false); return
       }
       if (e.key === 'Tab') {
-        const menu = menuRef.current
-        if (!menu) return
-        const focusables = Array.from(
-          menu.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"]), input, select, textarea')
-        ).filter(el => !el.hasAttribute('disabled') && el.tabIndex !== -1)
-        if (focusables.length === 0) return
+        const panel = panelRef.current
+        if (!panel) return
+        const focusables = Array.from(panel.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"]), input, select, textarea')).filter(el => !el.hasAttribute('disabled') && el.tabIndex !== -1)
+        if (!focusables.length) return
         const first = focusables[0]
         const last = focusables[focusables.length - 1]
         const active = document.activeElement as HTMLElement | null
-        const isShift = e.shiftKey
-        if (!isShift && active === last) {
-          e.preventDefault()
-          first.focus()
-        } else if (isShift && active === first) {
-          e.preventDefault()
-          last.focus()
-        }
+        if (!e.shiftKey && active === last) { e.preventDefault(); first.focus() }
+        else if (e.shiftKey && active === first) { e.preventDefault(); last.focus() }
       }
     }
     document.addEventListener('keydown', onKeyDown, true)
@@ -119,54 +212,68 @@ export function MobileMenu({ items, activeHref, ease = "power3.easeOut", onToggl
   // Close menu on viewport >= md (768px)
   useEffect(() => {
     const mq = window.matchMedia('(min-width: 768px)')
-    const onChange = (e: MediaQueryListEvent) => {
-      if (e.matches) setIsOpen(false)
-    }
+    const onChange = (e: MediaQueryListEvent) => { if (e.matches) setIsOpen(false) }
     if (typeof mq.addEventListener === 'function') mq.addEventListener('change', onChange)
     else mq.addListener(onChange)
-    return () => {
-      if (typeof mq.removeEventListener === 'function') mq.removeEventListener('change', onChange)
-      else mq.removeListener(onChange)
-    }
+    return () => { if (typeof mq.removeEventListener === 'function') mq.removeEventListener('change', onChange); else mq.removeListener(onChange) }
   }, [])
 
   // Safety: ensure body scroll restored on unmount
-  useEffect(() => {
-    return () => {
-      document.body.classList.remove('overflow-hidden')
-    }
-  }, [])
+  useEffect(() => () => { document.body.classList.remove('overflow-hidden') }, [])
 
-  const defaultStyle: React.CSSProperties = { background: "var(--pill-bg, #fff)", color: "var(--pill-text, #000)" }
-  const linkClasses = "inline-flex text-left py-2 px-3 text-[15px] font-medium rounded-[10px] whitespace-nowrap transition-all duration-200 ease-[cubic-bezier(0.25,0.1,0.25,1)]"
-  const childLinkClasses = "inline-flex text-left py-1.5 px-3 text-[14px] font-medium rounded-[10px] whitespace-nowrap transition-all duration-200 ease-[cubic-bezier(0.25,0.1,0.25,1)]"
+  const toggle = () => { const next = !isOpen; setIsOpen(next); onToggle?.() }
 
-  const hoverIn = (e: React.MouseEvent<HTMLAnchorElement>) => { e.currentTarget.style.background = "var(--base)"; e.currentTarget.style.color = "var(--hover-text, #fff)" }
-  const hoverOut = (e: React.MouseEvent<HTMLAnchorElement>) => { e.currentTarget.style.background = "var(--pill-bg, #fff)"; e.currentTarget.style.color = "var(--pill-text, #000)" }
-
-  // Partition items for mobile order: quick (languages + sign in) then rest
+  // Partition items for mobile: languages row at top; main items; account group at bottom.
   const isLanguageItem = (it: PillNavItem) => typeof it.label === 'string' && (it.label === '中文' || it.label === 'English')
   const isSignInItem = (it: PillNavItem) => typeof it.href === 'string' && it.href.includes('/auth/signin')
-  const quick: PillNavItem[] = items.filter((it) => isLanguageItem(it) || isSignInItem(it))
-  const rest: PillNavItem[] = items.filter((it) => !quick.includes(it))
-  const ordered: PillNavItem[] = [...quick, ...rest]
+  const isOrdersItem = (it: PillNavItem) => typeof it.href === 'string' && it.href.includes('/users/orders')
+  const isAdminItem = (it: PillNavItem) => typeof it.href === 'string' && it.href.includes('/admin')
+
+  const langItems = items.filter(isLanguageItem)
+  const signInItem = items.find(isSignInItem)
+  const ordersItem = items.find(isOrdersItem)
+  const adminItem = items.find(isAdminItem)
+  const hasUserCustom = items.some((it) => !!it.custom)
+
+  const mainItems: PillNavItem[] = items.filter((it) => !isLanguageItem(it) && !isSignInItem(it) && !isOrdersItem(it) && !isAdminItem(it) && !it.custom)
+
+  const sectionTitle = (content: React.ReactNode) => (
+    <div className="px-1.5 py-1 text-[13px] font-semibold text-neutral-500/90 uppercase tracking-wide">{content}</div>
+  )
+
+  const handleSignOut = async () => {
+    try {
+      await supabase.auth.signOut()
+    } finally {
+      setIsOpen(false)
+      router.push(`/${locale}`)
+      router.refresh()
+    }
+  }
 
   return (
     <>
+      {/* Toggle */}
       <button
-        ref={hamburgerRef}
+        ref={toggleBtnRef}
         onClick={toggle}
         aria-label="Toggle menu"
         aria-expanded={isOpen}
         aria-controls={menuId}
         aria-haspopup="dialog"
-        className="md:hidden rounded-full border-0 inline-flex items-center justify-center cursor-pointer relative ml-2 px-3 font-semibold text-[14px]"
+        className="md:hidden rounded-full border-0 inline-flex items-center justify-center cursor-pointer relative ml-2 px-3 font-semibold text-[14px] gap-2"
         style={{ height: "var(--nav-h)", background: "var(--base, #000)", color: "var(--pill-bg, #fff)" }}
       >
-        <span>{isOpen ? (toggleOpenLabel ?? 'Close') : (toggleLabel ?? 'Menu')}</span>
+        {/* Text cycler */}
+        <span className="relative inline-block h-[1em] overflow-hidden" style={{ width: 'auto', minWidth: 'auto' }}>
+          <span ref={textInnerRef} className="flex flex-col leading-none">
+            <span className="leading-none">{toggleLabel ?? 'Menu'}</span>
+            <span className="leading-none">{toggleOpenLabel ?? 'Close'}</span>
+          </span>
+        </span>
       </button>
 
-      {/* Overlay for outside tap */}
+      {/* Overlay */}
       <div
         ref={overlayRef}
         className="md:hidden fixed inset-0 z-[997] bg-black/40"
@@ -175,82 +282,57 @@ export function MobileMenu({ items, activeHref, ease = "power3.easeOut", onToggl
         aria-hidden={!isOpen}
       />
 
+      {/* Prelayers (behind panel) */}
       <div
-        ref={menuRef}
+        ref={preLayersRef}
+        className="md:hidden fixed inset-y-0 right-0 z-[998] pointer-events-none"
+        style={{ visibility: 'hidden', opacity: 1, width: 'min(50vw, 420px)' }}
+        aria-hidden="true"
+      >
+        <div className="sm-prelayer absolute inset-y-0 right-0 w-full" style={{ background: 'var(--base, #000)', opacity: 0.10 }} />
+        <div className="sm-prelayer absolute inset-y-0 right-0 w-full" style={{ background: 'var(--base, #000)', opacity: 0.14 }} />
+        <div className="sm-prelayer absolute inset-y-0 right-0 w-full" style={{ background: 'var(--base, #000)', opacity: 0.18 }} />
+      </div>
+
+      {/* Side panel */}
+      <aside
+        ref={panelRef}
         id={menuId}
         role="dialog"
         aria-modal="true"
         aria-label="Mobile navigation"
-        className="md:hidden absolute left-0 right-0 top-[calc(100%+8px)] rounded-[27px] shadow-[0_8px_32px_rgba(0,0,0,0.12)] z-[998] origin-top max-h-[75vh] overflow-y-auto overscroll-contain p-2"
-        style={{ background: "var(--base, #f0f0f0)", visibility: "hidden", opacity: 0, pointerEvents: 'none' }}
+        className="md:hidden fixed inset-y-0 right-0 z-[999] overflow-y-auto overscroll-contain"
+        style={{ visibility: 'hidden', pointerEvents: 'none', width: 'min(50vw, 420px)' }}
       >
-        <ul className="list-none m-0 p-0 flex flex-col gap-1.5 items-start">
-          {([...ordered]).map((item, i) => (
-            <li key={(item.href ?? "custom-") + i} className="w-auto self-start">
-              {item.custom && !item.href ? (
-                <div className={linkClasses} style={defaultStyle}>{item.custom}</div>
-              ) : item.children && item.children.length > 0 ? (
-                <>
-                  <div className="px-3 py-1.5 text-[13px] font-semibold text-white/90">{item.label}</div>
-                  {item.children.map((child, ci) => (
-                    isRouterLink(child.href) ? (
-                      <Link
-                        key={(child.href ?? "child-") + ci}
-                        href={child.href}
-                        className={childLinkClasses}
-                        style={defaultStyle}
-                        onMouseEnter={hoverIn}
-                        onMouseLeave={hoverOut}
-                        onClick={() => setIsOpen(false)}
-                        aria-current={hrefMatches(child.href, activeHref) ? 'page' : undefined}
-                      >
-                        {child.label}
-                      </Link>
-                    ) : (
-                      <a
-                        key={(child.href ?? "child-") + ci}
-                        href={child.href}
-                        className={childLinkClasses}
-                        style={defaultStyle}
-                        onMouseEnter={hoverIn}
-                        onMouseLeave={hoverOut}
-                        onClick={() => setIsOpen(false)}
-                        aria-current={hrefMatches(child.href, activeHref) ? 'page' : undefined}
-                      >
-                        {child.label}
-                      </a>
-                    )
-                  ))}
-                </>
-              ) : isRouterLink(item.href || "") ? (
-                <Link
-                  href={item.href as string}
-                  className={linkClasses}
-                  style={defaultStyle}
-                  onMouseEnter={hoverIn}
-                  onMouseLeave={hoverOut}
-                  onClick={() => setIsOpen(false)}
-                  aria-current={hrefMatches(item.href, activeHref) ? 'page' : undefined}
-                >
-                  {item.label}
-                </Link>
-              ) : (
-                <a
-                  href={item.href}
-                  className={linkClasses}
-                  style={defaultStyle}
-                  onMouseEnter={hoverIn}
-                  onMouseLeave={hoverOut}
-                  onClick={() => setIsOpen(false)}
-                  aria-current={hrefMatches(item.href, activeHref) ? 'page' : undefined}
-                >
-                  {item.label}
-                </a>
-              )}
-            </li>
-          ))}
-        </ul>
-      </div>
+        <div className="relative h-full w-full bg-white/95 backdrop-blur-md px-5 py-6 flex flex-col gap-4">
+          {/* In-panel close button */}
+          <button
+            type="button"
+            aria-label="Close menu"
+            onClick={() => setIsOpen(false)}
+            className="absolute right-3 top-3 inline-flex items-center justify-center w-9 h-9 rounded-full bg-black/10 text-black hover:bg-black/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-black/30"
+          >
+            <span aria-hidden className="text-xl leading-none">×</span>
+          </button>
+          <nav className="flex-1 flex flex-col gap-2" aria-label="Mobile">
+            {/* Languages row at top */}
+            <LanguageRow langItems={langItems} onClose={() => setIsOpen(false)} />
+
+            {/* Main navigation items */}
+            <MainList items={mainItems} activeHref={activeHref} onClose={() => setIsOpen(false)} />
+
+            {/* Account group at bottom */}
+            <AccountSection
+              ordersItem={ordersItem}
+              adminItem={adminItem}
+              signInItem={signInItem}
+              hasUserCustom={hasUserCustom}
+              onClose={() => setIsOpen(false)}
+              onSignOut={handleSignOut}
+            />
+          </nav>
+        </div>
+      </aside>
     </>
   )
 }

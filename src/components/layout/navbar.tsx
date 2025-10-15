@@ -59,7 +59,7 @@ export function Navbar() {
         ].join(" ")}>
           <div className="flex items-center justify-between gap-4">
             <PillNav
-              logoSrc="/favicon.ico"
+              logoSrc="/logo.png"
               logoAlt="AMTBCF"
               logoHref={`/${locale}`}
               items={items}

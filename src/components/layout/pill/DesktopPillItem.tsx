@@ -27,6 +27,18 @@ export function DesktopPillItem({ item, activeHref, ease = "power3.easeOut", ind
   const ddRef = useRef<HTMLDivElement | null>(null)
   const wrapperRef = useRef<HTMLLIElement | null>(null)
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const scheduleClose = (delay = 120) => {
+    if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
+    closeTimerRef.current = setTimeout(() => onClose(), delay)
+  }
+  const cancelClose = () => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current)
+      closeTimerRef.current = null
+    }
+  }
 
   const isLink = Boolean(item.href)
   const isActive = (!!item.href && hrefMatches(item.href, activeHref)) || (item.children?.some((c) => hrefMatches(c.href, activeHref)) ?? false)
@@ -40,9 +52,13 @@ export function DesktopPillItem({ item, activeHref, ease = "power3.easeOut", ind
     const layout = () => {
       const rect = pill.getBoundingClientRect()
       const { width: w, height: h } = rect
-      const R = ((w * w) / 4 + h * h) / (2 * h)
-      const D = Math.ceil(2 * R) + 2
-      const delta = Math.ceil(R - Math.sqrt(Math.max(0, R * R - (w * w) / 4))) + 1
+      // Base radius that covers a pill (capsule) of width w and height h.
+      const R0 = ((w * w) / 4 + h * h) / (2 * h)
+      // Add a small margin so the animated circle fully covers the pill even when sizes change.
+      const margin = Math.max(6, h * 0.2)
+      const R = R0 + margin
+      const D = Math.ceil(2 * R)
+      const delta = Math.ceil(R - Math.sqrt(Math.max(0, R * R - (w * w) / 4)))
       const originY = D - delta
       circle.style.width = `${D}px`
       circle.style.height = `${D}px`
@@ -94,6 +110,10 @@ export function DesktopPillItem({ item, activeHref, ease = "power3.easeOut", ind
         clearTimeout(hoverTimerRef.current)
         hoverTimerRef.current = null
       }
+      if (closeTimerRef.current) {
+        clearTimeout(closeTimerRef.current)
+        closeTimerRef.current = null
+      }
     }
   }, [])
 
@@ -135,7 +155,18 @@ export function DesktopPillItem({ item, activeHref, ease = "power3.easeOut", ind
   )
 
   return (
-    <li ref={wrapperRef} role="none" className="flex h-full relative">
+    <li
+      ref={wrapperRef}
+      role="none"
+      className="flex h-full relative"
+      onMouseEnter={cancelClose}
+      onMouseLeave={(e) => {
+        const root = wrapperRef.current
+        const t = e.relatedTarget as Node | null
+        if (!root || (t && root.contains(t))) return
+        scheduleClose(120)
+      }}
+    >
       {item.custom && !isLink ? (
         <div role="menuitem" tabIndex={0} className={basePillClassesCustom} style={pillStyle} onMouseEnter={handleEnter} onMouseLeave={handleLeave} data-pill>
           {PillContent}
@@ -153,6 +184,7 @@ export function DesktopPillItem({ item, activeHref, ease = "power3.easeOut", ind
               handleEnter()
               if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current)
               hoverTimerRef.current = setTimeout(() => onOpen(), 120)
+              cancelClose()
             }}
             onMouseLeave={() => {
               handleLeave()
@@ -160,6 +192,7 @@ export function DesktopPillItem({ item, activeHref, ease = "power3.easeOut", ind
                 clearTimeout(hoverTimerRef.current)
                 hoverTimerRef.current = null
               }
+              // wrapper onMouseLeave handles closing when exiting entire region
             }}
             onClick={() => (isOpen ? onClose() : onOpen())}
             data-pill
@@ -181,6 +214,7 @@ export function DesktopPillItem({ item, activeHref, ease = "power3.easeOut", ind
                 clearTimeout(hoverTimerRef.current)
                 hoverTimerRef.current = null
               }
+              cancelClose()
               onOpen()
             }}
             onMouseLeave={() => {
@@ -188,7 +222,7 @@ export function DesktopPillItem({ item, activeHref, ease = "power3.easeOut", ind
                 clearTimeout(hoverTimerRef.current)
                 hoverTimerRef.current = null
               }
-              onClose()
+              scheduleClose(120)
             }}
           >
             <ul className="list-none m-0 p-[6px] flex flex-col gap-[6px]" role="menu">
