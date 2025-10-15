@@ -3,18 +3,20 @@ import { Archivo } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext"
 import { Toaster } from "@/components/ui/toaster"
-import { cookies } from "next/headers"
-import { LocaleProvider } from "@/contexts/LocaleContext"
+import { cookies, headers } from "next/headers"
 import type { Locale } from "@/lib/i18n/config"
+import { detectLocaleFromHeader } from "@/lib/i18n/config"
 
 const archivo = Archivo({
   subsets: ['latin'],
   weight: ['400', '500', '600', '700', '800'],
   variable: '--font-archivo',
-  display: 'swap',
+  // Do not render a fallback; wait for Archivo to load
+  display: 'block',
   adjustFontFallback: false,
   fallback: [],
-  preload: false,
+  // Ensure Archivo is available at first paint
+  preload: true,
 });
 
 export const metadata: Metadata = {
@@ -28,16 +30,16 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const c = await cookies()
-  const cookieLocale = (c.get('ui_locale')?.value === 'zh' ? 'zh' : 'en') as Locale
+  const h = await headers()
+  const cookieVal = c.get('ui_locale')?.value
+  const cookieLocale = (cookieVal === 'zh' ? 'zh' : (cookieVal === 'en' ? 'en' : detectLocaleFromHeader(h.get('accept-language')))) as Locale
   return (
     <html lang={cookieLocale} className={`${archivo.className} ${archivo.variable}`} suppressHydrationWarning>
       <body className={`font-sans antialiased`}>
-        <LocaleProvider initialLocale={cookieLocale}>
-          <AuthProvider>
-            {children}
-            <Toaster />
-          </AuthProvider>
-        </LocaleProvider>
+        <AuthProvider>
+          {children}
+          <Toaster />
+        </AuthProvider>
       </body>
     </html>
   );

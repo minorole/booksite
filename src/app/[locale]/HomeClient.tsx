@@ -1,13 +1,17 @@
 "use client"
 
 import { Navbar } from "@/components/layout/navbar"
-import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { HOME_INPUT_MIN_WORDS_EN, HOME_INPUT_MIN_CHARS_ZH } from "@/lib/ui"
 import { useState, useEffect, useCallback } from "react"
 import dynamic from 'next/dynamic'
-import Typewriter from 'typewriter-effect'
+// Typewriter animation removed in favor of static hint
 import { useProgress } from '@react-three/drei'
 import { useLocale } from "@/contexts/LocaleContext"
+import { Send } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
 
 const LotusModel = dynamic(
   () => import('@/components/3d/lotus-model').then(m => m.LotusModel),
@@ -43,35 +47,82 @@ function LoadingOverlay({ progress, fading }: { progress: number; fading: boolea
   )
 }
 
-function ChatInput({ messages }: { messages: string[] }) {
-  const [isFocused, setIsFocused] = useState(false)
+  function ChatInput({ messages }: { messages: string[] }) {
+    const [isFocused, setIsFocused] = useState(false)
+    const [value, setValue] = useState("")
+    const { toast } = useToast()
+    const { locale } = useLocale()
+
+    const hint = messages[0] || ""
+    const hintVisible = !isFocused && value.trim().length === 0
+
+    const handleSubmit = useCallback(() => {
+      const v = value.trim()
+      if (!v) return
+      toast({
+        title: locale === 'zh' ? '已发送' : 'Sent',
+      description: locale === 'zh' ? '当前为示例输入框。' : 'This input is a demo for now.',
+    })
+    setValue("")
+  }, [value, toast, locale])
+
+  const isZh = locale === 'zh'
+  const wordCount = value.trim().split(/\s+/).filter(Boolean).length
+  const charCountZh = value.replace(/\s/g, '').length
+  const meetsMin = isZh
+    ? charCountZh >= HOME_INPUT_MIN_CHARS_ZH
+    : wordCount >= HOME_INPUT_MIN_WORDS_EN
 
   return (
-    <div className="relative w-full max-w-2xl mx-auto group">
-      <Input
+    <div className="relative w-full max-w-3xl mx-auto group">
+      <Textarea
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
         placeholder=""
-        className="h-16 rounded-2xl text-lg text-center shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-0"
-        onFocus={() => setIsFocused(true)}
+        aria-label={locale === 'zh' ? '消息输入' : 'Message input'}
+        className="min-h-[10rem] sm:min-h-[12rem] text-base sm:text-lg rounded-2xl shadow-sm pr-20 py-5 px-5 resize-y focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+        onFocus={() => {
+          setIsFocused(true)
+        }}
         onBlur={() => setIsFocused(false)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault()
+            if (meetsMin) {
+              handleSubmit()
+            } else {
+              toast({
+                variant: 'default',
+                title: isZh ? '输入太短' : 'Too short',
+                description: isZh
+                  ? `请至少输入${HOME_INPUT_MIN_CHARS_ZH}个字`
+                  : `Please enter at least ${HOME_INPUT_MIN_WORDS_EN} words`,
+              })
+            }
+          }
+        }}
       />
-      {!isFocused && (
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="relative h-full flex items-center justify-center px-4">
-            <div className="w-full text-center text-base sm:text-lg text-muted-foreground">
-              <Typewriter
-                options={{
-                  autoStart: true,
-                  loop: true,
-                  cursor: '|',
-                  wrapperClassName: 'break-words',
-                  cursorClassName: 'text-primary animate-blink',
-                  delay: 145,
-                  deleteSpeed: 5,
-                  strings: messages,
-                }}
-              />
+      {!isFocused && value.trim().length === 0 && (
+        <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
+          <div className="relative h-full px-5 py-5">
+            <div className="text-base sm:text-lg text-muted-foreground text-left">
+              <span className="opacity-80">{hint}</span>
             </div>
           </div>
+        </div>
+      )}
+      {meetsMin && (
+        <div className="absolute right-3 bottom-3">
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            aria-label={locale === 'zh' ? '发送' : 'Send'}
+            className="h-10 w-10 rounded-full"
+            onClick={handleSubmit}
+          >
+            <Send className="h-5 w-5" />
+          </Button>
         </div>
       )}
     </div>
@@ -153,7 +204,7 @@ export function HomeClient() {
           </div>
         </main>
 
-        <footer className="border-t py-4 mt-auto">
+        <footer className="py-4 mt-auto">
           <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
             <p>© 2024 AMTBCF. All rights reserved.</p>
           </div>

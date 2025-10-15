@@ -1,146 +1,79 @@
 "use client"
 
-import Link from "next/link"
-import { useEffect, useRef, useState } from "react"
+import { useMemo } from "react"
 import { UserMenu } from "@/components/auth/user-menu"
 import { useAuth } from "@/contexts/AuthContext"
-import { Logo } from "@/components/common/logo"
 import { Bilingual } from "@/components/common/bilingual"
 import { useLocale } from "@/contexts/LocaleContext"
-import { LanguageSwitch } from "@/components/layout/LanguageSwitch"
-import { cn } from "@/lib/utils"
-import { HOVER_LIFT_SHADOW } from "@/lib/ui"
-
-function NavLink({
-  href,
-  cnText,
-  enText,
-  className,
-}: {
-  href: string
-  cnText: React.ReactNode
-  enText: React.ReactNode
-  className?: string
-}) {
-  return (
-    <Link
-      href={href}
-      className={cn(
-        "inline-flex items-center rounded-md px-2 py-1.5 text-sm text-gray-900",
-        HOVER_LIFT_SHADOW,
-        className
-      )}
-    >
-      <Bilingual cnText={cnText} enText={enText} />
-    </Link>
-  )
-}
+import { PillNav } from "@/components/layout/pill-nav"
+import type { PillNavItem } from "@/components/layout/pill-nav"
+import { usePathname } from "next/navigation"
+import { replaceLeadingLocale } from "@/lib/i18n/paths"
 
 export function Navbar() {
   const { user, isAdmin } = useAuth()
   const { locale } = useLocale()
-  const [isOpen, setIsOpen] = useState(false)
-  const [shapeClass, setShapeClass] = useState("rounded-full")
-  const shapeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pathname = usePathname()
 
-  useEffect(() => {
-    if (shapeTimeoutRef.current) clearTimeout(shapeTimeoutRef.current)
-    if (isOpen) {
-      setShapeClass("rounded-xl")
+  const items = useMemo(() => {
+    const arr: PillNavItem[] = [
+      { href: `/${locale}`, label: <Bilingual cnText="首页" enText="Home" /> },
+      {
+        label: <Bilingual cnText="书籍与法物" enText="Books & Items" />,
+        children: [
+          { href: `/${locale}/books/pure-land`, label: <Bilingual cnText="净土佛书" enText="Pure Land" /> },
+          { href: `/${locale}/books/others`, label: <Bilingual cnText="其他佛书" enText="Other Books" /> },
+          { href: `/${locale}/items/dharma`, label: <Bilingual cnText="法宝" enText="Dharma Items" /> },
+          { href: `/${locale}/items/statues`, label: <Bilingual cnText="佛像" enText="Buddha Statues" /> },
+        ],
+      },
+    ]
+
+    if (user) arr.push({ href: `/${locale}/users/orders`, label: <Bilingual cnText="订单" enText="Orders" /> })
+    if (isAdmin) arr.push({ href: `/${locale}/admin/ai-chat`, label: <Bilingual cnText="管理" enText="Admin" /> })
+
+    // Locale switch as pill links
+    const current = pathname || `/${locale}`
+    const zhHref = replaceLeadingLocale(current, 'zh')
+    const enHref = replaceLeadingLocale(current, 'en')
+    arr.push({ href: zhHref, label: '中文' })
+    arr.push({ href: enHref, label: 'English' })
+
+    // Auth control at the end
+    if (user) {
+      arr.push({ custom: <UserMenu /> })
     } else {
-      shapeTimeoutRef.current = setTimeout(() => setShapeClass("rounded-full"), 250)
+      arr.push({ href: `/${locale}/auth/signin`, label: <Bilingual cnText="登录" enText="Sign In" /> })
     }
-    return () => {
-      if (shapeTimeoutRef.current) clearTimeout(shapeTimeoutRef.current)
-    }
-  }, [isOpen])
+    return arr
+  }, [locale, user, isAdmin, pathname])
 
   return (
     <nav className="sticky top-0 z-30 bg-transparent">
       <div className="container mx-auto px-4">
-        <div
-          className={[
-            "mt-4 mx-auto",
-            "w-full md:w-auto md:max-w-5xl",
-            "border border-neutral-200",
-            "bg-white",
-            "shadow-sm px-4 sm:px-6 py-3",
-            "transition-[border-radius] duration-300 ease-out",
-            shapeClass
-          ].join(" ")}
-        >
+        <div className={[
+          "mt-4 mx-auto",
+          "w-full md:max-w-5xl",
+          "px-2 sm:px-4 py-2",
+          "rounded-full",
+        ].join(" ")}>
           <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <Logo height={34} href={`/${locale}`} />
-            </div>
-
-            <nav className="hidden md:flex items-center gap-6">
-              <NavLink href={`/${locale}`} cnText="首页" enText="Home" />
-              <NavLink href={`/${locale}/books/pure-land`} cnText="净土佛书" enText="Pure Land" />
-              <NavLink href={`/${locale}/books/others`} cnText="其他佛书" enText="Other Books" />
-              <NavLink href={`/${locale}/items/dharma`} cnText="法宝" enText="Dharma Items" />
-              <NavLink href={`/${locale}/items/statues`} cnText="佛像" enText="Buddha Statues" />
-              {user && (
-                <NavLink href="/users/orders" cnText="订单" enText="Orders" />
-              )}
-              {isAdmin && (
-                <NavLink href="/admin/ai-chat" cnText="管理" enText="Admin" />
-              )}
-            </nav>
-
-            <div className="hidden md:flex items-center gap-2">
-              <LanguageSwitch />
-              <UserMenu />
-            </div>
-
-            {/* Keep language switch visible on mobile */}
-            <div className="flex md:hidden items-center gap-2">
-              <LanguageSwitch />
-            </div>
-
-            <button
-              type="button"
-              className="md:hidden inline-flex h-9 w-9 items-center justify-center rounded-md border border-neutral-200 bg-white text-gray-700 hover:bg-gray-50 transition-colors"
-              onClick={() => setIsOpen((v) => !v)}
-              aria-expanded={isOpen}
-              aria-label={isOpen ? "Close menu" : "Open menu"}
-            >
-              {isOpen ? (
-                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              ) : (
-                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              )}
-            </button>
-          </div>
-
-          <div
-            className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${
-              isOpen ? "max-h-96 pt-3" : "max-h-0 pt-0"
-            }`}
-          >
-            <nav className="flex flex-col items-center gap-4">
-              <NavLink href={`/${locale}`} cnText="首页" enText="Home" />
-              <NavLink href={`/${locale}/books/pure-land`} cnText="净土佛书" enText="Pure Land" />
-              <NavLink href={`/${locale}/books/others`} cnText="其他佛书" enText="Other Books" />
-              <NavLink href={`/${locale}/items/dharma`} cnText="法宝" enText="Dharma Items" />
-              <NavLink href={`/${locale}/items/statues`} cnText="佛像" enText="Buddha Statues" />
-              {user && (
-                <NavLink href="/users/orders" cnText="订单" enText="Orders" />
-              )}
-              {isAdmin && (
-                <NavLink href="/admin/ai-chat" cnText="管理" enText="Admin" />
-              )}
-              <div className="pt-2">
-                <UserMenu />
-              </div>
-            </nav>
+            <PillNav
+              logoSrc="/favicon.ico"
+              logoAlt="AMTBCF"
+              logoHref={`/${locale}`}
+              items={items}
+              activeHref={pathname}
+              baseColor="#000000"
+              pillColor="#ffffff"
+              hoveredPillTextColor="#ffffff"
+              pillTextColor="#000000"
+              className=""
+              initialLoadAnimation={true}
+            />
           </div>
         </div>
       </div>
     </nav>
   )
-} 
+}

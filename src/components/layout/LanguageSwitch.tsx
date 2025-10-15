@@ -6,29 +6,18 @@ import { useLocale } from '@/contexts/LocaleContext'
 import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
 import { HOVER_LIFT_SHADOW } from '@/lib/ui'
-
-function replaceLeadingLocale(pathname: string, next: 'en' | 'zh'): string {
-  const segs = pathname.split('?')[0].split('/')
-  // ['', maybe-locale, ...]
-  if (segs.length > 1 && (segs[1] === 'en' || segs[1] === 'zh')) {
-    segs[1] = next
-    return segs.join('/') || `/${next}`
-  }
-  // Non-localized path, just prefix
-  return `/${next}${pathname.startsWith('/') ? '' : '/'}${pathname}`
-}
+import { replaceLeadingLocale } from '@/lib/i18n/paths'
 
 export function LanguageSwitch() {
-  const { locale, setLocale } = useLocale()
+  const { locale } = useLocale()
   const router = useRouter()
   const pathname = usePathname()
 
   const switchTo = useCallback((next: 'en' | 'zh') => {
     if (!pathname) return
     const target = replaceLeadingLocale(pathname, next)
-    setLocale(next)
     router.push(target)
-  }, [pathname, router, setLocale])
+  }, [pathname, router])
 
   return (
     <Switch name="ui-language" size="small">

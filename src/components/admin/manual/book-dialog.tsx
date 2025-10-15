@@ -30,6 +30,7 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { CategoryType, CATEGORY_TYPES } from '@/lib/db/enums'
+import { CATEGORY_LABELS } from '@/lib/admin/constants'
 // Align dialog props with Supabase-based API shapes
 type Category = {
   id: string
@@ -51,12 +52,7 @@ type Book = {
   category: Category
 }
 
-const CATEGORY_LABELS: Record<CategoryType, string> = {
-  PURE_LAND_BOOKS: "净土佛书",
-  OTHER_BOOKS: "其他佛书",
-  DHARMA_ITEMS: "法宝",
-  BUDDHA_STATUES: "佛像"
-} as const
+// Category labels centralized in '@/lib/admin/constants'
 
 const formSchema = z.object({
   title_zh: z.string().optional(),

@@ -32,6 +32,7 @@
     "@upstash/ratelimit": "^1.2.1",
     "@upstash/redis": "^1.35.6",
     "class-variance-authority": "^0.7.0",
+    "gsap": "^3.12.5",
     "cloudinary": "^2.7.0",
     "clsx": "^2.1.1",
     "lucide-react": "^0.545.0",

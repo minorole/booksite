@@ -7,3 +7,8 @@ export const HOVER_LIFT_SHADOW = [
   "focus-within:ring-2 focus-within:ring-neutral-300",
 ].join(" ")
 
+// Home page input thresholds
+// - EN: words (space-separated)
+// - ZH: characters (ignoring whitespace), since spaces are uncommon
+export const HOME_INPUT_MIN_WORDS_EN = 6
+export const HOME_INPUT_MIN_CHARS_ZH = 12

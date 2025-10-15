@@ -9,6 +9,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { Bilingual } from "@/components/common/bilingual"
 import { BilingualInput } from "@/components/common/bilingual-input"
+import { useLocale } from "@/contexts/LocaleContext"
 
 export function AuthForm() {
   const [email, setEmail] = useState("")
@@ -17,6 +18,7 @@ export function AuthForm() {
   const router = useRouter()
   const supabase = createClient()
   const searchParams = useSearchParams()
+  const { locale } = useLocale()
 
   const mapAuthError = (msg?: string): ReactNode => {
     const m = (msg || '').toLowerCase()
@@ -52,7 +54,7 @@ export function AuthForm() {
       const qp = new URLSearchParams({ email })
       if (returnTo) qp.set('returnTo', returnTo)
       qp.set('ts', String(ts))
-      router.push(`/auth/verify?${qp.toString()}`)
+      router.push(`/${locale}/auth/verify?${qp.toString()}`)
     } catch (error) {
       toast({
         variant: "destructive",
@@ -150,9 +152,11 @@ export function AuthForm() {
 
       {/* Legal bilingual */}
       <p className="text-xs text-white/50 text-center leading-relaxed font-semibold">
-        继续即表示你同意我们的《服务条款》和《隐私政策》。
-        <br />
-        By continuing, you agree to our Terms of Service and Privacy Policy.
+        <Bilingual
+          as="span"
+          cnText="继续即表示你同意我们的《服务条款》和《隐私政策》。"
+          enText="By continuing, you agree to our Terms of Service and Privacy Policy."
+        />
       </p>
     </div>
   )

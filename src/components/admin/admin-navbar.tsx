@@ -4,21 +4,23 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { ChevronLeft } from "lucide-react"
+import { useLocale } from "@/contexts/LocaleContext"
 
 export function AdminNavbar() {
   const pathname = usePathname()
+  const { locale } = useLocale()
 
   const navItems = [
     {
-      href: "/admin/ai-chat",
+      href: `/${locale}/admin/ai-chat`,
       label: "AI Assistant"
     },
     {
-      href: "/admin/manual",
+      href: `/${locale}/admin/manual`,
       label: "Listing Management"
     },
     {
-      href: "/admin/orders",
+      href: `/${locale}/admin/orders`,
       label: "Orders"
     }
   ]
@@ -28,7 +30,7 @@ export function AdminNavbar() {
       <div className="container mx-auto">
         <div className="flex h-14 items-center space-x-4 px-4">
           <Link 
-            href="/"
+            href={`/${locale}`}
             className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors mr-4"
           >
             <ChevronLeft className="h-4 w-4" />

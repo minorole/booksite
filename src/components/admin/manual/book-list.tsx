@@ -48,16 +48,11 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { CategoryType } from '@/lib/db/enums'
+import { CATEGORY_LABELS } from '@/lib/admin/constants'
 
 type BookWithCategory = Book
 
-// Add the category display mapping
-const CATEGORY_LABELS: Record<CategoryType, string> = {
-  PURE_LAND_BOOKS: "净土佛书",
-  OTHER_BOOKS: "其他佛书",
-  DHARMA_ITEMS: "法宝",
-  BUDDHA_STATUES: "佛像"
-} as const
+// Category labels centralized in '@/lib/admin/constants'
 
 export function BookList() {
   const [books, setBooks] = useState<BookWithCategory[]>([])

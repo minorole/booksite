@@ -16,11 +16,13 @@ import { useAuth } from "@/contexts/AuthContext"
 import Link from "next/link"
 import { LogOut, Package, Settings, Shield } from "lucide-react"
 import { Bilingual } from "@/components/common/bilingual"
+import { useLocale } from "@/contexts/LocaleContext"
 
 function GlowSignIn() {
+  const { locale } = useLocale()
   return (
     <Link
-      href="/auth/signin"
+      href={`/${locale}/auth/signin`}
       className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 rounded-full bg-white shadow-sm transition-all duration-200 ease-out hover:shadow-md hover:-translate-y-0.5 hover:bg-neutral-50 active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-300"
     >
       <Bilingual cnText="登录" enText="Sign In" />
@@ -32,6 +34,7 @@ export function UserMenu() {
   const router = useRouter()
   const supabase = createClient()
   const { user, isAdmin, isSuperAdmin } = useAuth()
+  const { locale } = useLocale()
 
   if (!user?.email) {
     return <GlowSignIn />
@@ -39,7 +42,7 @@ export function UserMenu() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
-    router.push('/')
+    router.push(`/${locale}`)
     router.refresh()
   }
 
@@ -67,14 +70,14 @@ export function UserMenu() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Link href="/users/orders" className="cursor-pointer flex items-center">
+          <Link href={`/${locale}/users/orders`} className="cursor-pointer flex items-center">
             <Package className="mr-2 h-4 w-4" />
             <Bilingual as="span" cnText="我的订单" enText="My Orders" />
           </Link>
         </DropdownMenuItem>
         {(isAdmin || isSuperAdmin) && (
           <DropdownMenuItem asChild>
-            <Link href="/admin" className="cursor-pointer flex items-center">
+            <Link href={`/${locale}/admin`} className="cursor-pointer flex items-center">
               <Settings className="mr-2 h-4 w-4" />
               <Bilingual as="span" cnText="管理后台" enText="Admin Panel" />
             </Link>
@@ -82,7 +85,7 @@ export function UserMenu() {
         )}
         {isSuperAdmin && (
           <DropdownMenuItem asChild>
-            <Link href="/super-admin" className="cursor-pointer flex items-center">
+            <Link href={`/${locale}/super-admin`} className="cursor-pointer flex items-center">
               <Shield className="mr-2 h-4 w-4" />
               <Bilingual as="span" cnText="用户管理" enText="User Management" />
             </Link>

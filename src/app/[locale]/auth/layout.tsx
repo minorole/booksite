@@ -1,4 +1,5 @@
 import { CanvasRevealEffect } from "@/components/ui/canvas-reveal-effect"
+import { LanguageSwitch } from "@/components/layout/LanguageSwitch"
 
 export default function AuthLayout({
   children,
@@ -7,6 +8,9 @@ export default function AuthLayout({
 }) {
   return (
     <main className="relative min-h-screen flex items-center justify-center dark bg-background text-foreground">
+      <div className="absolute top-4 right-4 z-20">
+        <LanguageSwitch />
+      </div>
       <div className="absolute inset-0">
         <CanvasRevealEffect
           animationSpeed={3}

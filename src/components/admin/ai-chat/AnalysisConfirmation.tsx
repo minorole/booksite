@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import type { CategoryType } from '@/lib/db/enums'
+import { CATEGORY_LABELS } from '@/lib/admin/constants'
 
 export function AnalysisConfirmation({
   analysis,
@@ -38,7 +39,7 @@ export function AnalysisConfirmation({
           {analysis.publisher_en && <p>Publisher (English): {analysis.publisher_en}</p>}
           {ct && (
             <p>
-              Category: {ct} ({ct === 'PURE_LAND_BOOKS' ? '净土佛书' : ct === 'OTHER_BOOKS' ? '其他佛书' : ct === 'DHARMA_ITEMS' ? '法宝' : '佛像'})
+              Category: {ct} ({CATEGORY_LABELS[ct as CategoryType]})
             </p>
           )}
           {analysis.quality_issues?.length ? (
@@ -64,4 +65,3 @@ export function AnalysisConfirmation({
     </div>
   )
 }
-

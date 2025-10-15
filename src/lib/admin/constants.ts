@@ -1,4 +1,5 @@
 import { type ImageConfig, type CloudinaryConfig, type AllowedMimeType } from './types'
+import type { CategoryType } from '@/lib/db/enums'
 
 // File upload configurations
 export const FILE_CONFIG: ImageConfig = {
@@ -34,3 +35,11 @@ export const CLOUDINARY_CONFIG: CloudinaryConfig = {
     { quality: 'auto:best', fetch_format: 'auto' }
   ]
 } as const 
+
+// Centralized category display labels for UI
+export const CATEGORY_LABELS: Record<CategoryType, string> = {
+  PURE_LAND_BOOKS: '净土佛书',
+  OTHER_BOOKS: '其他佛书',
+  DHARMA_ITEMS: '法宝',
+  BUDDHA_STATUES: '佛像',
+} as const

@@ -6,6 +6,8 @@ import { cn } from "@/lib/utils";
 import type { Message, MessageContent as MsgContent } from '@/lib/admin/types'
 import { AnalysisConfirmation } from './AnalysisConfirmation'
 import Image from 'next/image'
+import { CATEGORY_LABELS } from '@/lib/admin/constants'
+import type { CategoryType } from '@/lib/db/enums'
 
 export function MessageContent({
   message,
@@ -88,15 +90,7 @@ export function MessageContent({
               {a.publisher_en && <p>Publisher (English): {a.publisher_en}</p>}
               {a.category_suggestion && (
                 <p>
-                  Suggested Category: {a.category_suggestion} ({
-                    a.category_suggestion === 'PURE_LAND_BOOKS'
-                      ? '净土佛书'
-                      : a.category_suggestion === 'OTHER_BOOKS'
-                      ? '其他佛书'
-                      : a.category_suggestion === 'DHARMA_ITEMS'
-                      ? '法宝'
-                      : '佛像'
-                  })
+                  Suggested Category: {a.category_suggestion} ({CATEGORY_LABELS[a.category_suggestion as CategoryType]})
                 </p>
               )}
               {a.quality_issues?.length ? (

@@ -9,12 +9,14 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Bilingual } from "@/components/common/bilingual"
 import { useToast } from "@/hooks/use-toast"
+import { useLocale } from "@/contexts/LocaleContext"
 
 const EXP_MS = 15 * 60 * 1000
 
 function VerifyPageInner() {
   const params = useSearchParams()
   const { toast } = useToast()
+  const { locale } = useLocale()
   const email = useMemo(() => {
     const raw = params?.get('email') || undefined
     return raw || ''
@@ -133,8 +135,8 @@ function VerifyPageInner() {
               <span className="text-xs text-muted-foreground">
                 <Bilingual
                   as="span"
-                  cnText={<><span>（邮箱不正确？</span><Link href="/auth/signin" className="text-primary hover:underline">重新填写</Link><span>）</span></>}
-                  enText={<><span>(Wrong email? </span><Link href="/auth/signin" className="text-primary hover:underline">Try again</Link><span>)</span></>}
+                  cnText={<><span>（邮箱不正确？</span><Link href={`/${locale}/auth/signin`} className="text-primary hover:underline">重新填写</Link><span>）</span></>}
+                  enText={<><span>(Wrong email? </span><Link href={`/${locale}/auth/signin`} className="text-primary hover:underline">Try again</Link><span>)</span></>}
                 />
               </span>
             </p>

@@ -1,5 +1,9 @@
-import { SuperAdminPanel } from '@/components/super-admin/super-admin-panel'
+import { redirect } from 'next/navigation'
+import { headers } from 'next/headers'
+import { detectLocaleFromHeader } from '@/lib/i18n/config'
 
-export default function SuperAdminPage() {
-  return <SuperAdminPanel />
-} 
+export default async function SuperAdminPage() {
+  const h = await headers()
+  const locale = detectLocaleFromHeader(h.get('accept-language'))
+  redirect(`/${locale}/super-admin`)
+}

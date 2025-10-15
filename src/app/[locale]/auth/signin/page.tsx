@@ -8,11 +8,15 @@ import { Bilingual } from "@/components/common/bilingual"
 
 export default async function SignInPage({
   searchParams,
+  params,
 }: {
   searchParams?: Promise<{ [key: string]: string | string[] | undefined }>
+  params: Promise<{ locale: string }>
 }) {
-  const params = await searchParams
-  const err = (typeof params?.error === 'string') ? params?.error : undefined
+  const p = await params
+  const locale = p.locale === 'zh' ? 'zh' : 'en'
+  const sp = await searchParams
+  const err = (typeof sp?.error === 'string') ? sp?.error : undefined
   const message: React.ReactNode = err === 'LinkExpired'
     ? (<Bilingual cnText="你的魔法链接已过期，请重新请求一封。" enText="Your magic link has expired. Please request a new one." />)
     : err === 'AuthError'
@@ -22,7 +26,7 @@ export default async function SignInPage({
   return (
     <Card className="bg-transparent border-0 shadow-none backdrop-blur-0 p-0">
       <CardHeader className="relative pb-2 flex items-center justify-center">
-        <Link href="/" className="absolute left-0 top-2 text-white/80 hover:text-white text-sm font-semibold leading-tight">
+        <Link href={`/${locale}`} className="absolute left-0 top-2 text-white/80 hover:text-white text-sm font-semibold leading-tight">
           <Bilingual as="span" cnText="返回" enText="Back" enClassName="text-white/60" />
         </Link>
         <CardTitle className="text-center">

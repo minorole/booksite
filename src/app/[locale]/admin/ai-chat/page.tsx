@@ -7,16 +7,18 @@ import { ChatInterface } from "@/components/admin/ai-chat/chat-interface";
 import { Card } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import { Bilingual } from "@/components/common/bilingual";
+import { useLocale } from "@/contexts/LocaleContext";
 
 export default function AdminAIChatPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
+  const { locale } = useLocale();
 
   useEffect(() => {
     if (!loading && !user) {
-      router.push('/auth/signin');
+      router.push(`/${locale}/auth/signin`);
     }
-  }, [loading, user, router]);
+  }, [loading, user, router, locale]);
 
   if (loading) {
     return (
