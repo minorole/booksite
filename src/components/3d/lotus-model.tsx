@@ -3,21 +3,17 @@
 import { Canvas, useFrame } from "@react-three/fiber"
 import { useGLTF, useAnimations, AdaptiveDpr } from "@react-three/drei"
 import { Suspense, useEffect, useMemo } from "react"
-import { useTheme } from "next-themes"
 import { MeshStandardMaterial, LoopPingPong } from 'three'
 
 // CSS Lotus as fallback
 function CssLotus() {
-  const { theme } = useTheme()
   return (
     <div className="w-32 h-32 mx-auto mb-8 relative">
       <div className="absolute inset-0 animate-spin-slow">
         {[...Array(8)].map((_, i) => (
           <div
             key={i}
-            className={`absolute w-16 h-16 left-8 -top-4 origin-bottom
-              ${theme === 'dark' ? 'bg-primary/10' : 'bg-primary/5'}
-              rounded-full transform`}
+            className={"absolute w-16 h-16 left-8 -top-4 origin-bottom bg-[#E8C95A]/10 rounded-full transform"}
             style={{
               transform: `rotate(${i * 45}deg)`,
               transformOrigin: 'center bottom',
@@ -25,9 +21,7 @@ function CssLotus() {
           />
         ))}
       </div>
-      <div className={`absolute w-8 h-8 rounded-full left-12 top-12
-        ${theme === 'dark' ? 'bg-primary/20' : 'bg-primary/10'}`}
-      />
+      <div className={"absolute w-8 h-8 rounded-full left-12 top-12 bg-[#E8C95A]/20"} />
     </div>
   )
 }
@@ -35,23 +29,14 @@ function CssLotus() {
 function Lotus(props: any) {
   const { scene, animations } = useGLTF('/models/lotus_compressed.glb', '/draco/', false)
   const { actions } = useAnimations(animations, scene)
-  const { theme } = useTheme()
 
-  // Shared materials (avoid reallocating per-mesh on theme change)
-  const lightMaterial = useMemo(() => new MeshStandardMaterial({
-    color: '#FFE55C',
-    metalness: 0.6,
-    roughness: 0.3,
-    emissive: '#FFE55C',
-    emissiveIntensity: 0.2,
-  }), [])
-
-  const darkMaterial = useMemo(() => new MeshStandardMaterial({
-    color: '#FFD700',
-    metalness: 0.6,
-    roughness: 0.3,
-    emissive: '#4A3800',
-    emissiveIntensity: 0.4,
+  // Single matte-gold material shared by all meshes
+  const goldMaterial = useMemo(() => new MeshStandardMaterial({
+    color: '#E8C95A',
+    metalness: 0.55,
+    roughness: 0.35,
+    emissive: '#E8C95A',
+    emissiveIntensity: 0.10,
   }), [])
 
   // Start animation once when actions are ready
@@ -67,23 +52,21 @@ function Lotus(props: any) {
     }
   }, [actions])
 
-  // Update materials on theme change without restarting animation
+  // Apply the matte-gold material to all meshes
   useEffect(() => {
-    const mat = theme === 'dark' ? darkMaterial : lightMaterial
     scene.traverse((child: any) => {
       if (child.isMesh) {
-        child.material = mat
+        child.material = goldMaterial
       }
     })
-  }, [scene, theme, lightMaterial, darkMaterial])
+  }, [scene, goldMaterial])
 
-  // Dispose shared materials on unmount
+  // Dispose shared material on unmount
   useEffect(() => {
     return () => {
-      lightMaterial.dispose()
-      darkMaterial.dispose()
+      goldMaterial.dispose()
     }
-  }, [lightMaterial, darkMaterial])
+  }, [goldMaterial])
 
   // Lightweight auto-rotation (matches OrbitControls autoRotateSpeed=2 ≈ 30s/rev)
   useFrame((_, delta) => {
@@ -97,6 +80,8 @@ export function LotusModel() {
     <div className="w-[430px] h-[400px] mx-auto -mt-6">
       <Suspense fallback={<CssLotus />}>
         <Canvas 
+          className="bg-transparent"
+          style={{ background: 'transparent' }}
           shadows={false}
           dpr={[1, 1.25]} 
           camera={{ 
@@ -110,6 +95,7 @@ export function LotusModel() {
             antialias: true,
             powerPreference: 'high-performance'
           }}
+          onCreated={({ gl }) => gl.setClearColor(0x000000, 0)}
         >
           <AdaptiveDpr />
           <ambientLight intensity={0.7} />
