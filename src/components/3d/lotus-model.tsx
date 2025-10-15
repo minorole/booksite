@@ -1,10 +1,10 @@
 "use client"
 
-import { Canvas } from "@react-three/fiber"
-import { useGLTF, OrbitControls, useAnimations, AdaptiveDpr } from "@react-three/drei"
-import { Suspense, useEffect } from "react"
+import { Canvas, useFrame } from "@react-three/fiber"
+import { useGLTF, useAnimations, AdaptiveDpr } from "@react-three/drei"
+import { Suspense, useEffect, useMemo } from "react"
 import { useTheme } from "next-themes"
-import * as THREE from 'three'
+import { MeshStandardMaterial, LoopPingPong } from 'three'
 
 // CSS Lotus as fallback
 function CssLotus() {
@@ -37,6 +37,23 @@ function Lotus(props: any) {
   const { actions } = useAnimations(animations, scene)
   const { theme } = useTheme()
 
+  // Shared materials (avoid reallocating per-mesh on theme change)
+  const lightMaterial = useMemo(() => new MeshStandardMaterial({
+    color: '#FFE55C',
+    metalness: 0.6,
+    roughness: 0.3,
+    emissive: '#FFE55C',
+    emissiveIntensity: 0.2,
+  }), [])
+
+  const darkMaterial = useMemo(() => new MeshStandardMaterial({
+    color: '#FFD700',
+    metalness: 0.6,
+    roughness: 0.3,
+    emissive: '#4A3800',
+    emissiveIntensity: 0.4,
+  }), [])
+
   // Start animation once when actions are ready
   useEffect(() => {
     const firstKey = Object.keys(actions)[0]
@@ -45,26 +62,33 @@ function Lotus(props: any) {
       action.reset().play()
       action.clampWhenFinished = false
       action.timeScale = 0.5
-      action.setLoop(THREE.LoopPingPong, Infinity)
+      action.setLoop(LoopPingPong, Infinity)
       action.fadeIn(0.1)
     }
   }, [actions])
 
   // Update materials on theme change without restarting animation
   useEffect(() => {
+    const mat = theme === 'dark' ? darkMaterial : lightMaterial
     scene.traverse((child: any) => {
       if (child.isMesh) {
-        const newMaterial = new THREE.MeshStandardMaterial({
-          color: theme === 'dark' ? '#FFD700' : '#FFE55C',
-          metalness: 0.6,
-          roughness: 0.3,
-          emissive: theme === 'dark' ? '#4A3800' : '#FFE55C',
-          emissiveIntensity: theme === 'dark' ? 0.4 : 0.2,
-        })
-        child.material = newMaterial
+        child.material = mat
       }
     })
-  }, [scene, theme])
+  }, [scene, theme, lightMaterial, darkMaterial])
+
+  // Dispose shared materials on unmount
+  useEffect(() => {
+    return () => {
+      lightMaterial.dispose()
+      darkMaterial.dispose()
+    }
+  }, [lightMaterial, darkMaterial])
+
+  // Lightweight auto-rotation (matches OrbitControls autoRotateSpeed=2 ≈ 30s/rev)
+  useFrame((_, delta) => {
+    scene.rotation.y += (Math.PI * 2 / 30) * delta
+  })
 
   return <primitive object={scene} {...props} />
 }
@@ -74,7 +98,7 @@ export function LotusModel() {
       <Suspense fallback={<CssLotus />}>
         <Canvas 
           shadows={false}
-          dpr={[1, 1.5]} 
+          dpr={[1, 1.25]} 
           camera={{ 
             fov: 45, 
             position: [0, 0, 2],
@@ -105,15 +129,6 @@ export function LotusModel() {
               receiveShadow={false}
             />
           </group>
-          <OrbitControls
-            autoRotate
-            autoRotateSpeed={2}
-            enableZoom={false}
-            enablePan={false}
-            enableRotate={false}
-            maxPolarAngle={Math.PI / 2}
-            minPolarAngle={Math.PI / 2}
-          />
         </Canvas>
       </Suspense>
     </div>
