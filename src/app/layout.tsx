@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Noto_Sans_SC, Noto_Serif } from "next/font/google";
+import { Archivo } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext"
 import { Toaster } from "@/components/ui/toaster"
@@ -7,16 +8,19 @@ import { cookies } from "next/headers"
 import { LocaleProvider } from "@/contexts/LocaleContext"
 import type { Locale } from "@/lib/i18n/config"
 
-const notoSerif = Noto_Serif({ 
+const archivo = Archivo({
   subsets: ['latin'],
-  weight: ['400', '700'],
-  variable: '--font-noto-serif',
+  weight: ['400', '500', '600', '700', '800'],
+  variable: '--font-archivo',
+  display: 'swap',
 });
 
-const notoSansSC = Noto_Sans_SC({ 
-  subsets: ['latin'],
-  weight: ['400', '500', '700'],
-  variable: '--font-noto-sans',
+const maShanZheng = localFont({
+  src: [
+    { path: "../../public/fonts/ma-shan-zheng/MaShanZheng-Regular.ttf", weight: "400", style: "normal" },
+  ],
+  variable: '--font-mashanzheng',
+  display: 'swap',
 });
 
 export const metadata: Metadata = {
@@ -33,7 +37,7 @@ export default async function RootLayout({
   const cookieLocale = (c.get('ui_locale')?.value === 'zh' ? 'zh' : 'en') as Locale
   return (
     <html lang={cookieLocale} suppressHydrationWarning>
-      <body className={`${notoSerif.variable} ${notoSansSC.variable} font-sans antialiased`}>
+      <body className={`${archivo.variable} ${maShanZheng.variable} font-sans antialiased`}>
         <LocaleProvider initialLocale={cookieLocale}>
           <AuthProvider>
             {children}

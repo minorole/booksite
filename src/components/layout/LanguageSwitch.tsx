@@ -2,8 +2,10 @@
 
 import { useCallback } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/button'
 import { useLocale } from '@/contexts/LocaleContext'
+import { Switch } from '@/components/ui/switch'
+import { cn } from '@/lib/utils'
+import { HOVER_LIFT_SHADOW } from '@/lib/ui'
 
 function replaceLeadingLocale(pathname: string, next: 'en' | 'zh'): string {
   const segs = pathname.split('?')[0].split('/')
@@ -29,16 +31,21 @@ export function LanguageSwitch() {
   }, [pathname, router, setLocale])
 
   return (
-    <div className="inline-flex rounded-md border border-neutral-200 p-0.5 bg-white/70 backdrop-blur">
-      <Button variant={locale === 'zh' ? 'default' : 'ghost'} size="sm" onClick={() => switchTo('zh')} className="px-2">
-        中
-      </Button>
-      <Button variant={locale === 'en' ? 'default' : 'ghost'} size="sm" onClick={() => switchTo('en')} className="px-2">
-        EN
-      </Button>
-    </div>
+    <Switch name="ui-language" size="small">
+      <div
+        onClick={() => switchTo('zh')}
+        className={cn(HOVER_LIFT_SHADOW, 'rounded-md px-1 py-0.5')}
+      >
+        <Switch.Control label="中文" value="zh" defaultChecked={locale === 'zh'} />
+      </div>
+      <div
+        onClick={() => switchTo('en')}
+        className={cn(HOVER_LIFT_SHADOW, 'rounded-md px-1 py-0.5')}
+      >
+        <Switch.Control label="English" value="en" defaultChecked={locale === 'en'} />
+      </div>
+    </Switch>
   )
 }
 
 export default LanguageSwitch
-

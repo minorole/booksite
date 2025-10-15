@@ -81,9 +81,23 @@
   --color-card: hsl(var(--card));
   --color-card-foreground: hsl(var(--card-foreground));
 
+  /* Additional tokens for UI switch */
+  --color-gray-100: var(--ds-gray-100);
+  --color-gray-800: var(--ds-gray-800);
+  --color-gray-900: var(--ds-gray-900);
+  --color-gray-1000: var(--ds-gray-1000);
+  --color-gray-alpha-400: var(--ds-gray-alpha-400);
+  --color-background-100: var(--ds-background-100);
+
+  --color-success: var(--geist-success);
+  --color-error: var(--geist-error);
+  --color-warning: var(--geist-warning);
+  --color-violet: var(--geist-violet);
+  --color-geist-foreground: var(--geist-foreground);
+
   /* Fonts */
-  --font-sans: var(--font-noto-sans), sans-serif;
-  --font-serif: var(--font-noto-serif), serif;
+  --font-sans: var(--font-archivo), var(--font-mashanzheng);
+  --font-serif: var(--font-archivo), var(--font-mashanzheng);
 
   /* Radii (for rounded-*) */
   --radius-lg: var(--radius);
@@ -100,6 +114,29 @@
     /* Tailwind v4: replace @apply bg-background text-foreground */
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
+  }
+  /* Ensure form controls inherit the same font stack for mixed input */
+  input, textarea, select, button { font: inherit; }
+
+  /*
+    Chinese rendering and weight notes
+    - We use Archivo for Latin and Ma Shan Zheng for Chinese.
+    - Some browsers may fallback away from Ma Shan Zheng when a bold weight
+      (700/800) is requested because the font ships only a 400 weight.
+    - To keep Chinese text in Ma Shan Zheng reliably, we prefer the same stack
+      and explicitly cap heading weight for zh content to 400.
+  */
+  :lang(zh) {
+    /* Prefer Ma Shan Zheng in zh context to avoid any Latin-first fallback quirks */
+    font-family: var(--font-mashanzheng), var(--font-archivo);
+  }
+  html:lang(zh) body { font-family: var(--font-mashanzheng), var(--font-archivo); }
+  :lang(zh) h1,
+  :lang(zh) h2,
+  :lang(zh) h3 {
+    /* Force a weight Ma Shan Zheng supports to prevent family fallback */
+    font-weight: 400 !important;
+    font-synthesis-weight: none;
   }
 }
 
@@ -118,3 +155,33 @@
 
 @keyframes spin-slow { 0% { transform: rotate(0deg) } 100% { transform: rotate(360deg) } }
 @utility animate-spin-slow { animation: spin-slow 10s linear infinite; }
+
+/* Base variables for additional tokens */
+@layer base {
+  :root {
+    --ds-gray-100: hsla(0, 0%, 95%, 1);
+    --ds-gray-800: hsla(0, 0%, 49%, 1);
+    --ds-gray-900: hsla(0, 0%, 40%, 1);
+    --ds-gray-1000: hsla(0, 0%, 9%, 1);
+    --ds-gray-alpha-400: hsla(0, 0%, 0%, 0.08);
+    --ds-background-100: hsla(0, 0%, 100%, 1);
+
+    --geist-success: #0070f3;
+    --geist-error: #ee0000;
+    --geist-warning: #f5a623;
+    --geist-violet: #7928ca;
+    --geist-foreground: #000;
+  }
+
+  .dark {
+    --ds-gray-100: hsla(0, 0%, 10%, 1);
+    --ds-gray-800: hsla(0, 0%, 49%, 1);
+    --ds-gray-900: hsla(0, 0%, 63%, 1);
+    --ds-gray-1000: hsla(0, 0%, 93%, 1);
+    --ds-gray-alpha-400: hsla(0, 0%, 100%, 0.14);
+    --ds-background-100: hsla(0, 0%, 4%, 1);
+
+    --geist-error: #ff0000;
+    --geist-foreground: #fff;
+  }
+}

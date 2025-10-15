@@ -114,7 +114,12 @@ export function HomeClient() {
             <LotusModel />
 
             <div className="space-y-4">
-              <h1 className="font-bold">
+              {/*
+                Ma Shan Zheng only has a 400 weight. Requesting bold (700/800)
+                can cause some browsers to pick a different Chinese font.
+                For zh, keep headings at medium/normal to ensure MSZ renders.
+              */}
+              <h1 className={cn(locale === 'zh' ? 'font-medium' : 'font-bold')}>
                 <span className="block font-serif text-5xl sm:text-6xl md:text-7xl tracking-tight leading-[1.1]">
                   {locale === 'zh' ? '中佛州净宗学会' : 'Amitabha Buddhist Society of Central Florida'}
                 </span>
@@ -134,4 +139,3 @@ export function HomeClient() {
     </>
   )
 }
-
