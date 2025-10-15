@@ -14,6 +14,13 @@ const LotusModel = dynamic(
   { ssr: false }
 )
 
+const Particles = dynamic(
+  () => import('@/components/ui/particles').then(m => m.Particles),
+  { ssr: false }
+)
+
+// Removed Liquid Ether background
+
 function LoadingOverlay({ progress, fading }: { progress: number; fading: boolean }) {
   const pct = Math.max(0, Math.min(Math.round(progress), 100))
   return (
@@ -43,7 +50,7 @@ function ChatInput({ messages }: { messages: string[] }) {
     <div className="relative w-full max-w-2xl mx-auto group">
       <Input
         placeholder=""
-        className="h-16 rounded-2xl text-lg text-center bg-background/60 border border-border/60 shadow-sm backdrop-blur-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-0"
+        className="h-16 rounded-2xl text-lg text-center shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-0"
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
       />
@@ -105,11 +112,27 @@ export function HomeClient() {
   return (
     <>
       {isLoading && <LoadingOverlay progress={progress} fading={isFadingOut} />}
-      <div className={cn("min-h-screen flex flex-col")}>        
+      <div className={cn("relative min-h-screen flex flex-col")}>        
+        {/* Home-only particles background; not a theme change */}
+        <div className="absolute inset-0 -z-10">
+          <div className="absolute inset-0 bg-neutral-950" />
+          <Particles
+            particleColors={["#FFE55C"]}
+            particleCount={200}
+            particleSpread={10}
+            speed={0.05}
+            particleBaseSize={120}
+            moveParticlesOnHover={false}
+            alphaParticles={false}
+            disableRotation={false}
+            className="absolute inset-0"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-neutral-950/80 via-neutral-950/40 to-transparent" />
+        </div>
         <Navbar />
 
         <main className="relative flex-1 flex flex-col items-center justify-start p-4 pt-6 sm:pt-8 md:pt-12 lg:pt-14">
-          <div className="pointer-events-none absolute -z-10 inset-x-0 top-[-60px] h-[240px] bg-[radial-gradient(60%_40%_at_50%_0%,hsl(var(--primary)/0.10),transparent)] blur-3xl" />
+          {/* background intentionally left blank */}
           <div className="w-full max-w-4xl mx-auto text-center space-y-4">
             <LotusModel />
 
@@ -120,7 +143,7 @@ export function HomeClient() {
                 For zh, keep headings at medium/normal to ensure MSZ renders.
               */}
               <h1 className={cn(locale === 'zh' ? 'font-medium' : 'font-bold')}>
-                <span className="block font-serif text-5xl sm:text-6xl md:text-7xl tracking-tight leading-[1.1]">
+                <span className="block font-serif text-5xl sm:text-6xl md:text-7xl tracking-tight leading-[1.1] text-white">
                   {locale === 'zh' ? '中佛州净宗学会' : 'Amitabha Buddhist Society of Central Florida'}
                 </span>
               </h1>

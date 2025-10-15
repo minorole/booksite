@@ -63,7 +63,7 @@ export function Navbar() {
             "mt-4 mx-auto",
             "w-full md:w-auto md:max-w-5xl",
             "border border-neutral-200",
-            "bg-white/85 supports-[backdrop-filter]:bg-white/70 backdrop-blur",
+            "bg-white",
             "shadow-sm px-4 sm:px-6 py-3",
             "transition-[border-radius] duration-300 ease-out",
             shapeClass

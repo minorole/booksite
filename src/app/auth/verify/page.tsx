@@ -1,6 +1,7 @@
 "use client"
 
 import { Suspense, useCallback, useEffect, useMemo, useState, type ReactNode } from "react"
+import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Mail } from "lucide-react"
@@ -132,8 +133,8 @@ function VerifyPageInner() {
               <span className="text-xs text-muted-foreground">
                 <Bilingual
                   as="span"
-                  cnText={<><span>（邮箱不正确？</span><a href="/auth/signin" className="text-primary hover:underline">重新填写</a><span>）</span></>}
-                  enText={<><span>(Wrong email? </span><a href="/auth/signin" className="text-primary hover:underline">Try again</a><span>)</span></>}
+                  cnText={<><span>（邮箱不正确？</span><Link href="/auth/signin" className="text-primary hover:underline">重新填写</Link><span>）</span></>}
+                  enText={<><span>(Wrong email? </span><Link href="/auth/signin" className="text-primary hover:underline">Try again</Link><span>)</span></>}
                 />
               </span>
             </p>
