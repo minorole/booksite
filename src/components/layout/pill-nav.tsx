@@ -20,6 +20,8 @@ type PillNavProps = {
   pillTextColor?: string
   onMobileMenuClick?: () => void
   initialLoadAnimation?: boolean
+  mobileToggleLabel?: React.ReactNode
+  mobileToggleOpenLabel?: React.ReactNode
 }
 
 export function PillNav({
@@ -36,6 +38,8 @@ export function PillNav({
   pillTextColor,
   onMobileMenuClick,
   initialLoadAnimation = true,
+  mobileToggleLabel,
+  mobileToggleOpenLabel,
 }: PillNavProps) {
   const resolvedPillTextColor = pillTextColor ?? baseColor
 
@@ -55,7 +59,21 @@ export function PillNav({
       <nav className="relative w-full md:w-full flex items-center justify-between md:justify-center gap-2 md:gap-4 box-border" aria-label="Primary" style={cssVars}>
         <LogoButton logoSrc={logoSrc} logoAlt={logoAlt} logoHref={logoHref} ease={ease} />
         <DesktopMenu items={items} activeHref={activeHref} ease={ease} initialLoadAnimation={initialLoadAnimation} />
-        <MobileMenu items={items} ease={ease} onToggle={onMobileMenuClick} />
+        {(() => {
+          const sanitized = (activeHref || '').replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '') || 'root'
+          const menuId = `mobile-menu-${sanitized}`
+          return (
+            <MobileMenu
+              items={items}
+              activeHref={activeHref}
+              ease={ease}
+              onToggle={onMobileMenuClick}
+              menuId={menuId}
+              toggleLabel={mobileToggleLabel}
+              toggleOpenLabel={mobileToggleOpenLabel}
+            />
+          )
+        })()}
       </nav>
     </div>
   )

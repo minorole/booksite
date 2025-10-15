@@ -69,6 +69,8 @@ export function Navbar() {
               hoveredPillTextColor="#ffffff"
               pillTextColor="#000000"
               className=""
+              mobileToggleLabel={<Bilingual cnText="菜单" enText="Menu" />}
+              mobileToggleOpenLabel={<Bilingual cnText="关闭" enText="Close" />}
               initialLoadAnimation={true}
             />
           </div>

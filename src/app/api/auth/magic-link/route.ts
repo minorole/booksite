@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { createRouteSupabaseClient } from '@/lib/supabase'
+import { buildCallbackUrl } from '@/lib/auth'
 import { checkRateLimit, rateLimitHeaders } from '@/lib/security/ratelimit'
 
 function getClientIp(request: Request): string | undefined {
@@ -31,13 +31,9 @@ export async function POST(request: Request) {
     }
 
     // Build safe redirect to our callback with optional returnTo and timestamp for 15-min expiry enforcement
-    const isSafePath = (p: string | undefined) => !!p && p.startsWith('/') && !p.startsWith('//')
-    const qp = new URLSearchParams()
-    if (isSafePath(returnTo)) qp.set('returnTo', returnTo!)
-    qp.set('ts', String(Date.now()))
-    const emailRedirectTo = `${origin}/api/auth/callback?${qp.toString()}`
+    const emailRedirectTo = buildCallbackUrl(origin, returnTo)
 
-    const supabase = createRouteHandlerClient({ cookies })
+    const supabase = await createRouteSupabaseClient()
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {

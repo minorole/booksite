@@ -1,9 +1,8 @@
-import { cookies } from 'next/headers'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { createRouteSupabaseClient } from '@/lib/supabase'
 import type { User } from '@supabase/supabase-js'
 
 export async function getAuthUser(): Promise<User | null> {
-  const supabase = createRouteHandlerClient({ cookies })
+  const supabase = await createRouteSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
   return user ?? null
 }
@@ -26,7 +25,7 @@ export async function assertUser(): Promise<User> {
 }
 
 export async function assertAdmin(): Promise<User> {
-  const supabase = createRouteHandlerClient({ cookies })
+  const supabase = await createRouteSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new UnauthorizedError()
   // Authoritative DB check
