@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import type { Session } from '@supabase/supabase-js'
 import type { Database } from '@/types/supabase.generated'
 import { detectLocaleFromHeader, COOKIE_NAME, SUPPORTED_LOCALES, type Locale } from '@/lib/i18n/config'
 import { stripLocalePrefix as stripLocalePrefixDynamic, resolveBest as resolveBestLocale } from '@/lib/i18n/middleware-helpers'
@@ -54,12 +55,12 @@ export async function middleware(req: NextRequest) {
     {
       cookies: {
         get(name: string) { return req.cookies.get(name)?.value ?? '' },
-        set(name: string, value: string, options?: any) { res.cookies.set(name, value, options) },
-        remove(name: string, options?: any) { res.cookies.delete(name) },
+        set(name: string, value: string) { res.cookies.set(name, value) },
+        remove(name: string) { res.cookies.delete(name) },
       },
     }
   )
-  let session: any | null = null
+  let session: Session | null = null
 
   // Allow auth callback and magic-link routes
   if (normalizedPath.startsWith('/api/auth/callback') ||

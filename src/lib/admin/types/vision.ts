@@ -24,7 +24,7 @@ export interface VisionAnalysisResult {
       en?: string
       confidence: number
     }
-    publisher?: {
+    publisher: {
       zh?: string
       en?: string
       confidence: number
@@ -52,4 +52,3 @@ export interface BookAnalyzeParams {
     category_type?: CategoryType
   }
 }
-

@@ -14,13 +14,16 @@ import { EditAnalysisDialog } from './EditAnalysisDialog';
 import { StepList } from './StepList'
 import Image from 'next/image'
 import { useLocale } from '@/contexts/LocaleContext'
+import { ResultStoreProvider, useResultsStore } from './state/useResultsStore'
+import { ResultsPanel } from './results/ResultsPanel'
 
-export function ChatInterface() {
+function ChatBody() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
   const [editOpen, setEditOpen] = useState(false)
-  const [editInitial, setEditInitial] = useState<any | null>(null)
+  const [editInitial, setEditInitial] = useState<Record<string, unknown> | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const { locale } = useLocale()
+  const results = useResultsStore()
   const {
     messages,
     input,
@@ -34,14 +37,16 @@ export function ChatInterface() {
     attachImage,
     confirmAnalysis,
     reset,
-  } = useChatSession(locale)
+  } = useChatSession(locale, {
+    onToolResult: (evt) => results.setFromToolResult(evt),
+  })
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading])
 
   return (
-    <div className="flex flex-col h-[calc(100vh-12rem)] max-w-[95%] sm:max-w-[90%] md:max-w-[85%] mx-auto">
+    <>
       <ErrorBanner error={error} onClose={() => setError(null)} />
 
       <div className="flex justify-end p-4">
@@ -52,35 +57,50 @@ export function ChatInterface() {
       </div>
 
       <StepList steps={steps} />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="md:col-span-2">
+            <MessageList
+              messages={messages}
+              loading={loading}
+              onConfirmAnalysis={confirmAnalysis}
+              onEditAnalysis={(a) => {
+                const x = a as {
+                  title_zh?: string
+                  title_en?: string | null
+                  author_zh?: string | null
+                  author_en?: string | null
+                  publisher_zh?: string | null
+                  publisher_en?: string | null
+                  category_suggestion?: import('@/lib/db/enums').CategoryType
+                }
+                const init = {
+                  title_zh: x.title_zh,
+                  title_en: x.title_en,
+                  author_zh: x.author_zh,
+                  author_en: x.author_en,
+                  publisher_zh: x.publisher_zh,
+                  publisher_en: x.publisher_en,
+                  category_type: x.category_suggestion,
+                }
+                setEditInitial(init)
+                setEditOpen(true)
+              }}
+              onSelectImage={(url) => setSelectedImage(url)}
+              endRef={messagesEndRef}
+            />
 
-      <MessageList
-        messages={messages}
-        loading={loading}
-        onConfirmAnalysis={confirmAnalysis}
-        onEditAnalysis={(a) => {
-          const init = {
-            title_zh: a.title_zh,
-            title_en: a.title_en,
-            author_zh: a.author_zh,
-            author_en: a.author_en,
-            publisher_zh: a.publisher_zh,
-            publisher_en: a.publisher_en,
-            category_type: a.category_suggestion,
-          }
-          setEditInitial(init)
-          setEditOpen(true)
-        }}
-        onSelectImage={(url) => setSelectedImage(url)}
-        endRef={messagesEndRef}
-      />
-
-      <ChatInput
-        input={input}
-        setInput={setInput}
-        onSubmit={sendText}
-        onSelectFile={attachImage}
-        loading={loading}
-      />
+            <ChatInput
+              input={input}
+              setInput={setInput}
+              onSubmit={sendText}
+              onSelectFile={attachImage}
+              loading={loading}
+            />
+        </div>
+        <div className="hidden md:block">
+          <ResultsPanel />
+        </div>
+      </div>
 
       <Dialog open={selectedImage !== null} onOpenChange={() => setSelectedImage(null)}>
         <DialogContent className="max-w-4xl w-full p-0 overflow-hidden bg-transparent border-0">
@@ -110,6 +130,16 @@ export function ChatInterface() {
           confirmAnalysis(v)
         }}
       />
+    </>
+  )
+}
+
+export function ChatInterface() {
+  return (
+    <div className="flex flex-col h-[calc(100vh-12rem)] max-w-[95%] sm:max-w-[90%] md:max-w-[85%] mx-auto">
+      <ResultStoreProvider>
+        <ChatBody />
+      </ResultStoreProvider>
     </div>
   )
 }

@@ -12,29 +12,18 @@ export async function analyzeItemPhoto(
   try {
     const standardizedUrl = await standardizeImageUrl(imageUrl)
 
-    const schema = {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        name: { anyOf: [{ type: 'string' }, { type: 'null' }] },
-        type: { anyOf: [{ type: 'string' }, { type: 'null' }] },
-        material: { anyOf: [{ type: 'string' }, { type: 'null' }] },
-        finish: { anyOf: [{ type: 'string' }, { type: 'null' }] },
-        size: { anyOf: [{ type: 'string' }, { type: 'null' }] },
-        dimensions: { anyOf: [{ type: 'string' }, { type: 'null' }] },
-        category_suggestion: {
-          anyOf: [
-            { type: 'string', enum: ['DHARMA_ITEMS', 'BUDDHA_STATUES'] },
-            { type: 'null' },
-          ],
-        },
-        tags: { type: 'array', items: { type: 'string' } },
-        quality_issues: { type: 'array', items: { type: 'string' } },
-      },
-      required: ['name', 'type', 'material', 'finish', 'size', 'dimensions', 'category_suggestion', 'tags', 'quality_issues'],
-    }
-
-    const json = await callVisionJSON<any>('ItemAnalysis', itemAnalysisSchema, [
+  const json = await callVisionJSON<{
+    name?: string | null
+    type?: string | null
+    material?: string | null
+    finish?: string | null
+    size?: string | null
+    dimensions?: string | null
+    category_suggestion?: import('@/lib/db/enums').CategoryType | null
+    tags?: string[]
+    quality_issues?: string[]
+    cover_url?: string
+  }>('ItemAnalysis', itemAnalysisSchema, [
       {
         role: 'user',
         content: [
@@ -51,7 +40,7 @@ export async function analyzeItemPhoto(
       finish: json.finish ?? null,
       size: json.size ?? null,
       dimensions: json.dimensions ?? null,
-      category_suggestion: json.category_suggestion ?? null,
+      category_suggestion: json.category_suggestion ?? undefined,
       tags: Array.isArray(json.tags) ? json.tags : [],
       quality_issues: Array.isArray(json.quality_issues) ? json.quality_issues : [],
       cover_url: standardizedUrl,

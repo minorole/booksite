@@ -1,8 +1,8 @@
 import { createVisionChatCompletion } from '@/lib/openai'
-import { type ChatCompletion } from 'openai/resources/chat/completions'
+import { type ChatCompletion, type ChatCompletionMessageParam } from 'openai/resources/chat/completions'
 import { visionStructuredResponseFormat } from './schemas'
 
-export async function callVisionJSON<T>(schemaName: string, schema: Record<string, any>, messages: any[]): Promise<T> {
+export async function callVisionJSON<T>(schemaName: string, schema: Record<string, unknown>, messages: ChatCompletionMessageParam[]): Promise<T> {
   const response = (await createVisionChatCompletion({
     messages,
     stream: false,
@@ -12,4 +12,3 @@ export async function callVisionJSON<T>(schemaName: string, schema: Record<strin
   if (!content) throw new Error('No analysis received from vision model')
   return JSON.parse(content) as T
 }
-

@@ -31,3 +31,4 @@ describe('auth and admin redirects to localized routes', () => {
     await expect(modZh.default()).rejects.toMatchObject({ url: '/zh/admin/ai-chat' })
   })
 })
+

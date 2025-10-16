@@ -63,7 +63,7 @@ export async function checkDuplicates(
     const analysis = analyzeResults(
       visualAnalysis.length > 0
         ? visualAnalysis.map((v) => ({
-            book_id: (v.book as any).id || '',
+            book_id: v.book.id || '',
             similarity_score: (v.similarity.layout + v.similarity.content) / 2,
             differences: v.differences,
             visual_analysis: {
@@ -83,7 +83,7 @@ export async function checkDuplicates(
           matches:
             visualAnalysis.length > 0
               ? visualAnalysis.map((v) => ({
-                  book_id: (v.book as any).id || '',
+                  book_id: v.book.id || '',
                   similarity_score: (v.similarity.layout + v.similarity.content) / 2,
                   differences: v.differences,
                   visual_analysis: {

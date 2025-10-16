@@ -1,5 +1,5 @@
 import OpenAI from 'openai'
-import type { ChatCompletion } from 'openai/resources/chat/completions'
+import type { ChatCompletion, ChatCompletionChunk, ChatCompletionCreateParamsBase } from 'openai/resources/chat/completions'
 import { getAdminClient } from './client'
 import { getModel } from './models'
 import { logOperation } from './logging'
@@ -30,7 +30,7 @@ export async function createChatCompletion({
 
     const client = getAdminClient()
     if (isResponsesAPIEnabled() && !tools && !stream) {
-      const payload = toResponsesPayload(messages as any)
+      const payload = toResponsesPayload(messages)
       const synthetic: ChatCompletion = await createViaResponses(
         client,
         MODEL,
@@ -43,7 +43,9 @@ export async function createChatCompletion({
       return synthetic
     }
 
-    const response = await client.chat.completions.create({
+    const params: Pick<ChatCompletionCreateParamsBase, 'messages' | 'tools' | 'tool_choice'> & {
+      model: string; temperature?: number; max_tokens?: number; stream?: boolean
+    } = {
       model: MODEL,
       messages,
       tools,
@@ -51,20 +53,18 @@ export async function createChatCompletion({
       temperature,
       max_tokens: maxTokens,
       stream,
-    } as any)
+    }
+    const response = await client.chat.completions.create(params as unknown as ChatCompletionCreateParamsBase)
 
     const duration = Date.now() - startTime
-    logOperation('RESPONSE', {
-      duration,
-      status: 'success',
-      usage: (response as any).usage,
-    })
+    logOperation('RESPONSE', { duration, status: 'success' })
 
     if (stream) {
-      return iteratorToStream(createResponseIterator(response as any))
+      const streamResp = response as unknown as AsyncIterable<ChatCompletionChunk>
+      return iteratorToStream(createResponseIterator(streamResp))
     }
     return response as ChatCompletion
-  } catch (error: any) {
+  } catch (error: unknown) {
     const duration = Date.now() - startTime
     logOperation('ERROR', {
       duration,

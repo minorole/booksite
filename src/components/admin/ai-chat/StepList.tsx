@@ -11,10 +11,12 @@ type Step = {
 
 const LABELS: Record<string, string> = {
   analyze_book_cover: 'Analyzing cover',
+  analyze_item_photo: 'Analyzing item photo',
   check_duplicates: 'Checking duplicates',
   create_book: 'Creating book',
   update_book: 'Updating book',
   search_books: 'Searching books',
+  adjust_book_quantity: 'Adjusting quantity',
   update_order: 'Updating order',
 }
 

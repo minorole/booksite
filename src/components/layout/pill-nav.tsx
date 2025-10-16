@@ -48,15 +48,15 @@ export function PillNav({
   const resolvedPillTextColor = pillTextColor ?? baseColor
 
   const cssVars: React.CSSProperties = {
-    ["--base" as any]: baseColor,
-    ["--pill-bg" as any]: pillColor,
-    ["--hover-text" as any]: hoveredPillTextColor,
-    ["--pill-text" as any]: resolvedPillTextColor,
-    ["--sm-accent" as any]: mobileAccentColor,
-    ["--nav-h" as any]: "42px",
-    ["--logo" as any]: "36px",
-    ["--pill-pad-x" as any]: "18px",
-    ["--pill-gap" as any]: "3px",
+    ['--base' as string]: baseColor,
+    ['--pill-bg' as string]: pillColor,
+    ['--hover-text' as string]: hoveredPillTextColor,
+    ['--pill-text' as string]: resolvedPillTextColor,
+    ['--sm-accent' as string]: mobileAccentColor,
+    ['--nav-h' as string]: '42px',
+    ['--logo' as string]: '36px',
+    ['--pill-pad-x' as string]: '18px',
+    ['--pill-gap' as string]: '3px',
   }
 
   const sanitized = (activeHref || '').replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '') || 'root'
@@ -69,7 +69,7 @@ export function PillNav({
     let zhHref: string | undefined
     let enHref: string | undefined
     for (let i = 0; i < arr.length; i++) {
-      const it = arr[i] as any
+      const it = arr[i] as unknown as { label?: string; href?: string }
       const label = it?.label
       if (typeof label === 'string' && (label === '中文' || label === 'English' || label === 'ENGLISH')) {
         langIdxs.push(i)
@@ -96,7 +96,7 @@ export function PillNav({
   return (
     <div className={cn("w-full", className)}>
       <nav className="relative w-full md:w-full flex items-center justify-between md:justify-center gap-2 md:gap-4 box-border" aria-label="Primary" style={cssVars}>
-        <div className="hidden md:flex items-center" style={{ gap: 'var(--pill-gap)' as any }}>
+        <div className="hidden md:flex items-center" style={{ gap: 'var(--pill-gap)' as React.CSSProperties['gap'] }}>
           <LogoButton logoSrc={logoSrc} logoAlt={logoAlt} logoHref={logoHref} ease={ease} />
           <div className="md:[--nav-h:52px] md:[--logo:44px] md:[--pill-pad-x:22px] md:[--pill-gap:4px]">
             <DesktopMenu items={desktopItems} activeHref={activeHref} ease={ease} initialLoadAnimation={initialLoadAnimation} />

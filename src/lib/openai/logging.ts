@@ -1,4 +1,4 @@
-export function logOperation(operation: string, details: Record<string, any>, error?: Error) {
+export function logOperation(operation: string, details: Record<string, unknown>, error?: Error) {
   const logEntry = {
     operation,
     timestamp: new Date().toISOString(),
@@ -20,4 +20,3 @@ export function logOperation(operation: string, details: Record<string, any>, er
   }
   return logEntry
 }
-

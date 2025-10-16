@@ -23,15 +23,17 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
     }
 
-    const db = await getServerDb()
+  const db = await getServerDb()
 
-    // Fetch roles to enforce SUPER_ADMIN protections
-    const { data: allUsers, error: listErr } = await db.rpc('list_users')
-    if (listErr) {
-      return NextResponse.json({ error: 'Failed to validate roles' }, { status: 500 })
-    }
-    const me = (allUsers as any[])?.find(u => u.id === user.id)
-    const target = (allUsers as any[])?.find(u => u.id === userId)
+  // Fetch roles to enforce SUPER_ADMIN protections
+  const { data: allUsers, error: listErr } = await db.rpc('list_users')
+  if (listErr) {
+    return NextResponse.json({ error: 'Failed to validate roles' }, { status: 500 })
+  }
+  type UserRow = { id: string; role: Role }
+  const arr = (allUsers ?? []) as UserRow[]
+  const me = arr.find((u) => u.id === user.id)
+  const target = arr.find((u) => u.id === userId)
     const myRole = (me?.role as Role | undefined) || 'USER'
     const targetRole = (target?.role as Role | undefined) || 'USER'
 

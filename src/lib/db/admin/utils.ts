@@ -11,6 +11,5 @@ export async function resolveCategoryId(categoryType: CategoryType | undefined):
     .eq('type', categoryType)
     .maybeSingle()
   if (error || !data) return undefined
-  return (data as any).id as string
+  return (data as { id: string }).id
 }
-

@@ -104,7 +104,7 @@ export function BookDialog({
           ? book.search_tags.join(", ")
           : key === 'category_type'
             ? book.category.type
-            : (book as any)[key]
+            : (book as Record<string, unknown>)[key]
 
         if (value !== originalValue) {
           if (key === 'tags' && typeof value === 'string') {
@@ -114,7 +114,7 @@ export function BookDialog({
           }
         }
         return acc
-      }, {} as Record<string, any>)
+      }, {} as Record<string, unknown>)
 
       if (Object.keys(changedFields).length === 0) {
         onOpenChange(false)

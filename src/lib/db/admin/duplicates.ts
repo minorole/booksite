@@ -1,6 +1,7 @@
 import { getServerDb } from '@/lib/db/client'
 import type { BookBase } from '@/lib/admin/types'
 import type { CategoryType } from '@/lib/db/enums'
+import type { SearchBooksRow, TagJoinRow } from '@/lib/db/types'
 
 // Simple duplicate check based on titles/authors, returns basic projections
 export async function checkDuplicatesDb(args: {
@@ -26,7 +27,7 @@ export async function checkDuplicatesDb(args: {
   const { data, error } = await query.limit(50)
   if (error) throw new Error(`Failed to search duplicates: ${error.message}`)
 
-  const list = (data ?? []) as any[]
+  const list = (data ?? []) as SearchBooksRow[]
   if (list.length === 0) return []
 
   const bookIds = list.map((b) => b.id as string)
@@ -39,8 +40,9 @@ export async function checkDuplicatesDb(args: {
       .from('categories')
       .select('id, type')
       .in('id', categoryIds)
-    for (const c of cats ?? []) {
-      catTypeById.set((c as any).id, (c as any).type as CategoryType)
+    type CatRow = { id: string; type: CategoryType }
+    for (const c of (cats ?? []) as CatRow[]) {
+      catTypeById.set(c.id, c.type)
     }
   }
 
@@ -51,12 +53,12 @@ export async function checkDuplicatesDb(args: {
       .from('book_tags')
       .select('book_id, tags:tags(name)')
       .in('book_id', bookIds)
-    for (const row of tagRows ?? []) {
-      const n = (row as any)?.tags?.name as string | undefined
+    for (const row of (tagRows ?? []) as TagJoinRow[]) {
+      const n = row.tags?.name ?? undefined
       if (!n) continue
-      const arr = tagsByBook.get((row as any).book_id) ?? []
+      const arr = tagsByBook.get(row.book_id) ?? []
       arr.push(n)
-      tagsByBook.set((row as any).book_id, arr)
+      tagsByBook.set(row.book_id, arr)
     }
   }
 

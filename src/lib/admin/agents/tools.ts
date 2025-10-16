@@ -6,13 +6,14 @@ import {
   analyzeItemPhoto,
 } from '@/lib/admin/services/vision'
 import { checkDuplicates } from '@/lib/admin/services/duplicates'
-import { createBook, updateBook, searchBooks } from '@/lib/admin/services/books'
+import { createBook, updateBook, searchBooks, adjustBookQuantity } from '@/lib/admin/services/books'
 import { updateOrder } from '@/lib/admin/services/orders'
 import { getOrderDb, searchOrdersDb } from '@/lib/db/admin'
 
 // Agent context
 export type AgentContext = {
   userEmail: string
+  uiLanguage?: import('@/lib/admin/i18n').UILanguage
 }
 
 export function visionTools(): Tool<AgentContext>[] {
@@ -36,9 +37,9 @@ export function visionTools(): Tool<AgentContext>[] {
         })
         .nullable(),
     }),
-    async execute(input: any, context?: RunContext<AgentContext>) {
+    async execute(input: unknown, context?: RunContext<AgentContext>) {
       const email = context?.context?.userEmail || 'admin@unknown'
-      const result = await analyzeBookCover(input, email)
+      const result = await analyzeBookCover(input as import('@/lib/admin/types').BookAnalyzeParams, email)
       return result
     },
   })
@@ -56,9 +57,17 @@ export function visionTools(): Tool<AgentContext>[] {
       publisher_en: z.string().nullable(),
       cover_image: z.string().url().nullable(),
     }),
-    async execute(input: any, context?: RunContext<AgentContext>) {
+    async execute(input: unknown, context?: RunContext<AgentContext>) {
       const email = context?.context?.userEmail || 'admin@unknown'
-      const result = await checkDuplicates(input, email)
+      const result = await checkDuplicates(input as {
+        title_zh: string
+        title_en?: string
+        author_zh?: string
+        author_en?: string
+        publisher_zh?: string
+        publisher_en?: string
+        cover_image?: string
+      }, email)
       return result
     },
   })
@@ -70,9 +79,10 @@ export function visionTools(): Tool<AgentContext>[] {
     parameters: z.object({
       image_url: z.string().url(),
     }),
-    async execute(input: any, context?: RunContext<AgentContext>) {
+    async execute(input: unknown, context?: RunContext<AgentContext>) {
       const email = context?.context?.userEmail || 'admin@unknown'
-      const result = await analyzeItemPhoto(input.image_url, email)
+      const { image_url } = input as { image_url: string }
+      const result = await analyzeItemPhoto(image_url, email)
       return result
     },
   })
@@ -99,9 +109,9 @@ export function inventoryTools(): Tool<AgentContext>[] {
       publisher_zh: z.string().nullable(),
       publisher_en: z.string().nullable(),
     }),
-    async execute(input: any, context?: RunContext<AgentContext>) {
+    async execute(input: unknown, context?: RunContext<AgentContext>) {
       const email = context?.context?.userEmail || 'admin@unknown'
-      const result = await createBook(input, email)
+      const result = await createBook(input as import('@/lib/admin/types').BookCreate, email)
       return result
     },
   })
@@ -119,15 +129,18 @@ export function inventoryTools(): Tool<AgentContext>[] {
       category_type: z.enum(['PURE_LAND_BOOKS', 'OTHER_BOOKS', 'DHARMA_ITEMS', 'BUDDHA_STATUES']).nullable(),
       quantity: z.number().int().min(0).nullable(),
       tags: z.array(z.string()).nullable(),
+      cover_image: z.string().url().nullable(),
     }),
-    async execute(input: any, context?: RunContext<AgentContext>) {
+    async execute(input: unknown, context?: RunContext<AgentContext>) {
       const email = context?.context?.userEmail || 'admin@unknown'
       // convert nulls to undefined for partial updates
-      const sanitized: Record<string, any> = {}
-      for (const [k, v] of Object.entries(input)) {
-        if (v !== null && v !== undefined) sanitized[k] = v
+      const sanitized: Record<string, unknown> = {}
+      if (typeof input === 'object' && input !== null) {
+        for (const [k, v] of Object.entries(input as Record<string, unknown>)) {
+          if (v !== null && v !== undefined) sanitized[k] = v
+        }
       }
-      const result = await updateBook(sanitized as any, email)
+      const result = await updateBook(sanitized as unknown as import('@/lib/admin/types').BookUpdate, email)
       return result
     },
   })
@@ -143,17 +156,35 @@ export function inventoryTools(): Tool<AgentContext>[] {
       min_quantity: z.number().int().nullable(),
       max_quantity: z.number().int().nullable(),
     }),
-    async execute(input: any) {
-      const pruned: Record<string, any> = {}
-      for (const [k, v] of Object.entries(input)) {
-        if (v !== null && v !== undefined) pruned[k] = v
+    async execute(input: unknown) {
+      const pruned: Record<string, unknown> = {}
+      if (typeof input === 'object' && input !== null) {
+        for (const [k, v] of Object.entries(input as Record<string, unknown>)) {
+          if (v !== null && v !== undefined) pruned[k] = v
+        }
       }
-      const result = await searchBooks(pruned as any)
+      const result = await searchBooks(pruned as import('@/lib/admin/types').BookSearch)
       return result
     },
   })
 
-  return [create, update, search]
+  const adjust = tool({
+    name: 'adjust_book_quantity',
+    description: 'Increase or decrease the quantity of an existing book by a delta. Ensures non-negative results.',
+    strict: true,
+    parameters: z.object({
+      book_id: z.string(),
+      delta: z.number().int(),
+    }),
+    async execute(input: unknown, context?: RunContext<AgentContext>) {
+      const email = context?.context?.userEmail || 'admin@unknown'
+      const { book_id, delta } = input as { book_id: string; delta: number }
+      const result = await adjustBookQuantity({ book_id, delta }, email)
+      return result
+    },
+  })
+
+  return [create, update, search, adjust]
 }
 
 export function orderTools(): Tool<AgentContext>[] {
@@ -165,15 +196,18 @@ export function orderTools(): Tool<AgentContext>[] {
       order_id: z.string(),
       status: z.string().nullable(),
       tracking_number: z.string().nullable(),
-      shipped_at: z.string().nullable(),
+      admin_notes: z.string().nullable(),
+      override_monthly: z.boolean().nullable(),
     }),
-    async execute(input: any, context?: RunContext<AgentContext>) {
+    async execute(input: unknown, context?: RunContext<AgentContext>) {
       const email = context?.context?.userEmail || 'admin@unknown'
-      const pruned: Record<string, any> = {}
-      for (const [k, v] of Object.entries(input)) {
-        if (v !== null && v !== undefined) pruned[k] = v
+      const pruned: Record<string, unknown> = {}
+      if (typeof input === 'object' && input !== null) {
+        for (const [k, v] of Object.entries(input as Record<string, unknown>)) {
+          if (v !== null && v !== undefined) pruned[k] = v
+        }
       }
-      const result = await updateOrder(pruned as any, email)
+      const result = await updateOrder(pruned as unknown as import('@/lib/admin/types').OrderUpdate, email)
       return result
     },
   })
@@ -183,8 +217,9 @@ export function orderTools(): Tool<AgentContext>[] {
     description: 'Fetch a single order by ID.',
     strict: true,
     parameters: z.object({ order_id: z.string() }),
-    async execute(input: any) {
-      const o = await getOrderDb(input.order_id)
+    async execute(input: unknown) {
+      const { order_id } = input as { order_id: string }
+      const o = await getOrderDb(order_id)
       if (!o) return { success: false, message: 'Order not found' }
       return { success: true, message: 'Order found', data: { order: { order_id: o.order_id, status: o.status, tracking_number: o.tracking_number ?? undefined } } }
     },
@@ -195,8 +230,9 @@ export function orderTools(): Tool<AgentContext>[] {
     description: 'Search orders by status or query string (id or tracking number).',
     strict: true,
     parameters: z.object({ status: z.string().nullable(), q: z.string().nullable() }),
-    async execute(input: any) {
-      const rows = await searchOrdersDb({ status: input.status ?? undefined, q: input.q ?? undefined })
+    async execute(input: unknown) {
+      const { status, q } = input as { status?: string | null; q?: string | null }
+      const rows = await searchOrdersDb({ status: status ?? undefined, q: q ?? undefined })
       return { success: true, message: `Found ${rows.length} order(s)`, data: { orders: rows } }
     },
   })

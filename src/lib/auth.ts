@@ -59,11 +59,11 @@ export async function finalizePostLogin(
   // Opportunistically ensure a Cloudinary-hosted avatar for Google users.
   // Never block login if this fails.
   try {
-    const provider = (user.app_metadata as any)?.provider as string | undefined
+    const provider = (user.app_metadata as Record<string, unknown> | null | undefined)?.provider as string | undefined
     const umeta = (user.user_metadata ?? {}) as Record<string, unknown>
     const candidate =
       (typeof umeta.avatar_url === 'string' && (umeta.avatar_url as string)) ||
-      (typeof (umeta as any).picture === 'string' && ((umeta as any).picture as string)) ||
+      (typeof (umeta as Record<string, unknown>).picture === 'string' && ((umeta as Record<string, unknown>).picture as string)) ||
       undefined
 
     if (provider === 'google' && candidate && !candidate.includes('res.cloudinary.com')) {

@@ -23,7 +23,7 @@ export function EditAnalysisDialog({
     category_type?: CategoryType
   }
   onClose: () => void
-  onSave: (v: any) => void
+  onSave: (v: unknown) => void
 }) {
   const [form, setForm] = useState(initial)
   return (
@@ -64,4 +64,3 @@ export function EditAnalysisDialog({
     </Dialog>
   )
 }
-

@@ -7,10 +7,10 @@ import { useImageUpload } from './useImageUpload'
 
 type AnalysisState = {
   imageUrl: string | null
-  confirmedInfo?: any
+  confirmedInfo?: unknown
 }
 
-export function useChatSession(language: UILanguage = 'en') {
+export function useChatSession(language: UILanguage = 'en', opts?: { onToolResult?: (evt: import('@/lib/admin/types/events').SSEEvent) => void }) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -25,7 +25,7 @@ export function useChatSession(language: UILanguage = 'en') {
     if (uploadError) setError(uploadError)
   }, [uploadError])
 
-  const streamOrchestrated = useCallback(async (payload: { messages: Message[]; imageUrl?: string; confirmedInfo?: any }) => {
+  const streamOrchestrated = useCallback(async (payload: { messages: Message[] }) => {
     setLoading(true)
     setError(null)
     setLoadingKey('processing')
@@ -35,7 +35,7 @@ export function useChatSession(language: UILanguage = 'en') {
       const res = await fetch('/api/admin/ai-chat/stream/orchestrated', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ messages: payload.messages, uiLanguage: language }),
         signal: ac.signal,
       })
       if (!res.ok || !res.body) throw new Error(ERROR_MESSAGES[language].network_error)
@@ -101,6 +101,7 @@ export function useChatSession(language: UILanguage = 'en') {
               }
               case 'tool_result': {
                 setSteps((prev) => prev.map((s) => (s.id === evt.id ? { ...s, status: evt.success ? 'done' : 'error' } : s)))
+                opts?.onToolResult?.(evt)
                 break
               }
               case 'tool_append': {
@@ -147,18 +148,18 @@ export function useChatSession(language: UILanguage = 'en') {
       }
       const nextMessages = [...messages, imageMessage]
       setMessages((prev) => [...prev, imageMessage])
-      await streamOrchestrated({ messages: nextMessages, imageUrl: url })
+      await streamOrchestrated({ messages: nextMessages })
     },
     [upload, messages, streamOrchestrated]
   )
 
   const confirmAnalysis = useCallback(
-    async (confirmedInfo: any) => {
+    async (confirmedInfo: unknown) => {
       if (!analysis.imageUrl) return
       const user: Message = { role: 'user', content: `Yes, the information is correct. Confirmed info: ${JSON.stringify(confirmedInfo)}. Please proceed with the structured analysis using this confirmed information.` }
       const nextMessages = [...messages, user]
       setMessages((prev) => [...prev, user])
-      await streamOrchestrated({ messages: nextMessages, imageUrl: analysis.imageUrl, confirmedInfo })
+      await streamOrchestrated({ messages: nextMessages })
       setAnalysis((prev) => ({ ...prev, confirmedInfo }))
     },
     [analysis.imageUrl, messages, streamOrchestrated]

@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils"
 
 type Uniforms = {
   [key: string]: {
-    value: number[] | number[][] | number | any
+  value: number[] | number[][] | number | unknown
     type?: string
   }
 }
@@ -185,16 +185,16 @@ const ShaderMaterial = ({ source, uniforms, maxFps = 60 }: { source: string; uni
   useFrame(({ clock }) => {
     if (!ref.current) return
     const timestamp = clock.getElapsedTime()
-    const material: any = (ref.current as any).material
+  const material = (ref.current as unknown as { material?: { uniforms?: Record<string, { value: unknown }> } | undefined }).material
     if (material && material.uniforms && material.uniforms.u_time) {
       material.uniforms.u_time.value = timestamp
     }
   })
 
   const uniformsPrepared = React.useMemo(() => {
-    const prepared: any = {}
+  const prepared: Record<string, { value: unknown }> = {}
     for (const name in uniforms) {
-      const u: any = uniforms[name]
+      const u = uniforms[name] as unknown as { type: string; value: any }
       switch (u.type) {
         case "uniform3f":
           prepared[name] = { value: new THREE.Vector3().fromArray(u.value) }
@@ -214,7 +214,7 @@ const ShaderMaterial = ({ source, uniforms, maxFps = 60 }: { source: string; uni
     }
     prepared["u_time"] = { value: 0 }
     prepared["u_resolution"] = { value: new THREE.Vector2(size.width * 2, size.height * 2) }
-    return prepared
+    return prepared as unknown as { [uniform: string]: import('three').IUniform<any> }
   }, [size.width, size.height, uniforms])
 
   const material = React.useMemo(() => {
@@ -241,7 +241,7 @@ const ShaderMaterial = ({ source, uniforms, maxFps = 60 }: { source: string; uni
   }, [source, uniformsPrepared])
 
   return (
-    <mesh ref={ref as any}>
+    <mesh ref={ref as unknown as React.MutableRefObject<unknown>}>
       <planeGeometry args={[2, 2]} />
       <primitive object={material} attach="material" />
     </mesh>

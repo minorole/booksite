@@ -1,4 +1,4 @@
-export function visionStructuredResponseFormat(name: string, schema: Record<string, any>) {
+export function visionStructuredResponseFormat(name: string, schema: Record<string, unknown>) {
   return {
     type: 'json_schema',
     json_schema: {
@@ -10,7 +10,7 @@ export function visionStructuredResponseFormat(name: string, schema: Record<stri
 }
 
 // Cover analysis — initial stage schema
-export const initialCoverAnalysisSchema: Record<string, any> = {
+export const initialCoverAnalysisSchema: Record<string, unknown> = {
   type: 'object',
   additionalProperties: false,
   properties: {
@@ -43,7 +43,7 @@ export const initialCoverAnalysisSchema: Record<string, any> = {
 }
 
 // Cover analysis — structured (VisionAnalysisResult)
-export const structuredVisionAnalysisSchema: Record<string, any> = {
+export const structuredVisionAnalysisSchema: Record<string, unknown> = {
   type: 'object',
   additionalProperties: false,
   properties: {
@@ -121,7 +121,7 @@ export const structuredVisionAnalysisSchema: Record<string, any> = {
 }
 
 // Item analysis schema
-export const itemAnalysisSchema: Record<string, any> = {
+export const itemAnalysisSchema: Record<string, unknown> = {
   type: 'object',
   additionalProperties: false,
   properties: {
@@ -144,7 +144,7 @@ export const itemAnalysisSchema: Record<string, any> = {
 }
 
 // Visual similarity schema
-export const visualSimilaritySchema: Record<string, any> = {
+export const visualSimilaritySchema: Record<string, unknown> = {
   type: 'object',
   additionalProperties: false,
   properties: {
@@ -154,4 +154,3 @@ export const visualSimilaritySchema: Record<string, any> = {
   },
   required: ['layout_similarity', 'content_similarity', 'confidence'],
 }
-

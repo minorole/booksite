@@ -35,8 +35,8 @@ export function BilingualInput({
         type={type}
         placeholder=""
         className={cn("h-12 text-sm", className)}
-        value={value as any}
-        defaultValue={defaultValue as any}
+        value={value as unknown as string | number | readonly string[] | undefined}
+        defaultValue={defaultValue as unknown as string | number | readonly string[] | undefined}
         {...rest}
       />
       {!hasContent && (

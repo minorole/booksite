@@ -1,4 +1,5 @@
 import { getServerDb } from '@/lib/db/client'
+import type { TablesUpdate } from '@/types/supabase.generated'
 
 // Update order status/details
 export async function updateOrderDb(id: string, patch: {
@@ -9,7 +10,7 @@ export async function updateOrderDb(id: string, patch: {
   processed_by?: string
 }): Promise<void> {
   const db = await getServerDb()
-  const update: any = {
+  const update: TablesUpdate<'orders'> = {
     status: patch.status,
     processed_by: patch.processed_by ?? null,
   }
@@ -32,7 +33,7 @@ export async function getOrderDb(id: string): Promise<{ order_id: string; status
     .single()
   if (error) return null
   if (!data) return null
-  return { order_id: (data as any).id as string, status: (data as any).status as string, tracking_number: (data as any).tracking_number ?? null }
+  return { order_id: data.id, status: data.status, tracking_number: (data as { tracking_number: string | null }).tracking_number ?? null }
 }
 
 // Search orders by status or free-text (id/notes)
@@ -47,5 +48,6 @@ export async function searchOrdersDb(args: { status?: string | null; q?: string 
   }
   const { data, error } = await query.limit(args?.limit ?? 50)
   if (error || !data) return []
-  return (data as any[]).map((r) => ({ order_id: r.id as string, status: r.status as string, tracking_number: r.tracking_number ?? null }))
+  type Row = { id: string; status: string; tracking_number: string | null }
+  return ((data ?? []) as Row[]).map((r) => ({ order_id: r.id, status: r.status, tracking_number: r.tracking_number ?? null }))
 }

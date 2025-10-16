@@ -43,7 +43,7 @@
 ## Project Structure & Module Organization
 - App and API routes: `src/app/**` (e.g., `src/app/api/admin/**/route.ts`).
 - Admin UI: `src/app/admin/**`, components under `src/components/admin/**` and `src/components/ui/**`.
-- AI tooling: `src/lib/openai.ts`, `src/lib/admin/{function-definitions.ts,function-handlers.ts,system-prompts.ts}`.
+- AI tooling: `src/lib/openai.ts`, Agents and tools under `src/lib/admin/agents/**`, orchestrator at `src/lib/admin/chat/orchestrator-agentkit.ts`.
 - Supabase/Prisma: `src/lib/{supabase.ts,prisma.ts}`.
 - Database: `prisma/schema.prisma`, `prisma/migrations`, `prisma/seed.ts`.
 - Static assets: `public/`; path alias `@/*` per `tsconfig.json`.
@@ -52,7 +52,7 @@
 - API routes: `src/app/api/**/route.ts` (auth, admin, upload, callbacks).
 - Admin features: manual book flow and AI chat (`src/app/admin/**`).
 - Image upload/processing: `src/lib/admin/image-upload.ts`, Cloudinary config in `src/lib/admin/constants.ts`.
-- AI prompts/functions: `src/lib/admin/system-prompts.ts`, `function-definitions.ts`, `function-handlers.ts`.
+- Agents and tools: `src/lib/admin/agents/**`; Orchestrated chat: `src/lib/admin/chat/orchestrator-agentkit.ts`; Vision services: `src/lib/admin/services/vision/**`.
 
 ### Discovery Recipes (repo root)
 - List API routes: `rg --glob "src/app/api/**/route.ts" -n ""`.

@@ -36,9 +36,10 @@ export async function POST(request: Request) {
       )
     }
 
+    const roleMeta = ((user.user_metadata ?? null) as Record<string, unknown> | null)?.role as string | undefined
     console.log('✅ User authorized:', {
       email: user.email,
-      role: (user as any).user_metadata?.role
+      role: roleMeta,
     })
 
     const formData = await request.formData()

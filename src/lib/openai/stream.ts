@@ -1,4 +1,5 @@
 import { logOperation } from './logging'
+import type { ChatCompletionChunk } from 'openai/resources/chat/completions'
 
 export function iteratorToStream(iterator: AsyncIterator<Uint8Array>) {
   return new ReadableStream({
@@ -18,7 +19,7 @@ export function iteratorToStream(iterator: AsyncIterator<Uint8Array>) {
   })
 }
 
-export async function* createResponseIterator(response: AsyncIterable<any>) {
+export async function* createResponseIterator(response: AsyncIterable<ChatCompletionChunk>) {
   const encoder = new TextEncoder()
   for await (const chunk of response) {
     const { delta } = chunk.choices[0]
@@ -38,4 +39,3 @@ export async function* createResponseIterator(response: AsyncIterable<any>) {
     }
   }
 }
-

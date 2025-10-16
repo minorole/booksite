@@ -26,7 +26,7 @@ function CssLotus() {
   )
 }
 
-function Lotus(props: any) {
+function Lotus(props: Record<string, unknown>) {
   const { scene, animations } = useGLTF('/models/lotus_compressed.glb', '/draco/', false)
   const { actions } = useAnimations(animations, scene)
 
@@ -54,9 +54,11 @@ function Lotus(props: any) {
 
   // Apply the matte-gold material to all meshes
   useEffect(() => {
-    scene.traverse((child: any) => {
-      if (child.isMesh) {
-        child.material = goldMaterial
+    scene.traverse((child) => {
+      const c = child as unknown as { isMesh?: boolean; material?: unknown }
+      if (c.isMesh) {
+        // Assign shared material when available
+        ;(c as unknown as { material: MeshStandardMaterial }).material = goldMaterial
       }
     })
   }, [scene, goldMaterial])

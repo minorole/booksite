@@ -59,39 +59,6 @@ export type Database = {
         }
         Relationships: []
       }
-      book_similarities: {
-        Row: {
-          book_id: string
-          score: number
-          similar_book_id: string
-        }
-        Insert: {
-          book_id: string
-          score: number
-          similar_book_id: string
-        }
-        Update: {
-          book_id?: string
-          score?: number
-          similar_book_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "book_similarities_book_id_fkey"
-            columns: ["book_id"]
-            isOneToOne: false
-            referencedRelation: "books"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "book_similarities_similar_book_id_fkey"
-            columns: ["similar_book_id"]
-            isOneToOne: false
-            referencedRelation: "books"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       book_tags: {
         Row: {
           book_id: string
@@ -124,7 +91,6 @@ export type Database = {
       }
       books: {
         Row: {
-          ai_metadata: Json | null
           author_en: string | null
           author_zh: string | null
           category_id: string
@@ -138,7 +104,6 @@ export type Database = {
           discontinued_at: string | null
           discontinued_by: string | null
           discontinued_reason: string | null
-          embedding: string | null
           has_english_translation: boolean
           id: string
           image_analysis_data: Json | null
@@ -154,7 +119,6 @@ export type Database = {
           views: number
         }
         Insert: {
-          ai_metadata?: Json | null
           author_en?: string | null
           author_zh?: string | null
           category_id: string
@@ -168,7 +132,6 @@ export type Database = {
           discontinued_at?: string | null
           discontinued_by?: string | null
           discontinued_reason?: string | null
-          embedding?: string | null
           has_english_translation?: boolean
           id?: string
           image_analysis_data?: Json | null
@@ -184,7 +147,6 @@ export type Database = {
           views?: number
         }
         Update: {
-          ai_metadata?: Json | null
           author_en?: string | null
           author_zh?: string | null
           category_id?: string
@@ -198,7 +160,6 @@ export type Database = {
           discontinued_at?: string | null
           discontinued_by?: string | null
           discontinued_reason?: string | null
-          embedding?: string | null
           has_english_translation?: boolean
           id?: string
           image_analysis_data?: Json | null
@@ -512,125 +473,6 @@ export type Database = {
           },
         ]
       }
-      system_prompts: {
-        Row: {
-          created_at: string
-          created_by: string | null
-          id: string
-          is_active: boolean
-          name: string
-          performance_metrics: Json | null
-          prompt_text: string
-          updated_at: string
-          use_case: string
-          version: number
-        }
-        Insert: {
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          is_active?: boolean
-          name: string
-          performance_metrics?: Json | null
-          prompt_text: string
-          updated_at?: string
-          use_case: string
-          version?: number
-        }
-        Update: {
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          is_active?: boolean
-          name?: string
-          performance_metrics?: Json | null
-          prompt_text?: string
-          updated_at?: string
-          use_case?: string
-          version?: number
-        }
-        Relationships: []
-      }
-      system_settings: {
-        Row: {
-          description: string | null
-          id: string
-          key: string
-          updated_at: string
-          updated_by: string | null
-          value: Json
-        }
-        Insert: {
-          description?: string | null
-          id?: string
-          key: string
-          updated_at?: string
-          updated_by?: string | null
-          value: Json
-        }
-        Update: {
-          description?: string | null
-          id?: string
-          key?: string
-          updated_at?: string
-          updated_by?: string | null
-          value?: Json
-        }
-        Relationships: []
-      }
-      tag_history: {
-        Row: {
-          added_at: string
-          added_by: string
-          approved: boolean
-          approved_at: string | null
-          approved_by: string | null
-          book_id: string
-          confidence: number | null
-          id: string
-          is_auto: boolean
-          prompt_version: number
-          tag: string
-          updated_at: string
-        }
-        Insert: {
-          added_at?: string
-          added_by: string
-          approved?: boolean
-          approved_at?: string | null
-          approved_by?: string | null
-          book_id: string
-          confidence?: number | null
-          id?: string
-          is_auto: boolean
-          prompt_version: number
-          tag: string
-          updated_at?: string
-        }
-        Update: {
-          added_at?: string
-          added_by?: string
-          approved?: boolean
-          approved_at?: string | null
-          approved_by?: string | null
-          book_id?: string
-          confidence?: number | null
-          id?: string
-          is_auto?: boolean
-          prompt_version?: number
-          tag?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "tag_history_book_id_fkey"
-            columns: ["book_id"]
-            isOneToOne: false
-            referencedRelation: "books"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       tags: {
         Row: {
           id: string
@@ -759,7 +601,6 @@ export type Database = {
           tag_names?: string[]
         }
         Returns: {
-          ai_metadata: Json | null
           author_en: string | null
           author_zh: string | null
           category_id: string
@@ -773,7 +614,6 @@ export type Database = {
           discontinued_at: string | null
           discontinued_by: string | null
           discontinued_reason: string | null
-          embedding: string | null
           has_english_translation: boolean
           id: string
           image_analysis_data: Json | null
@@ -800,13 +640,6 @@ export type Database = {
       show_trgm: {
         Args: { "": string }
         Returns: string[]
-      }
-      similar_books_nn: {
-        Args: { k?: number; src_book_id: string }
-        Returns: {
-          score: number
-          similar_book_id: string
-        }[]
       }
       sparsevec_out: {
         Args: { "": unknown }

@@ -17,7 +17,16 @@ export type UserOrderProjection = {
   order_items: OrderItemProjection[]
 }
 
-function formatAddress(addr: any | null | undefined): string {
+type ShippingAddress = {
+  address1?: string | null
+  address2?: string | null
+  city?: string | null
+  state?: string | null
+  zip?: string | null
+  country?: string | null
+}
+
+function formatAddress(addr: ShippingAddress | null | undefined): string {
   if (!addr) return ''
   const lines: string[] = []
   if (addr.address1) lines.push(addr.address1)
@@ -53,23 +62,31 @@ export async function getUserOrders(userId: string): Promise<UserOrderProjection
     throw new Error(`Failed to fetch user orders: ${error.message}`)
   }
 
-  const orders = (data ?? []).map((o: any) => ({
-    id: o.id as string,
-    status: o.status as string,
-    total_items: o.total_items as number,
-    created_at: o.created_at as string,
+  type Row = {
+    id: string
+    status: string
+    total_items: number
+    created_at: string
+    shipping_addresses: ShippingAddress | null
+    order_items: Array<{ quantity: number; books: { title_en: string | null; title_zh: string | null } | null }>
+  }
+
+  const orders = ((data ?? []) as Row[]).map((o) => ({
+    id: o.id,
+    status: o.status,
+    total_items: o.total_items,
+    created_at: o.created_at,
     shipping_address: formatAddress(o.shipping_addresses),
     order_items: Array.isArray(o.order_items)
-      ? o.order_items.map((oi: any) => ({
+      ? o.order_items.map((oi) => ({
           book: {
-            title_en: oi?.books?.title_en ?? '',
-            title_zh: oi?.books?.title_zh ?? '',
+            title_en: oi.books?.title_en ?? '',
+            title_zh: oi.books?.title_zh ?? '',
           },
-          quantity: oi.quantity as number,
+          quantity: oi.quantity,
         }))
       : [],
   })) satisfies UserOrderProjection[]
 
   return orders
 }
-

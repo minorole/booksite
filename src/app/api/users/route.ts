@@ -20,12 +20,14 @@ export async function GET() {
       return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 })
     }
 
-    const users = (data ?? []).map((u: any) => ({
-      id: u.id as string,
-      email: u.email as string,
-      name: (u.name as string) ?? null,
-      role: u.role as 'USER' | 'ADMIN' | 'SUPER_ADMIN',
-      created_at: u.created_at as string,
+    type UserRow = { id: string; email: string; name: string | null; role: 'USER' | 'ADMIN' | 'SUPER_ADMIN'; created_at: string }
+    const rows = (data ?? []) as UserRow[]
+    const users = rows.map((u) => ({
+      id: u.id,
+      email: u.email,
+      name: u.name ?? null,
+      role: u.role,
+      created_at: u.created_at,
     }))
 
     return NextResponse.json({ users })

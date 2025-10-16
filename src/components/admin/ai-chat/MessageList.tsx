@@ -33,8 +33,8 @@ export function MessageList({
 }: {
   messages: Message[]
   loading: boolean
-  onConfirmAnalysis: (analysis: any) => void
-  onEditAnalysis: (analysis: any) => void
+  onConfirmAnalysis: (analysis: unknown) => void
+  onEditAnalysis: (analysis: unknown) => void
   onSelectImage: (url: string) => void
   endRef: React.RefObject<HTMLDivElement>
 }) {

@@ -1,35 +1,7 @@
 import { getServerDb } from '@/lib/db/client'
+import type { BookProjection, TagJoinRow } from '@/lib/db/types'
 
-type CategoryProjection = {
-  id: string
-  type: string
-  name_zh: string
-  name_en: string
-  description_zh: string | null
-  description_en: string | null
-}
-
-type BookRow = {
-  id: string
-  title_zh: string
-  title_en: string | null
-  description_zh: string
-  description_en: string | null
-  cover_image: string | null
-  quantity: number
-  created_at: string
-  updated_at: string
-  has_english_translation: boolean
-  content_summary_zh: string | null
-  content_summary_en: string | null
-  author_zh: string | null
-  author_en: string | null
-  publisher_zh: string | null
-  publisher_en: string | null
-  category: CategoryProjection
-}
-
-export type BookWithCategoryAndTags = BookRow & { search_tags: string[] }
+export type BookWithCategoryAndTags = BookProjection & { search_tags: string[] }
 
 export async function listBooks(): Promise<BookWithCategoryAndTags[]> {
   const db = await getServerDb()
@@ -53,7 +25,7 @@ export async function listBooks(): Promise<BookWithCategoryAndTags[]> {
     throw new Error(`Failed to fetch books: ${booksError.message}`)
   }
 
-  const bookIds = (books ?? []).map((b: any) => b.id as string)
+  const bookIds = ((books ?? []) as BookProjection[]).map((b) => b.id)
   const tagsByBook = new Map<string, string[]>()
 
   if (bookIds.length > 0) {
@@ -67,16 +39,16 @@ export async function listBooks(): Promise<BookWithCategoryAndTags[]> {
       throw new Error(`Failed to fetch book tags: ${tagsError.message}`)
     }
 
-    for (const row of tagRows ?? []) {
-      const name = (row as any)?.tags?.name as string | undefined
+    for (const row of (tagRows ?? []) as TagJoinRow[]) {
+      const name = row.tags?.name ?? undefined
       if (!name) continue
-      const arr = tagsByBook.get((row as any).book_id) ?? []
+      const arr = tagsByBook.get(row.book_id) ?? []
       arr.push(name)
-      tagsByBook.set((row as any).book_id, arr)
+      tagsByBook.set(row.book_id, arr)
     }
   }
 
-  return (books ?? []).map((b: any) => ({
+  return ((books ?? []) as BookProjection[]).map((b) => ({
     id: b.id,
     title_zh: b.title_zh,
     title_en: b.title_en,
@@ -131,29 +103,30 @@ export async function getBook(id: string): Promise<BookWithCategoryAndTags | nul
   }
 
   const names: string[] = []
-  for (const row of tagRows ?? []) {
-    const n = (row as any)?.tags?.name as string | undefined
+  for (const row of (tagRows ?? []) as TagJoinRow[]) {
+    const n = row.tags?.name ?? undefined
     if (n) names.push(n)
   }
 
+  const book = b as BookProjection
   return {
-    id: (b as any).id,
-    title_zh: (b as any).title_zh,
-    title_en: (b as any).title_en,
-    description_zh: (b as any).description_zh,
-    description_en: (b as any).description_en,
-    cover_image: (b as any).cover_image,
-    quantity: (b as any).quantity,
-    created_at: (b as any).created_at,
-    updated_at: (b as any).updated_at,
-    has_english_translation: (b as any).has_english_translation,
-    content_summary_zh: (b as any).content_summary_zh,
-    content_summary_en: (b as any).content_summary_en,
-    author_zh: (b as any).author_zh,
-    author_en: (b as any).author_en,
-    publisher_zh: (b as any).publisher_zh,
-    publisher_en: (b as any).publisher_en,
-    category: (b as any).category,
+    id: book.id,
+    title_zh: book.title_zh,
+    title_en: book.title_en,
+    description_zh: book.description_zh,
+    description_en: book.description_en,
+    cover_image: book.cover_image,
+    quantity: book.quantity,
+    created_at: book.created_at,
+    updated_at: book.updated_at,
+    has_english_translation: book.has_english_translation,
+    content_summary_zh: book.content_summary_zh,
+    content_summary_en: book.content_summary_en,
+    author_zh: book.author_zh,
+    author_en: book.author_en,
+    publisher_zh: book.publisher_zh,
+    publisher_en: book.publisher_en,
+    category: book.category,
     search_tags: names,
   }
 }

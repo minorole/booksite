@@ -18,8 +18,8 @@ export function MessageContent({
 }: {
   message: Message
   loading: boolean
-  onConfirmAnalysis: (analysis: any) => void
-  onEditAnalysis: (analysis: any) => void
+  onConfirmAnalysis: (analysis: unknown) => void
+  onEditAnalysis: (analysis: unknown) => void
   onSelectImage: (url: string) => void
 }) {
   // Array content (image + text)
@@ -60,8 +60,15 @@ export function MessageContent({
   if (message.role === 'tool') {
     try {
       const content = message.content ? JSON.parse(message.content) : null
-      const vision = content?.vision_analysis
-      const item = content?.item_analysis
+      const data = content?.data || content
+      const vision = data?.vision_analysis
+      const item = data?.item_analysis
+      const name = message.name
+      // Duplicates / search rendering
+      const duplicate = data?.duplicate_detection
+      const search = data?.search
+      const createdBook = data?.book
+      const order = data?.order
       if (item?.structured_data) {
         const sd = item.structured_data
         return (
@@ -108,6 +115,57 @@ export function MessageContent({
                 <p>Notable Elements: {sd.visual_elements.notable_elements.join(', ')}</p>
               )}
             </div>
+          </div>
+        )
+      }
+      // Duplicate detection summary
+      if (duplicate) {
+        const matches = duplicate.matches || []
+        const rec = duplicate.analysis?.recommendation
+        return (
+          <div className="space-y-2">
+            <p>Duplicate check complete.</p>
+            <div className="pl-4 border-l-2 border-primary/20 space-y-1">
+              <p>Recommendation: {rec || 'n/a'}</p>
+              <p>Matches: {matches.length}</p>
+              {matches.slice(0, 3).map((m: { similarity_score?: number }, i: number) => (
+                <p key={i}>Match #{i + 1}: score {Math.round(((m.similarity_score ?? 0) * 100))}%</p>
+              ))}
+            </div>
+          </div>
+        )
+      }
+      // Search results summary
+      if (search?.books) {
+        const books = search.books as Array<{ id: string; title_en?: string; title_zh?: string }>
+        return (
+          <div className="space-y-2">
+            <p>Found {books.length} book(s).</p>
+            <div className="pl-4 border-l-2 border-primary/20 space-y-1">
+              {books.slice(0, 5).map((b) => (
+                <p key={b.id}>{b.title_en || b.title_zh}</p>
+              ))}
+            </div>
+          </div>
+        )
+      }
+      // Book create/update summary
+      if (createdBook && (name === 'create_book' || name === 'update_book')) {
+        const b = createdBook
+        return (
+          <div className="space-y-1">
+            <p>{name === 'create_book' ? 'Book created successfully.' : 'Book updated successfully.'}</p>
+            <p>Title: {b.title_en || b.title_zh}</p>
+          </div>
+        )
+      }
+      // Order update summary
+      if (order && name === 'update_order') {
+        const o = order
+        return (
+          <div className="space-y-1">
+            <p>Order updated.</p>
+            <p>ID: {o.order_id} {o.status ? `(status: ${o.status})` : ''} {o.tracking_number ? `(tracking: ${o.tracking_number})` : ''}</p>
           </div>
         )
       }
@@ -160,5 +218,5 @@ export function MessageContent({
     }
   }
 
-  return <p>{message.content as any}</p>
+  return <p>{String(message.content)}</p>
 }

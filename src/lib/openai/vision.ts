@@ -1,5 +1,5 @@
 import OpenAI from 'openai'
-import type { ChatCompletion } from 'openai/resources/chat/completions'
+import type { ChatCompletion, ChatCompletionChunk, ChatCompletionCreateParamsBase } from 'openai/resources/chat/completions'
 import { getAdminClient } from './client'
 import { getModel } from './models'
 import { logOperation } from './logging'
@@ -13,12 +13,12 @@ export async function createVisionChatCompletion({
   stream = false,
   max_tokens,
   response_format,
-}: Omit<ChatOptions, 'tools' | 'tool_choice' | 'temperature'> & { response_format?: any }): Promise<ChatResponse> {
+}: Omit<ChatOptions, 'tools' | 'tool_choice' | 'temperature'> & { response_format?: unknown }): Promise<ChatResponse> {
   const startTime = Date.now()
   const maxTokens = max_tokens ?? OPENAI_CONFIG.TOKENS.MAX_OUTPUT
   const imageCount = messages.reduce((count, message) => {
     if (Array.isArray(message.content)) {
-      return count + message.content.filter((c: any) => 'image_url' in c).length
+      return count + message.content.filter((c) => typeof c === 'object' && c !== null && 'image_url' in c).length
     }
     return count
   }, 0)
@@ -36,29 +36,26 @@ export async function createVisionChatCompletion({
     })
 
     const client = getAdminClient()
-    const response = await client.chat.completions.create({
+    const params: Pick<ChatCompletionCreateParamsBase, 'messages'> & { model: string; stream?: boolean; max_tokens?: number; temperature?: number; response_format?: unknown } = {
       model: getModel('vision'),
       messages,
       stream,
       max_tokens: maxTokens,
+      temperature: 0,
       ...(response_format ? { response_format } : {}),
-    } as any)
+    }
+    const response = await client.chat.completions.create(params as unknown as ChatCompletionCreateParamsBase)
 
     const duration = Date.now() - startTime
-    logOperation('VISION_RESPONSE', {
-      duration,
-      stream,
-      imageCount,
-      status: 'success',
-      usage: (response as ChatCompletion).usage,
-    })
+    logOperation('VISION_RESPONSE', { duration, stream, imageCount, status: 'success' })
 
     if (stream) {
-      return iteratorToStream(createResponseIterator(response as any))
+      const streamResp = response as unknown as AsyncIterable<ChatCompletionChunk>
+      return iteratorToStream(createResponseIterator(streamResp))
     }
 
     return response as ChatCompletion
-  } catch (error: any) {
+  } catch (error: unknown) {
     const duration = Date.now() - startTime
     logOperation('VISION_ERROR', {
       duration,

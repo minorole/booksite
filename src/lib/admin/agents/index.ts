@@ -6,10 +6,10 @@ import { ordersAgent } from './orders'
 import type { AgentContext } from './tools'
 
 export type AgentRegistry = {
-  router: Agent<any, any>
-  vision: Agent<any, any>
-  inventory: Agent<any, any>
-  orders: Agent<any, any>
+  router: Agent<AgentContext, 'text'>
+  vision: Agent<AgentContext, 'text'>
+  inventory: Agent<AgentContext, 'text'>
+  orders: Agent<AgentContext, 'text'>
 }
 
 export function createAgentRegistry(): AgentRegistry {
@@ -17,10 +17,10 @@ export function createAgentRegistry(): AgentRegistry {
   const router = Agent.create({
     name: 'Router',
     handoffs: [visionAgent, inventoryAgent, ordersAgent],
-    instructions: (ctx) => routerAgent.instructions instanceof Function ? routerAgent.instructions(ctx as any, routerAgent) : (routerAgent.instructions as string),
+    instructions: routerAgent.instructions as string,
     handoffDescription: routerAgent.handoffDescription,
     tools: [],
-  })
+  }) as Agent<AgentContext, 'text'>
 
   return {
     router,

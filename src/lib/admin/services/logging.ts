@@ -5,9 +5,9 @@ export async function logAnalysisOperation(
   data: {
     admin_email: string
     image_url: string
-    analysis_result?: any
-    confirmed_info?: any
-    structured_data?: any
+    analysis_result?: unknown
+    confirmed_info?: unknown
+    structured_data?: unknown
   }
 ) {
   await logAdminAction({
@@ -19,4 +19,3 @@ export async function logAnalysisOperation(
     },
   })
 }
-

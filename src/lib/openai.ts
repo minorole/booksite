@@ -1,8 +1,6 @@
 // OpenAI Configuration Constants - Single source of truth
 export const OPENAI_CONFIG = {
   MODELS: {
-    GPT4O: 'gpt-4o' as const,
-    GPT4O_MINI: 'gpt-4o-mini' as const,
     GPT5_MINI: 'gpt-5-mini' as const,
   },
   TOKENS: {

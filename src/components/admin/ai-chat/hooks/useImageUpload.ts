@@ -20,8 +20,9 @@ export function useImageUpload(language: UILanguage = 'en') {
       }
       const data = (await res.json()) as { url: string }
       return data.url
-    } catch (e: any) {
-      setError(e?.message || ERROR_MESSAGES[language].upload_failed)
+    } catch (e: unknown) {
+      const msg = typeof e === 'object' && e && 'message' in e ? String((e as { message?: unknown }).message) : ERROR_MESSAGES[language].upload_failed
+      setError(msg)
       return null
     } finally {
       setLoading(false)
@@ -30,4 +31,3 @@ export function useImageUpload(language: UILanguage = 'en') {
 
   return { upload, loading, error, setError }
 }
-

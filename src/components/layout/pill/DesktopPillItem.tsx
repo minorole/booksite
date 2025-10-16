@@ -140,8 +140,8 @@ export function DesktopPillItem({ item, activeHref, ease = "power3.easeOut", ind
   const pillStyleCustom: React.CSSProperties = {
     background: "var(--pill-bg, #fff)",
     color: "var(--pill-text, var(--base, #000))",
-    paddingLeft: isCircle ? 0 : ("var(--pill-pad-x)" as any),
-    paddingRight: isCircle ? 0 : ("var(--pill-pad-x)" as any),
+    paddingLeft: isCircle ? 0 : ('var(--pill-pad-x)' as React.CSSProperties['paddingLeft']),
+    paddingRight: isCircle ? 0 : ('var(--pill-pad-x)' as React.CSSProperties['paddingRight']),
   }
   const basePillClasses = "relative overflow-hidden inline-flex items-center justify-center h-full no-underline rounded-full box-border font-semibold text-[16px] leading-[0] uppercase tracking-[0.2px] whitespace-nowrap cursor-pointer px-0"
   const basePillClassesCustom = isCircle

@@ -51,10 +51,10 @@ export const createRouteSupabaseClient = async () => {
         get(name: string) {
           return store.get(name)?.value ?? ''
         },
-        set(name: string, value: string, options?: any) {
-          store.set(name, value, options)
+        set(name: string, value: string, _options?: Record<string, unknown>) {
+          store.set(name, value)
         },
-        remove(name: string, options?: any) {
+        remove(name: string, _options?: Record<string, unknown>) {
           store.delete(name)
         },
       },

@@ -16,18 +16,11 @@ export async function analyzeVisualSimilarity(
       standardizeImageUrl(existingImageUrl),
     ])
 
-    const similaritySchema = {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        layout_similarity: { type: 'number' },
-        content_similarity: { type: 'number' },
-        confidence: { type: 'number' },
-      },
-      required: ['layout_similarity', 'content_similarity', 'confidence'],
-    }
-
-    const json = await callVisionJSON<any>('VisualSimilarity', visualSimilaritySchema, [
+  const json = await callVisionJSON<{
+    layout_similarity: number
+    content_similarity: number
+    confidence: number
+  }>('VisualSimilarity', visualSimilaritySchema, [
       {
         role: 'user',
         content: [

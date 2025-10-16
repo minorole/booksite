@@ -31,8 +31,8 @@ function getInitials(nameOrEmail: string): string {
 export function UserAvatar({ user, className }: { user: User; className?: string }) {
   const meta = (user.user_metadata ?? {}) as Record<string, unknown>
   const imageUrl =
-    (typeof meta.avatar_url === "string" && meta.avatar_url) ||
-    (typeof (meta as any).picture === "string" && (meta as any).picture) ||
+    (typeof meta.avatar_url === 'string' && meta.avatar_url) ||
+    (typeof (meta as Record<string, unknown>).picture === 'string' && (meta as Record<string, unknown>).picture as string) ||
     undefined
   const label =
     (typeof meta.name === "string" && meta.name) ||
@@ -59,4 +59,3 @@ export function UserAvatar({ user, className }: { user: User; className?: string
     </Avatar>
   )
 }
-
