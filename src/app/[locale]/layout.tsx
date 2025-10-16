@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { LocaleProvider } from "@/contexts/LocaleContext"
+import { Toaster } from "@/components/ui/toaster"
 
 export default async function LocaleLayout({ children, params }: { children: React.ReactNode; params: Promise<{ locale: string }> }) {
   const { locale } = await params
@@ -7,6 +8,7 @@ export default async function LocaleLayout({ children, params }: { children: Rea
   return (
     <LocaleProvider initialLocale={l}>
       {children}
+      <Toaster />
     </LocaleProvider>
   )
 }

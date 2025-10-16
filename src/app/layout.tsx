@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Archivo } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext"
-import { Toaster } from "@/components/ui/toaster"
 import { cookies, headers } from "next/headers"
 import type { Locale } from "@/lib/i18n/config"
 import { detectLocaleFromHeader } from "@/lib/i18n/config"
@@ -41,7 +40,6 @@ export default async function RootLayout({
       <body className={`font-sans antialiased`}>
         <AuthProvider>
           {children}
-          <Toaster />
         </AuthProvider>
       </body>
     </html>
