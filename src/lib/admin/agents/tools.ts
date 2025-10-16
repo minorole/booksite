@@ -3,10 +3,12 @@ import { tool, type Tool } from '@openai/agents-core'
 import type { RunContext } from '@openai/agents-core'
 import {
   analyzeBookCover,
+  analyzeItemPhoto,
 } from '@/lib/admin/services/vision'
 import { checkDuplicates } from '@/lib/admin/services/duplicates'
 import { createBook, updateBook, searchBooks } from '@/lib/admin/services/books'
 import { updateOrder } from '@/lib/admin/services/orders'
+import { getOrderDb, searchOrdersDb } from '@/lib/db/admin'
 
 // Agent context
 export type AgentContext = {
@@ -61,7 +63,21 @@ export function visionTools(): Tool<AgentContext>[] {
     },
   })
 
-  return [analyze, dup]
+  const analyzeItem = tool({
+    name: 'analyze_item_photo',
+    description: 'Analyze a non-book item photo and return structured fields (name/type, material/finish, size/dimensions, category suggestion, tags).',
+    strict: true,
+    parameters: z.object({
+      image_url: z.string().url(),
+    }),
+    async execute(input: any, context?: RunContext<AgentContext>) {
+      const email = context?.context?.userEmail || 'admin@unknown'
+      const result = await analyzeItemPhoto(input.image_url, email)
+      return result
+    },
+  })
+
+  return [analyze, dup, analyzeItem]
 }
 
 export function inventoryTools(): Tool<AgentContext>[] {
@@ -162,7 +178,30 @@ export function orderTools(): Tool<AgentContext>[] {
     },
   })
 
-  return [update]
+  const getOrder = tool({
+    name: 'get_order',
+    description: 'Fetch a single order by ID.',
+    strict: true,
+    parameters: z.object({ order_id: z.string() }),
+    async execute(input: any) {
+      const o = await getOrderDb(input.order_id)
+      if (!o) return { success: false, message: 'Order not found' }
+      return { success: true, message: 'Order found', data: { order: { order_id: o.order_id, status: o.status, tracking_number: o.tracking_number ?? undefined } } }
+    },
+  })
+
+  const searchOrders = tool({
+    name: 'search_orders',
+    description: 'Search orders by status or query string (id or tracking number).',
+    strict: true,
+    parameters: z.object({ status: z.string().nullable(), q: z.string().nullable() }),
+    async execute(input: any) {
+      const rows = await searchOrdersDb({ status: input.status ?? undefined, q: input.q ?? undefined })
+      return { success: true, message: `Found ${rows.length} order(s)`, data: { orders: rows } }
+    },
+  })
+
+  return [update, getOrder, searchOrders]
 }
 
 export function getToolsForAgent(agentId: 'router' | 'vision' | 'inventory' | 'orders'): Tool<AgentContext>[] {

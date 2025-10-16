@@ -5,6 +5,7 @@ import type { Message } from '@/lib/admin/types'
 import { createAgentRegistry } from '@/lib/admin/agents'
 import type { AgentContext } from '@/lib/admin/agents/tools'
 import { getModel } from '@/lib/openai/models'
+import { logAdminAction } from '@/lib/db/admin'
 
 type SSEWriter = (event: any) => void
 
@@ -89,14 +90,33 @@ export async function runChatWithAgentsStream(params: {
           const call = item?.rawItem
           if (call?.type === 'function_call') {
             write({ type: 'tool_start', id: call.callId || call.id, name: call.name, args: call.arguments, startedAt: new Date().toISOString() })
+            // Audit log: function call
+            try {
+              await logAdminAction({ action: 'FUNCTION_CALL', admin_email: userEmail, metadata: { name: call.name, args: call.arguments, call_id: call.callId || call.id } })
+            } catch {}
           }
         } else if (name === 'tool_output') {
           const out = item?.rawItem
           if (out?.type === 'function_call_result') {
-            const payload = out.output?.type === 'text' ? out.output.text : '[binary]'
+            let payload: any = null
+            if (out.output?.type === 'text') {
+              payload = out.output.text
+            } else if (out.output?.type === 'json') {
+              payload = out.output.json
+            } else if (out.output && typeof out.output === 'object') {
+              // Fallback: attempt to serialize unknown structured payloads
+              payload = out.output
+            } else {
+              payload = '[binary]'
+            }
             write({ type: 'tool_result', id: out.callId, name: out.name, success: true, result: payload, finishedAt: new Date().toISOString() })
-            // Also append a synthetic tool message for the UI
-            write({ type: 'tool_append', message: { role: 'tool', name: out.name, tool_call_id: out.callId, content: typeof payload === 'string' ? payload : JSON.stringify(payload) } })
+            // Audit log: function success
+            try {
+              await logAdminAction({ action: 'FUNCTION_SUCCESS', admin_email: userEmail, metadata: { name: out.name, call_id: out.callId, result: typeof payload === 'string' ? payload : '[json]' } })
+            } catch {}
+            // Also append a synthetic tool message for the UI with JSON string content when applicable
+            const contentStr = typeof payload === 'string' ? payload : JSON.stringify(payload)
+            write({ type: 'tool_append', message: { role: 'tool', name: out.name, tool_call_id: out.callId, content: contentStr } })
           }
         }
       }

@@ -17,7 +17,7 @@ const DEFAULT_POLICY: RateLimitPolicy = {
 }
 
 const ROUTE_POLICIES: Record<string, Partial<RateLimitPolicy>> = {
-  '/api/admin/ai-chat': {
+  '/api/admin/ai-chat/stream/orchestrated': {
     window: 60,
     limit: 10,
     weight: 2,

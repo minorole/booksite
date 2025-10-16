@@ -22,3 +22,30 @@ export async function updateOrderDb(id: string, patch: {
   if (error) throw new Error(`Failed to update order: ${error.message}`)
 }
 
+// Fetch a single order by ID (basic projection)
+export async function getOrderDb(id: string): Promise<{ order_id: string; status: string; tracking_number?: string | null } | null> {
+  const db = await getServerDb()
+  const { data, error } = await db
+    .from('orders')
+    .select('id, status, tracking_number')
+    .eq('id', id)
+    .single()
+  if (error) return null
+  if (!data) return null
+  return { order_id: (data as any).id as string, status: (data as any).status as string, tracking_number: (data as any).tracking_number ?? null }
+}
+
+// Search orders by status or free-text (id/notes)
+export async function searchOrdersDb(args: { status?: string | null; q?: string | null; limit?: number }): Promise<Array<{ order_id: string; status: string; tracking_number?: string | null }>> {
+  const db = await getServerDb()
+  let query = db.from('orders').select('id, status, tracking_number')
+  if (args?.status) query = query.eq('status', args.status)
+  if (args?.q && args.q.trim().length > 0) {
+    const q = args.q.trim()
+    // limited ilike search on id/tracking_number
+    query = query.or(`id.ilike.%${q}%,tracking_number.ilike.%${q}%`)
+  }
+  const { data, error } = await query.limit(args?.limit ?? 50)
+  if (error || !data) return []
+  return (data as any[]).map((r) => ({ order_id: r.id as string, status: r.status as string, tracking_number: r.tracking_number ?? null }))
+}

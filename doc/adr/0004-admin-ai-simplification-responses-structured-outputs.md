@@ -1,14 +1,14 @@
 # ADR 0004: Admin AI Simplification — OpenAI Responses + Structured Outputs, Streaming‑Only, OpenAI‑Only
 
-Status: Accepted (implemented)
+Status: Accepted (implemented, refreshed)
 Date: 2025-10-16
 
 Context
 The admin AI accumulated complexity across multiple layers:
-- Brittle JSON handling in the vision flow, scraping JSON out of free‑text and retrying on failure (see `src/lib/admin/services/vision.ts:120` and `src/lib/admin/services/vision.ts:213`).
+- Brittle JSON handling in the vision flow, scraping JSON out of free‑text and retrying on failure (legacy; now replaced by strict JSON schemas).
 - Partial usage of the OpenAI Responses API only for safe, non‑tool, non‑streaming cases (see `src/lib/openai/chat.ts:32`), leaving tools and vision on Chat Completions without structured outputs.
 - Duplicated API paths for chat: a legacy non‑stream route and a streaming orchestration route; the UI uses the streaming path only.
-- Outdated prompt wording references GPT‑4o, while the configured default model is GPT‑5‑mini (see `src/lib/admin/system-prompts.ts:1` and `src/lib/openai/models.ts:3`).
+- Outdated prompt wording referenced GPT‑4o, while the configured default model is GPT‑5‑mini (legacy prompt removed; default model centrally configured).
 
 Research inputs are captured in `doc/admin-ai/llm-comparison.md`, which recommends GPT‑5‑mini + Responses API with structured outputs, OpenAI Agents primitives when helpful, and image embeddings as a later optimization. The same brief advises against relying on Gemini for this project.
 
@@ -16,45 +16,52 @@ Decision
 1) Use OpenAI Responses API with structured outputs for all vision JSON returns.
    - Replace free‑text → JSON scraping in `analyzeBookCover` (structured stage) with response_format JSON schema.
    - Replace regex parsing in `analyzeVisualSimilarity` with a small JSON schema `{ layout_similarity, content_similarity, confidence }`.
+   - Keep Chat Completions for vision specifically (to preserve image inputs) with `response_format: { type: 'json_schema', strict: true }`.
 
 2) Consolidate to the streaming orchestrator path and remove dead code.
-   - Keep `src/app/api/admin/ai-chat/stream/orchestrated/route.ts:44` (server‑orchestrated streaming with tool execution via SSE events).
-   - Remove the legacy non‑stream route (deleted) and its orchestrator (deleted).
+   - Keep `src/app/api/admin/ai-chat/stream/orchestrated/route.ts` (server‑orchestrated streaming with tool execution via SSE events) using AgentKit.
+   - Remove the legacy non‑stream route and its orchestrator (deleted).
 
 3) Remain OpenAI‑only; no Gemini fallback.
    - All chat/vision stays on OpenAI (GPT‑5‑mini by default); improve OCR reliability with structured outputs and precise prompts instead of vendor fallback.
 
 4) Keep duplicate detection simple for now; pgvector optional later.
-   - Maintain Supabase text search in `src/lib/db/admin/duplicates.ts:1` and a single vision comparison (`src/lib/admin/services/vision.ts:264`).
+   - Maintain Supabase text search in `src/lib/db/admin/duplicates.ts` and a single vision comparison (`src/lib/admin/services/vision/similarity.ts`).
    - Revisit pgvector for text/image embeddings only if recall/precision issues emerge at scale.
 
 5) Add minimal, high‑value unit tests under `test/` to pin contracts.
    - Vision structured stage returns typed JSON with `cover_url`.
-   - Vision similarity parses numeric scores (or returns structured JSON post‑migration).
-   - Orchestrated streaming executes a tool call and emits tool lifecycle events.
+   - Vision similarity parses numeric scores via strict JSON.
+   - Orchestrated streaming executes tool calls and emits lifecycle events + handoffs.
    - Model selection defaults to GPT‑5‑mini when env overrides are absent.
 
-Changes
+Changes (Refreshed)
 - Code removal (completed):
   - Deleted legacy non‑stream chat route: `src/app/api/admin/ai-chat/route.ts`.
   - Deleted non‑stream orchestrator: `src/lib/admin/chat/orchestrator.ts`.
+  - Deleted legacy system prompts file referencing GPT‑4o: `src/lib/admin/system-prompts.ts`.
+  - Deleted old Chat Completions tool scaffolding (definitions/handlers).
 
-- Tests (added):
-  - `test/admin-ai/vision.service.test.ts` — validates structured stage success/error paths and schema validation.
-  - `test/admin-ai/vision.similarity.test.ts` — validates similarity score parsing shape.
-  - `test/admin-ai/orchestrator.stream.test.ts` — validates tool execution lifecycle on the streaming path.
-  - `test/openai.models.test.ts` — validates default model resolution to GPT‑5‑mini.
+- Tests (added/updated):
+  - `test/admin-ai/vision.service.test.ts` — structured stage success/error + schema validation.
+  - `test/admin-ai/vision.similarity.test.ts` — similarity JSON parsing.
+  - `test/admin-ai/orchestrator.events.test.ts` — AgentKit stream: handoff, assistant deltas, tool lifecycle, JSON result mapping.
+  - `test/admin-ai/item.service.test.ts` — item analysis returns structured data with cover_url.
+  - `test/admin-ai/agentkit.tools-scope.test.ts` — tool registry coverage (includes new tools).
+  - `test/security.limits.test.ts` — route-specific rate limit policy for SSE path.
+  - `test/openai.models.test.ts` — default model resolution.
 
-- Streaming orchestrator (retained):
-  - `runChatWithToolsStream` streams assistant deltas and executes tools (`src/lib/admin/chat/orchestrator-stream.ts:27`).
-  - Emits `tool_start`, `tool_result`, and `tool_append` events (`src/lib/admin/chat/orchestrator-stream.ts:114`, `src/lib/admin/chat/orchestrator-stream.ts:142`, `src/lib/admin/chat/orchestrator-stream.ts:145`).
+- Streaming orchestrator (retained, AgentKit):
+  - `runChatWithAgentsStream` streams assistant deltas and executes tools (`src/lib/admin/chat/orchestrator-agentkit.ts`).
+  - Emits `handoff`, `assistant_delta`, `tool_start`, `tool_result`, and `tool_append` events; logs FUNCTION_CALL/FUNCTION_SUCCESS.
 
-- OpenAI wrappers (current behavior, to be simplified next):
-  - Partial Responses use for non‑tool, non‑stream (`src/lib/openai/chat.ts:32`).
-  - Default model selection to GPT‑5‑mini (`src/lib/openai/models.ts:3`).
+- OpenAI wrappers:
+  - Vision uses Chat Completions with `response_format` for images (strict JSON).
+  - Partial Responses remain optional for non‑tool, non‑stream paths.
+  - Default model selection to GPT‑5‑mini.
 
-- Prompts (cleanup planned):
-  - Update wording to remove GPT‑4o mention (`src/lib/admin/system-prompts.ts:1`) and keep model naming neutral (configured in code).
+- Prompts:
+  - Removed legacy system prompt file referencing GPT‑4o; agent instructions reside alongside agent definitions.
 
 Out of Scope (for this ADR)
 - Introducing pgvector and embeddings in the initial simplification. This remains a future optimization once we see real duplicate‑detection pain.
@@ -131,10 +138,20 @@ References
 - Research brief: `doc/admin-ai/llm-comparison.md`
 - Prior work: ADR 0002 (server‑orchestrated chat + streaming) `doc/adr/0002-server-orchestrated-ai-chat-ui-refactor-streaming-and-gpt5-mini.md`
 - Evidence in code:
-  - Vision JSON/regex paths: `src/lib/admin/services/vision.ts:61`, `src/lib/admin/services/vision.ts:120`, `src/lib/admin/services/vision.ts:213`, `src/lib/admin/services/vision.ts:264`
+- Vision structured paths: `src/lib/admin/services/vision/cover-analysis.ts`, `src/lib/admin/services/vision/similarity.ts`, `src/lib/admin/services/vision/item-analysis.ts`
   - Partial Responses usage: `src/lib/openai/chat.ts:32`
   - Default model selection: `src/lib/openai/models.ts:3`
-  - Streaming orchestrator function: `src/lib/admin/chat/orchestrator-stream.ts:27`
-  - Tool lifecycle events (AgentKit): Emitted by `src/lib/admin/chat/orchestrator-agentkit.ts:79` (assistant), `src/lib/admin/chat/orchestrator-agentkit.ts:90` (tool_start), `src/lib/admin/chat/orchestrator-agentkit.ts:96` (tool_result/tool_append)
-  - Prompt wording: `src/lib/admin/system-prompts.ts:1`
-  - Rate limits still pointing to legacy path: `src/lib/security/limits.ts:20`
+- Streaming orchestrator function: `src/lib/admin/chat/orchestrator-agentkit.ts`
+  - Tool lifecycle events (AgentKit): Emitted by `src/lib/admin/chat/orchestrator-agentkit.ts` (handoff, assistant_delta, tool_*).
+  - Prompt wording: legacy file removed; see agents in `src/lib/admin/agents/**`.
+  - Rate limits now point to the streaming route: `src/lib/security/limits.ts`.
+
+Known Gaps / Not Done Yet
+- Rich UI for tool results: duplicate/search results and create/update outputs are not rendered with dedicated components in chat; they appear as raw tool JSON (see `src/components/admin/ai-chat/MessageContent.tsx`).
+- Inventory niceties: no explicit increase/decrease quantity tool; no automatic low‑stock warnings surfaced by the agent.
+- Orders assistance: no stock‑shortage warning during shipping; `update_order` tool does not expose `admin_notes` or `override_monthly` although the service supports them.
+- Observability: Sentry and request‑ID tracing are not wired into the streaming route/orchestrator.
+- Vector/embeddings: no pgvector/embeddings pipeline for duplicates yet (intentionally deferred).
+- Upload optimization: still server‑side base64 uploads to Cloudinary; no signed direct uploads/webhook flow.
+- Tests (route integration): no integration test that exercises `/api/admin/ai-chat/stream/orchestrated` end‑to‑end with mocked RL/CC; only a policy unit test exists.
+- Bilingual hinting: agents are not explicitly instructed to mirror UI locale; behavior relies on model defaults.

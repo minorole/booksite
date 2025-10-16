@@ -13,12 +13,14 @@ import { useChatSession } from './hooks/useChatSession';
 import { EditAnalysisDialog } from './EditAnalysisDialog';
 import { StepList } from './StepList'
 import Image from 'next/image'
+import { useLocale } from '@/contexts/LocaleContext'
 
 export function ChatInterface() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
   const [editOpen, setEditOpen] = useState(false)
   const [editInitial, setEditInitial] = useState<any | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const { locale } = useLocale()
   const {
     messages,
     input,
@@ -32,7 +34,7 @@ export function ChatInterface() {
     attachImage,
     confirmAnalysis,
     reset,
-  } = useChatSession('en')
+  } = useChatSession(locale)
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })

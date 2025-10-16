@@ -1,8 +1,7 @@
 "use client"
 
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-
-export type Locale = 'en' | 'zh'
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import type { Locale } from '@/lib/i18n/config'
 
 type LocaleContextType = {
   locale: Locale

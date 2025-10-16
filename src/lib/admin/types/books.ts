@@ -4,6 +4,7 @@ import { type LanguagePreference } from './context'
 
 // Book domain types
 export interface BookBase {
+  id?: string
   title_zh: string
   title_en?: string | null
   description_zh: string
@@ -38,4 +39,3 @@ export interface BookSearch {
   similarity_threshold?: number
   language_preference?: LanguagePreference
 }
-

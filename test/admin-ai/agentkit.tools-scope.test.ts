@@ -9,6 +9,7 @@ describe('AgentKit tools scope', () => {
     const names = getToolsForAgent('vision').map((t: any) => t.name)
     expect(names).toContain('analyze_book_cover')
     expect(names).toContain('check_duplicates')
+    expect(names).toContain('analyze_item_photo')
   })
   it('inventory includes create/update/search', () => {
     const names = getToolsForAgent('inventory').map((t: any) => t.name)
@@ -19,7 +20,8 @@ describe('AgentKit tools scope', () => {
   it('orders includes update_order only', () => {
     const names = getToolsForAgent('orders').map((t: any) => t.name)
     expect(names).toContain('update_order')
+    expect(names).toContain('get_order')
+    expect(names).toContain('search_orders')
     expect(names).not.toContain('create_book')
   })
 })
-

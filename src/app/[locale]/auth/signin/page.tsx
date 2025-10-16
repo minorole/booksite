@@ -5,6 +5,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Logo } from "@/components/common/logo"
 import Link from "next/link"
 import { Bilingual } from "@/components/common/bilingual"
+import { assertLocaleParam } from "@/lib/i18n/assert"
 
 export default async function SignInPage({
   searchParams,
@@ -14,7 +15,7 @@ export default async function SignInPage({
   params: Promise<{ locale: string }>
 }) {
   const p = await params
-  const locale = p.locale === 'zh' ? 'zh' : 'en'
+  const locale = assertLocaleParam(p.locale, { notFoundOnError: true })
   const sp = await searchParams
   const err = (typeof sp?.error === 'string') ? sp?.error : undefined
   const message: React.ReactNode = err === 'LinkExpired'

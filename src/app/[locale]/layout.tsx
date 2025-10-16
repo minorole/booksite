@@ -1,10 +1,11 @@
 import type { Metadata } from "next"
 import { LocaleProvider } from "@/contexts/LocaleContext"
 import { Toaster } from "@/components/ui/toaster"
+import { assertLocaleParam } from "@/lib/i18n/assert"
 
 export default async function LocaleLayout({ children, params }: { children: React.ReactNode; params: Promise<{ locale: string }> }) {
   const { locale } = await params
-  const l = locale === 'zh' ? 'zh' : 'en'
+  const l = assertLocaleParam(locale, { notFoundOnError: true })
   return (
     <LocaleProvider initialLocale={l}>
       {children}

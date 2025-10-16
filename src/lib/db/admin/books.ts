@@ -67,6 +67,7 @@ export async function searchBooksDb(args: BookSearch): Promise<BookBase[]> {
     if (typeof args.min_quantity === 'number' && b.quantity < args.min_quantity) continue
     if (typeof args.max_quantity === 'number' && b.quantity > args.max_quantity) continue
     results.push({
+      id: b.id as string,
       title_zh: b.title_zh,
       title_en: b.title_en ?? null,
       description_zh: b.description_zh,
@@ -77,7 +78,6 @@ export async function searchBooksDb(args: BookSearch): Promise<BookBase[]> {
       cover_image: b.cover_image ?? ''
     })
   }
-
   return results
 }
 
@@ -251,4 +251,3 @@ export async function updateBookDb(id: string, patch: Omit<BookUpdate, 'book_id'
     cover_image: (book as any).cover_image ?? ''
   }
 }
-

@@ -61,6 +61,41 @@ export function MessageContent({
     try {
       const content = message.content ? JSON.parse(message.content) : null
       const vision = content?.vision_analysis
+      const item = content?.item_analysis
+      if (item?.structured_data) {
+        const sd = item.structured_data
+        return (
+          <div className="space-y-2">
+            <p>Item analysis complete. Structured details:</p>
+            <div className="pl-4 border-l-2 border-primary/20 space-y-1">
+              {sd.name && <p>Name: {sd.name}</p>}
+              {sd.type && <p>Type: {sd.type}</p>}
+              {sd.material && <p>Material: {sd.material}</p>}
+              {sd.finish && <p>Finish: {sd.finish}</p>}
+              {sd.size && <p>Size: {sd.size}</p>}
+              {sd.dimensions && <p>Dimensions: {sd.dimensions}</p>}
+              {sd.category_suggestion && (
+                <p>
+                  Suggested Category: {sd.category_suggestion} ({CATEGORY_LABELS[sd.category_suggestion as CategoryType]})
+                </p>
+              )}
+              {Array.isArray(sd.tags) && sd.tags.length > 0 && (
+                <p>Tags: {sd.tags.join(', ')}</p>
+              )}
+              {Array.isArray(sd.quality_issues) && sd.quality_issues.length > 0 && (
+                <div className="mt-2">
+                  <p className="font-medium">Quality Issues:</p>
+                  <ul className="list-disc list-inside">
+                    {sd.quality_issues.map((issue: string, i: number) => (
+                      <li key={i}>{issue}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </div>
+        )
+      }
       if (vision?.structured_data) {
         const sd = vision.structured_data
         return (

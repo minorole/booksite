@@ -61,6 +61,7 @@ export async function checkDuplicatesDb(args: {
   }
 
   return list.map((b) => ({
+    id: b.id as string,
     title_zh: b.title_zh,
     title_en: b.title_en ?? null,
     description_zh: b.description_zh,
@@ -71,4 +72,3 @@ export async function checkDuplicatesDb(args: {
     cover_image: b.cover_image ?? ''
   }))
 }
-

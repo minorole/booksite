@@ -69,5 +69,18 @@ export type AdminOperationResult = OperationResult<{
     }
     structured_data?: VisionAnalysisResult
   }
+  item_analysis?: {
+    structured_data: {
+      name?: string | null
+      type?: string | null
+      material?: string | null
+      finish?: string | null
+      size?: string | null
+      dimensions?: string | null
+      category_suggestion?: CategoryType
+      tags?: string[]
+      quality_issues?: string[]
+      cover_url?: string
+    }
+  }
 }>
-

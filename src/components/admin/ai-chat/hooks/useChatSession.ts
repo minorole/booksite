@@ -80,6 +80,14 @@ export function useChatSession(language: UILanguage = 'en') {
                 }
                 break
               }
+              case 'handoff': {
+                const target = (evt?.to as string) || 'agent'
+                setSteps((prev) => [
+                  ...prev,
+                  { id: `handoff:${Date.now()}:${target}` , name: `handoff:${target}`, status: 'done' }
+                ])
+                break
+              }
               case 'assistant_done': {
                 if (!haveAssistant && assistantIndex !== null) {
                   // Remove empty placeholder
@@ -147,7 +155,7 @@ export function useChatSession(language: UILanguage = 'en') {
   const confirmAnalysis = useCallback(
     async (confirmedInfo: any) => {
       if (!analysis.imageUrl) return
-      const user: Message = { role: 'user', content: 'Yes, the information is correct. Please proceed with the analysis.' }
+      const user: Message = { role: 'user', content: `Yes, the information is correct. Confirmed info: ${JSON.stringify(confirmedInfo)}. Please proceed with the structured analysis using this confirmed information.` }
       const nextMessages = [...messages, user]
       setMessages((prev) => [...prev, user])
       await streamOrchestrated({ messages: nextMessages, imageUrl: analysis.imageUrl, confirmedInfo })
