@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
+    "lint": "eslint --ext .js,.jsx,.ts,.tsx src/app/api src/lib/db src/lib/security src/lib/supabase.ts src/middleware.ts",
     "lint:filesize": "node scripts/check-file-lines.mjs",
     "test": "vitest run",
     "test:watch": "vitest",

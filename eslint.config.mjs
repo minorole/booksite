@@ -1,0 +1,64 @@
+import { FlatCompat } from '@eslint/eslintrc'
+import js from '@eslint/js'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+
+const compat = new FlatCompat({
+  baseDirectory: __dirname,
+  recommendedConfig: js.configs.recommended,
+  allConfig: js.configs.all,
+})
+
+export default [
+  ...compat.config({
+    ignorePatterns: ['src/types/supabase.generated.ts', '.next/**', 'node_modules/**', 'public/**', 'scripts/**', 'doc/**'],
+    extends: [
+      'next/core-web-vitals',
+      'eslint:recommended',
+      'plugin:promise/recommended',
+    ],
+    plugins: ['promise'],
+    rules: {
+      'no-warning-comments': ['error', { terms: ['todo', 'fixme'], location: 'anywhere' }],
+      'promise/always-return': 'off',
+      'promise/catch-or-return': 'off',
+      'no-console': 'off',
+      'no-empty': ['error', { allowEmptyCatch: true }],
+      'no-useless-escape': 'off',
+    },
+    overrides: [
+      {
+        files: ['src/**/*.ts', 'src/**/*.tsx'],
+        excludedFiles: ['src/types/supabase.generated.ts'],
+        extends: ['plugin:@typescript-eslint/recommended-type-checked'],
+        parser: '@typescript-eslint/parser',
+        parserOptions: {
+          project: './tsconfig.json',
+          tsconfigRootDir: __dirname,
+        },
+        rules: {
+          '@typescript-eslint/no-floating-promises': 'off',
+          '@typescript-eslint/no-misused-promises': 'off',
+          '@typescript-eslint/consistent-type-imports': 'off',
+          '@typescript-eslint/no-explicit-any': 'warn',
+          '@typescript-eslint/explicit-function-return-type': 'off',
+          '@typescript-eslint/no-unused-vars': 'off',
+          '@typescript-eslint/no-unsafe-assignment': 'off',
+          '@typescript-eslint/no-unsafe-argument': 'off',
+          '@typescript-eslint/no-unsafe-member-access': 'off',
+          '@typescript-eslint/no-unsafe-call': 'off',
+          '@typescript-eslint/no-unsafe-return': 'off',
+          '@typescript-eslint/no-require-imports': 'off',
+          '@typescript-eslint/no-unnecessary-type-assertion': 'off',
+          '@typescript-eslint/no-redundant-type-constituents': 'off',
+          '@typescript-eslint/restrict-template-expressions': 'off',
+          '@typescript-eslint/no-base-to-string': 'off',
+        },
+      },
+    ],
+  }),
+]
+
