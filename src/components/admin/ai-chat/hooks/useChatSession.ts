@@ -121,7 +121,7 @@ export function useChatSession(language: UILanguage = 'en', opts?: { onToolResul
       setLoading(false)
       setLoadingKey(null)
     }
-  }, [language])
+  }, [language, opts])
 
   const sendText = useCallback(async () => {
     if (!input.trim() || loading) return

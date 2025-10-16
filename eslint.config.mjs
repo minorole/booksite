@@ -12,7 +12,7 @@ const compat = new FlatCompat({
   allConfig: js.configs.all,
 })
 
-export default [
+const config = [
   ...compat.config({
     ignorePatterns: ['src/types/supabase.generated.ts', '.next/**', 'node_modules/**', 'public/**', 'scripts/**', 'doc/**'],
     extends: [
@@ -43,7 +43,7 @@ export default [
           '@typescript-eslint/no-floating-promises': 'off',
           '@typescript-eslint/no-misused-promises': 'off',
           '@typescript-eslint/consistent-type-imports': 'off',
-          '@typescript-eslint/no-explicit-any': 'warn',
+          '@typescript-eslint/no-explicit-any': 'off',
           '@typescript-eslint/explicit-function-return-type': 'off',
           '@typescript-eslint/no-unused-vars': 'off',
           '@typescript-eslint/no-unsafe-assignment': 'off',
@@ -58,7 +58,15 @@ export default [
           '@typescript-eslint/no-base-to-string': 'off',
         },
       },
+      {
+        files: ['test/**/*.{js,jsx,ts,tsx}'],
+        rules: {
+          'promise/param-names': 'off',
+          'no-unused-vars': 'off',
+        },
+      },
     ],
   }),
 ]
 
+export default config

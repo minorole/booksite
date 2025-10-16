@@ -169,7 +169,7 @@ export async function handleImageUpload(file: File, maxRetries = 2): Promise<str
         transformation: CLOUDINARY_CONFIG.TRANSFORMATION
       })
 
-      const timeoutPromise = new Promise((_, reject) => {
+      const timeoutPromise = new Promise((_resolve, reject) => {
         setTimeout(() => reject(new Error('Upload timeout')), 10000)
       })
 
