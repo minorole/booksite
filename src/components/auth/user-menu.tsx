@@ -17,13 +17,18 @@ import Link from "next/link"
 import { LogOut, Package, Settings, Shield } from "lucide-react"
 import { Bilingual } from "@/components/common/bilingual"
 import { useLocale } from "@/contexts/LocaleContext"
+import { cn } from "@/lib/utils"
+import { HOVER_LIFT_SHADOW } from "@/lib/ui"
 
 function GlowSignIn() {
   const { locale } = useLocale()
   return (
     <Link
       href={`/${locale}/auth/signin`}
-      className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 rounded-full bg-white shadow-sm transition-all duration-200 ease-out hover:shadow-md hover:-translate-y-0.5 hover:bg-neutral-50 active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-300"
+      className={cn(
+        HOVER_LIFT_SHADOW,
+        "relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 rounded-full bg-white shadow-sm hover:bg-neutral-50"
+      )}
     >
       <Bilingual cnText="登录" enText="Sign In" />
     </Link>

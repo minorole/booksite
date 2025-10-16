@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Archivo } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext"
-import { LocaleProvider } from "@/contexts/LocaleContext"
 import { Toaster } from "@/components/ui/toaster"
 import { cookies, headers } from "next/headers"
 import type { Locale } from "@/lib/i18n/config"
@@ -32,17 +31,18 @@ export default async function RootLayout({
 }>) {
   const c = await cookies()
   const h = await headers()
+  const hinted = h.get('x-ui-locale')
+  const hintedLocale: Locale | null = hinted === 'zh' ? 'zh' : (hinted === 'en' ? 'en' : null)
   const cookieVal = c.get('ui_locale')?.value
   const cookieLocale = (cookieVal === 'zh' ? 'zh' : (cookieVal === 'en' ? 'en' : detectLocaleFromHeader(h.get('accept-language')))) as Locale
+  const effectiveLocale = (hintedLocale ?? cookieLocale) as Locale
   return (
-    <html lang={cookieLocale} className={`${archivo.className} ${archivo.variable}`} suppressHydrationWarning>
+    <html lang={effectiveLocale} className={`${archivo.className} ${archivo.variable}`} suppressHydrationWarning>
       <body className={`font-sans antialiased`}>
-        <LocaleProvider initialLocale={cookieLocale}>
-          <AuthProvider>
-            {children}
-            <Toaster />
-          </AuthProvider>
-        </LocaleProvider>
+        <AuthProvider>
+          {children}
+          <Toaster />
+        </AuthProvider>
       </body>
     </html>
   );

@@ -12,3 +12,7 @@ export const HOVER_LIFT_SHADOW = [
 // - ZH: characters (ignoring whitespace), since spaces are uncommon
 export const HOME_INPUT_MIN_WORDS_EN = 6
 export const HOME_INPUT_MIN_CHARS_ZH = 12
+
+// Toast configuration (single source of truth)
+export const TOAST_LIMIT = 1
+export const TOAST_REMOVE_DELAY = 1000000

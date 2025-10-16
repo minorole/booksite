@@ -25,7 +25,7 @@ export function IconCircle({
     padding: pad,
     ...style,
   }
-  const innerStyle: React.CSSProperties =
+  const innerStyle: React.CSSProperties | undefined =
     scale !== 1
       ? { transform: `scale(${scale})`, transformOrigin: "center" }
       : undefined

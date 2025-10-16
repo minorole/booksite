@@ -17,6 +17,7 @@ function VerifyPageInner() {
   const params = useSearchParams()
   const { toast } = useToast()
   const { locale } = useLocale()
+  const [hydrated, setHydrated] = useState(false)
   const email = useMemo(() => {
     const raw = params?.get('email') || undefined
     return raw || ''
@@ -32,6 +33,8 @@ function VerifyPageInner() {
   const [issuedAt, setIssuedAt] = useState<number>(initialIssuedAt)
 
   const [remainingMs, setRemainingMs] = useState<number>(Math.max(0, EXP_MS - (Date.now() - issuedAt)))
+
+  useEffect(() => { setHydrated(true) }, [])
 
   useEffect(() => {
     setCooldown(60)
@@ -163,7 +166,9 @@ function VerifyPageInner() {
 
           <div className="text-center text-sm text-white/80">
             {remainingMs > 0 ? (
-              <Bilingual as="span" cnText={<>链接将在 {expiryLabel} 后过期</>} enText={<>Link expires in {expiryLabel}</>} />
+              hydrated
+                ? <Bilingual as="span" cnText={<>链接将在 {expiryLabel} 后过期</>} enText={<>Link expires in {expiryLabel}</>} />
+                : <Bilingual as="span" cnText="链接即将过期" enText="Link expires soon" />
             ) : (
               <Bilingual as="span" cnText="链接可能已过期，你可以在下方重新发送。" enText="The link may have expired. You can resend a new link below." />
             )}

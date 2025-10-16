@@ -20,6 +20,7 @@ type PillNavProps = {
   pillColor?: string
   hoveredPillTextColor?: string
   pillTextColor?: string
+  mobileAccentColor?: string
   onMobileMenuClick?: () => void
   initialLoadAnimation?: boolean
   mobileToggleLabel?: React.ReactNode
@@ -38,6 +39,7 @@ export function PillNav({
   pillColor = "#ffffff",
   hoveredPillTextColor = "#ffffff",
   pillTextColor,
+  mobileAccentColor = "#5227FF",
   onMobileMenuClick,
   initialLoadAnimation = true,
   mobileToggleLabel,
@@ -50,6 +52,7 @@ export function PillNav({
     ["--pill-bg" as any]: pillColor,
     ["--hover-text" as any]: hoveredPillTextColor,
     ["--pill-text" as any]: resolvedPillTextColor,
+    ["--sm-accent" as any]: mobileAccentColor,
     ["--nav-h" as any]: "42px",
     ["--logo" as any]: "36px",
     ["--pill-pad-x" as any]: "18px",

@@ -17,9 +17,19 @@ function stripLocalePrefix(pathname: string): { locale: 'en' | 'zh' | null; path
 }
 
 export async function middleware(req: NextRequest) {
-  const res = NextResponse.next()
   const pathname = req.nextUrl.pathname
   const { locale, path: normalizedPath } = stripLocalePrefix(pathname)
+  // Compute best locale for this request (used for SSR hints and fallbacks)
+  let best: 'en' | 'zh' | undefined = locale as any
+  if (!best) {
+    const c = req.cookies.get('ui_locale')?.value as 'en' | 'zh' | undefined
+    best = (c === 'en' || c === 'zh') ? c : detectFromAccept(req.headers.get('accept-language'))
+  }
+
+  // Prepare a NextResponse with a request header to hint SSR about locale
+  const reqHeaders = new Headers(req.headers)
+  if (best) reqHeaders.set('x-ui-locale', best)
+  const res = NextResponse.next({ request: { headers: reqHeaders } })
 
   // Align cookie if locale is present in the URL
   if (locale) {
