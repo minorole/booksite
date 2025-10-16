@@ -55,92 +55,14 @@ export function validateAnalysisResult(result: any): result is VisionAnalysisRes
   }
 }
 
-/**
- * Attempts to retry analysis with emphasized JSON requirement
- */
-async function retryAnalysis(
-  args: { image_url: string },
-  adminEmail: string
-): Promise<AdminOperationResult> {
-  try {
-    const isValid = await validateCloudinaryUrl(args.image_url)
-    if (!isValid) {
-      return {
-        success: false,
-        message: 'Invalid image URL',
-        error: {
-          code: 'validation_error',
-          details: 'Invalid or inaccessible image URL',
-        },
-      }
-    }
-
-    const standardizedUrl = await standardizeImageUrl(args.image_url)
-
-    const response = (await createVisionChatCompletion({
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'text',
-              text:
-                `Analyze this Buddhist book cover and return ONLY valid JSON for VisionAnalysisResult. ` +
-                `Do not include extra commentary.`,
-            },
-            { type: 'image_url', image_url: { url: standardizedUrl } },
-          ],
-        },
-      ],
-      stream: false,
-    })) as ChatCompletion
-
-    if (!response.choices[0]?.message?.content) {
-      throw new Error('Invalid retry response format')
-    }
-
-    const content = response.choices[0].message.content
-    const analysisResult = JSON.parse(content)
-    if (!validateAnalysisResult(analysisResult)) {
-      throw new Error('Invalid retry analysis structure')
-    }
-
-    return {
-      success: true,
-      message: 'Analysis complete (retry successful)',
-      data: {
-        vision_analysis: { stage: 'structured', structured_data: analysisResult },
-      },
-    }
-  } catch (error) {
-    return handleOperationError(error, 'retry analyze book cover')
-  }
-}
-
-function extractLastJsonObject(raw: string): { json: any | null; start: number; end: number } {
-  try {
-    // Find last closing brace
-    let end = raw.lastIndexOf('}')
-    if (end === -1) return { json: null, start: -1, end: -1 }
-    // Backward scan for matching opening brace (simple balance; assumes no nested braces in strings)
-    let depth = 1
-    for (let i = end - 1; i >= 0; i--) {
-      const ch = raw[i]
-      if (ch === '}') depth++
-      else if (ch === '{') depth--
-      if (depth === 0) {
-        const fragment = raw.slice(i, end + 1)
-        try {
-          const parsed = JSON.parse(fragment)
-          return { json: parsed, start: i, end: end + 1 }
-        } catch {
-          return { json: null, start: -1, end: -1 }
-        }
-      }
-    }
-    return { json: null, start: -1, end: -1 }
-  } catch {
-    return { json: null, start: -1, end: -1 }
+function visionStructuredResponseFormat(name: string, schema: Record<string, any>) {
+  return {
+    type: 'json_schema',
+    json_schema: {
+      name,
+      schema,
+      strict: true,
+    },
   }
 }
 
@@ -155,6 +77,41 @@ export async function analyzeBookCover(
     const standardizedUrl = await standardizeImageUrl(args.image_url)
 
     if (args.stage === 'initial') {
+      const initialSchema = {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          summary: { type: 'string' },
+          title_zh: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+          title_en: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+          author_zh: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+          author_en: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+          publisher_zh: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+          publisher_en: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+          category_suggestion: {
+            anyOf: [
+              {
+                type: 'string',
+                enum: ['PURE_LAND_BOOKS', 'OTHER_BOOKS', 'DHARMA_ITEMS', 'BUDDHA_STATUES'],
+              },
+              { type: 'null' },
+            ],
+          },
+          quality_issues: { type: 'array', items: { type: 'string' } },
+        },
+        required: [
+          'summary',
+          'title_zh',
+          'title_en',
+          'author_zh',
+          'author_en',
+          'publisher_zh',
+          'publisher_en',
+          'category_suggestion',
+          'quality_issues',
+        ],
+      }
+
       const response = (await createVisionChatCompletion({
         messages: [
           {
@@ -163,37 +120,30 @@ export async function analyzeBookCover(
               {
                 type: 'text',
                 text:
-                  `Analyze this Buddhist book cover and do two things in order:\n` +
-                  `1) Provide a concise natural-language summary of what you see.\n` +
-                  `2) Then output a single JSON object on the last line with these exact keys: ` +
-                  `{ "title_zh"?, "title_en"?, "author_zh"?, "author_en"?, "publisher_zh"?, "publisher_en"?, ` +
-                  `  "category_suggestion"? (one of PURE_LAND_BOOKS|OTHER_BOOKS|DHARMA_ITEMS|BUDDHA_STATUES), ` +
-                  `  "quality_issues"?: string[] }.\n` +
-                  `Return the JSON as the final block by itself so it can be parsed.`,
+                  `Analyze this Buddhist book cover. Extract bilingual text as-is (do not translate), return a brief summary, and output ONLY valid JSON strictly matching the expected schema.`,
               },
               { type: 'image_url', image_url: { url: standardizedUrl } },
             ],
           },
         ],
         stream: false,
+        response_format: visionStructuredResponseFormat('InitialCoverAnalysis', initialSchema),
       })) as ChatCompletion
 
       const content = response.choices[0]?.message?.content
       if (!content) throw new Error('No analysis received from vision model')
-
-      const { json, start, end } = extractLastJsonObject(content)
-      const summary = start > 0 ? content.slice(0, start).trim() : content.trim()
+      const json = JSON.parse(content)
 
       const analysis = {
-        summary,
-        title_zh: json?.title_zh ?? undefined,
-        title_en: json?.title_en ?? undefined,
-        author_zh: json?.author_zh ?? undefined,
-        author_en: json?.author_en ?? undefined,
-        publisher_zh: json?.publisher_zh ?? undefined,
-        publisher_en: json?.publisher_en ?? undefined,
-        category_suggestion: json?.category_suggestion ?? undefined,
-        quality_issues: Array.isArray(json?.quality_issues) ? json.quality_issues : undefined,
+        summary: json.summary,
+        title_zh: json.title_zh ?? undefined,
+        title_en: json.title_en ?? undefined,
+        author_zh: json.author_zh ?? undefined,
+        author_en: json.author_en ?? undefined,
+        publisher_zh: json.publisher_zh ?? undefined,
+        publisher_en: json.publisher_en ?? undefined,
+        category_suggestion: json.category_suggestion ?? undefined,
+        quality_issues: Array.isArray(json.quality_issues) ? json.quality_issues : undefined,
         needs_confirmation: true,
       }
 
@@ -211,6 +161,83 @@ export async function analyzeBookCover(
     }
 
     if (args.stage === 'structured' && args.confirmed_info) {
+      const structuredSchema = {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          confidence_scores: {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              title_detection: { type: 'number' },
+              category_match: { type: 'number' },
+              overall: { type: 'number' },
+            },
+            required: ['title_detection', 'category_match', 'overall'],
+          },
+          language_detection: {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              has_chinese: { type: 'boolean' },
+              has_english: { type: 'boolean' },
+              primary_language: { type: 'string', enum: ['zh', 'en'] },
+              script_types: { type: 'array', items: { type: 'string', enum: ['simplified', 'traditional', 'english'] } },
+            },
+            required: ['has_chinese', 'has_english', 'primary_language', 'script_types'],
+          },
+          extracted_text: {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              title: {
+                type: 'object',
+                additionalProperties: false,
+                properties: {
+                  zh: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+                  en: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+                  confidence: { type: 'number' },
+                },
+                required: ['zh', 'en', 'confidence'],
+              },
+              author: {
+                type: 'object',
+                additionalProperties: false,
+                properties: {
+                  zh: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+                  en: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+                  confidence: { type: 'number' },
+                },
+                required: ['zh', 'en', 'confidence'],
+              },
+              publisher: {
+                type: 'object',
+                additionalProperties: false,
+                properties: {
+                  zh: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+                  en: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+                  confidence: { type: 'number' },
+                },
+                required: ['zh', 'en', 'confidence'],
+              },
+              other_text: { type: 'array', items: { type: 'string' } },
+            },
+            required: ['title', 'author', 'publisher', 'other_text'],
+          },
+          visual_elements: {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              has_cover_image: { type: 'boolean' },
+              image_quality_score: { type: 'number' },
+              notable_elements: { type: 'array', items: { type: 'string' } },
+            },
+            required: ['has_cover_image', 'image_quality_score', 'notable_elements'],
+          },
+        },
+        required: ['confidence_scores', 'language_detection', 'extracted_text', 'visual_elements'],
+      }
+
       const response = (await createVisionChatCompletion({
         messages: [
           {
@@ -219,39 +246,35 @@ export async function analyzeBookCover(
               {
                 type: 'text',
                 text:
-                  `Based on this book cover and the confirmed information: ${JSON.stringify(
+                  `Extract text as-is (do not translate). Use bilingual fields. Based on this cover and confirmed info: ${JSON.stringify(
                     args.confirmed_info
-                  )}, provide JSON strictly following the VisionAnalysisResult structure.`,
+                  )}, respond with ONLY valid JSON strictly matching the schema.`,
               },
               { type: 'image_url', image_url: { url: standardizedUrl } },
             ],
           },
         ],
         stream: false,
+        response_format: visionStructuredResponseFormat('VisionAnalysisResult', structuredSchema),
       })) as ChatCompletion
 
       const content = response.choices[0]?.message?.content
       if (!content) throw new Error('No analysis received from vision model')
 
-      try {
-        const structuredData = JSON.parse(content) as VisionAnalysisResult
-        structuredData.cover_url = standardizedUrl
+      const structuredData = JSON.parse(content) as VisionAnalysisResult
+      structuredData.cover_url = standardizedUrl
 
-        await logAnalysisOperation('STRUCTURED_ANALYSIS', {
-          admin_email: adminEmail,
-          image_url: standardizedUrl,
-          confirmed_info: args.confirmed_info,
-          structured_data: structuredData,
-        })
+      await logAnalysisOperation('STRUCTURED_ANALYSIS', {
+        admin_email: adminEmail,
+        image_url: standardizedUrl,
+        confirmed_info: args.confirmed_info,
+        structured_data: structuredData,
+      })
 
-        return {
-          success: true,
-          message: 'Structured analysis complete',
-          data: { vision_analysis: { stage: 'structured', structured_data: structuredData } },
-        }
-      } catch (error) {
-        // Attempt one retry with stricter JSON requirement
-        return await retryAnalysis({ image_url: standardizedUrl }, adminEmail)
+      return {
+        success: true,
+        message: 'Structured analysis complete',
+        data: { vision_analysis: { stage: 'structured', structured_data: structuredData } },
       }
     }
 
@@ -275,7 +298,18 @@ export async function analyzeVisualSimilarity(
       standardizeImageUrl(existingImageUrl),
     ])
 
-    const response = await createVisionChatCompletion({
+    const similaritySchema = {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        layout_similarity: { type: 'number' },
+        content_similarity: { type: 'number' },
+        confidence: { type: 'number' },
+      },
+      required: ['layout_similarity', 'content_similarity', 'confidence'],
+    }
+
+    const response = (await createVisionChatCompletion({
       messages: [
         {
           role: 'user',
@@ -283,9 +317,7 @@ export async function analyzeVisualSimilarity(
             {
               type: 'text',
               text:
-                `Compare these Buddhist book covers and analyze their similarity. Focus on:\n` +
-                `1. Layout similarity (0-1)\n2. Content similarity (0-1)\n3. Confidence (0-1)\n` +
-                `Respond as plain text with lines:\nLayout similarity: [score]\nContent similarity: [score]\nConfidence: [score]`,
+                `Compare these two Buddhist book covers and respond with ONLY JSON strictly matching the schema (0-1 scores).`,
             },
             { type: 'image_url', image_url: { url: standardizedNew } },
             { type: 'image_url', image_url: { url: standardizedExisting } },
@@ -293,25 +325,20 @@ export async function analyzeVisualSimilarity(
         },
       ],
       stream: false,
-    })
+      response_format: visionStructuredResponseFormat('VisualSimilarity', similaritySchema),
+    })) as ChatCompletion
 
-    if (response instanceof ReadableStream) throw new Error('Unexpected streaming response')
-
-    const content = response.choices[0].message.content
+    const content = response.choices[0]?.message?.content
     if (!content) throw new Error('No analysis received from vision model')
 
-    const layoutMatch = content.match(/layout\s*similarity\s*[:\-]\s*(\d+\.?\d*)/i)
-    const contentMatch = content.match(/content\s*similarity\s*[:\-]\s*(\d+\.?\d*)/i)
-    const confidenceMatch = content.match(/confidence\s*[:\-]\s*(\d+\.?\d*)/i)
-
+    const json = JSON.parse(content)
     return {
-      layout_similarity: layoutMatch ? parseFloat(layoutMatch[1]) : 0.5,
-      content_similarity: contentMatch ? parseFloat(contentMatch[1]) : 0.5,
-      confidence: confidenceMatch ? parseFloat(confidenceMatch[1]) : 0.5,
+      layout_similarity: Number(json.layout_similarity ?? 0.5),
+      content_similarity: Number(json.content_similarity ?? 0.5),
+      confidence: Number(json.confidence ?? 0.5),
     }
   } catch (error) {
     console.error('❌ Visual comparison error:', error)
     return { layout_similarity: 0.5, content_similarity: 0.5, confidence: 0.3 }
   }
 }
-

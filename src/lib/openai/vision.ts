@@ -12,7 +12,8 @@ export async function createVisionChatCompletion({
   messages,
   stream = false,
   max_tokens,
-}: Omit<ChatOptions, 'tools' | 'tool_choice' | 'temperature'>): Promise<ChatResponse> {
+  response_format,
+}: Omit<ChatOptions, 'tools' | 'tool_choice' | 'temperature'> & { response_format?: any }): Promise<ChatResponse> {
   const startTime = Date.now()
   const maxTokens = max_tokens ?? OPENAI_CONFIG.TOKENS.MAX_OUTPUT
   const imageCount = messages.reduce((count, message) => {
@@ -40,7 +41,8 @@ export async function createVisionChatCompletion({
       messages,
       stream,
       max_tokens: maxTokens,
-    })
+      ...(response_format ? { response_format } : {}),
+    } as any)
 
     const duration = Date.now() - startTime
     logOperation('VISION_RESPONSE', {

@@ -10,11 +10,13 @@
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
   <meta name="x-apple-disable-message-reformatting" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>AMTBCF Magic Link</title>
   
 </head>
-<body style="margin:0;padding:0;background:#ffffff;color:#111111;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol'">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#ffffff">
+<body bgcolor="#ffffff" style="margin:0;padding:0;background:#ffffff;color:#111111;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol';font-size:16px;line-height:1.6;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%">
+  <div style="display:none;visibility:hidden;mso-hide:all;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden">Sign in to AMTBCF. Link valid for 15 minutes.</div>
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#ffffff" style="background:#ffffff">
     <tr>
       <td align="center" style="padding:24px 12px">
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:600px;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden">
@@ -33,23 +35,23 @@
 
           <!-- Title + brief copy -->
           <tr>
-            <td align="center" style="padding:0 28px 6px 28px">
-              <div style="font-size:20px;font-weight:700;line-height:1.3">Sign in to AMTBCF<br/>登录 AMTBCF</div>
+            <td align="center" style="padding:0 28px 8px 28px">
+              <div style="font-size:28px;font-weight:700;line-height:1.25">Sign in to AMTBCF<br/>登录 AMTBCF</div>
             </td>
           </tr>
           <tr>
-            <td align="center" style="padding:6px 28px 18px 28px">
-              <div style="font-size:14px;line-height:1.6;color:#444444">Click the button below to continue.<br/>点击下方按钮继续。</div>
+            <td align="left" style="padding:0 28px 24px 28px">
+              <div style="font-size:16px;line-height:1.6;color:#444444;text-align:left">Click the button below to continue.<br/>点击下方按钮继续。</div>
             </td>
           </tr>
 
           <!-- Primary CTA (outline, black text) -->
           <tr>
-            <td align="center" style="padding:6px 28px 18px 28px">
+            <td align="center" style="padding:0 28px 24px 28px">
               <table role="presentation" cellspacing="0" cellpadding="0" border="0">
                 <tr>
-                  <td align="center" style="border:2px solid #111111;border-radius:8px">
-                    <a href="{{ .ConfirmationURL }}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:12px 22px;font-size:16px;font-weight:700;color:#111111;text-decoration:none;background:#ffffff;border-radius:8px">
+                  <td align="center">
+                    <a href="{{ .ConfirmationURL }}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:16px 24px;font-size:16px;line-height:1.2;font-weight:700;color:#111111;text-decoration:none;background:#ffffff;border:2px solid #111111;border-radius:8px">
                       Open Magic Link · 打开登录链接
                     </a>
                   </td>
@@ -61,12 +63,12 @@
           <!-- Fallback link -->
           <tr>
             <td style="padding:0 28px">
-              <div style="font-size:13px;line-height:1.6;color:#555555">If the button doesn’t work, copy and paste this link:<br/>如果按钮无效，请复制粘贴以下链接：</div>
+              <div style="font-size:14px;line-height:1.6;color:#555555">If the button doesn’t work, copy and paste this link:<br/>如果按钮无效，请复制粘贴以下链接：</div>
             </td>
           </tr>
           <tr>
             <td style="padding:6px 28px 0 28px">
-              <a href="{{ .ConfirmationURL }}" target="_blank" rel="noopener noreferrer" style="font-size:13px;line-height:1.5;color:#111111;text-decoration:underline;word-break:break-all">{{ .ConfirmationURL }}</a>
+              <a href="{{ .ConfirmationURL }}" target="_blank" rel="noopener noreferrer" style="font-size:14px;line-height:1.5;color:#111111;text-decoration:underline;word-break:break-all">{{ .ConfirmationURL }}</a>
             </td>
           </tr>
 
