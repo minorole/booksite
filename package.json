@@ -9,10 +9,12 @@
     "lint": "eslint --ext .js,.jsx,.ts,.tsx src/app/api src/lib/db src/lib/security src/lib/supabase.ts src/middleware.ts",
     "lint:ci": "eslint . --quiet --max-warnings=0 --report-unused-disable-directives",
     "lint:filesize": "node scripts/check-file-lines.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "db:types": "supabase gen types typescript --linked --schema public > src/types/supabase.generated.ts"
+    "db:types": "supabase gen types typescript --linked --schema public > src/types/supabase.generated.ts",
+    "check:ci": "npm run lint:ci && npm run typecheck && npm run test && npm run build"
   },
   "engines": {
     "node": ">=20.18.0"

@@ -7,12 +7,16 @@ on:
       - master
   pull_request:
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [20.x]
+        node-version: [20.18.x]
     env:
       NEXT_TELEMETRY_DISABLED: '1'
       # Minimal values to satisfy required env lookups during build
@@ -36,6 +40,9 @@ jobs:
 
       - name: Lint (ESLint CLI, strict)
         run: npm run lint:ci
+
+      - name: Typecheck
+        run: npm run typecheck
 
       - name: File length check (warn > 300 lines)
         run: npm run lint:filesize
