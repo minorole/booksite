@@ -2,12 +2,12 @@
 
 ## Scope
 - Assist admins in managing both books and non‑book items (e.g., Dharma items, Buddha statues) via chat and photos.
-- Keep logic server‑side, behind admin auth, with clear confirmations before changes.
+- Keep logic server‑side, behind admin auth. Confirmation is enforced server‑side (no visible UI modal) for mutating actions.
 
 ## Features
 - Bilingual chat helper
   - Understands and replies in Chinese or English.
-  - Explains intended actions and asks for confirmation on important steps.
+  - Explains intended actions and asks for confirmation in chat on important steps (no UI modal).
 
 - Photo‑to‑listing (books and items)
   - You upload a photo; the AI extracts what it can.
@@ -22,11 +22,11 @@
 
 - Create new listing (book or item)
   - Prefills fields from photo + your edits.
-  - Sets category, tags, photo, descriptions; asks before saving.
+  - Sets category, tags, photo, descriptions; requires explicit admin confirmation in chat (server enforces `confirmed: true`).
 
 - Update existing listing
   - Edits names/titles, descriptions, tags, category, quantity, and photos.
-  - Keeps a simple “review → confirm → apply” flow.
+  - Confirmation occurs in chat; server rejects calls without `confirmed: true`.
 
 - Inventory help
   - Checks current stock.
@@ -43,7 +43,7 @@
   - Suggests next steps (e.g., restock or partial shipment).
 
 - Conversational flow that reduces mistakes
-  - Initial analysis → show findings → let you edit/confirm → structured extraction → propose actions → execute after confirmation.
+  - Initial analysis → show findings → structured extraction → propose actions → execute only after explicit chat confirmation (server‑enforced).
 
 - Safety and access
   - Admin‑only access via Supabase auth.
@@ -59,4 +59,3 @@
   - No payments or shipping carrier integrations.
   - No bulk web scraping or external knowledge bases.
   - Admin‑only (not for public end‑users).
-

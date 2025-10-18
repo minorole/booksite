@@ -3,6 +3,11 @@
 Status: Accepted
 Date: 2025-10-13
 
+Update (2025-10-17)
+- Visible confirmation UI surfaces were removed in favor of server‑enforced confirmation. Mutating tools now require `confirmed: true` parameters; agents include this only after explicit admin confirmation in chat. No confirm/edit dialogs are rendered in the UI.
+- Event contract refined: `tool_result.result` now emits unwrapped domain `data` (when present); `tool_append` keeps the full envelope JSON for chat summaries.
+- A right‑pane `ResultsPanel` with bilingual labels renders rich panels for duplicates/search/create/update/order, and duplicates deep‑link opens the manual editor.
+
 Context
 The admin chat interface at `src/components/admin/ai-chat/chat-interface.tsx` had grown to ~739 lines and mixed UI concerns with network orchestration and tool execution. The client executed tool calls by invoking `/api/admin/function-call`, then re‑invoked `/api/admin/ai-chat`, making the flow brittle and hard to test. The repo’s Primary Objectives call for “Server‑centric APIs” and logic in `src/app/api/**/route.ts`, protected by auth. In addition, the model lineup is evolving; we want an easy switch to `gpt-5-mini` without refactoring the app, and we want a better text‑chat UX via streaming.
 
@@ -24,15 +29,15 @@ Changes
 - UI refactor (thin client, no tool execution)
   - `src/components/admin/ai-chat/chat-interface.tsx` rewritten as a small container that composes:
     - `MessageList`, `MessageContent`, `ChatInput`, `ErrorBanner`, `LoadingIndicator`.
-    - `EditAnalysisDialog` for manual field corrections (replaces the previous TODO placeholder).
+    - (Superseded) `EditAnalysisDialog` for manual field corrections — removed in favor of chat‑based confirmation + server enforcement.
   - New components:
     - `src/components/admin/ai-chat/MessageList.tsx`
     - `src/components/admin/ai-chat/MessageContent.tsx`
     - `src/components/admin/ai-chat/ChatInput.tsx`
     - `src/components/admin/ai-chat/ErrorBanner.tsx`
     - `src/components/admin/ai-chat/LoadingIndicator.tsx`
-    - `src/components/admin/ai-chat/AnalysisConfirmation.tsx`
-    - `src/components/admin/ai-chat/EditAnalysisDialog.tsx`
+    - (Superseded) `src/components/admin/ai-chat/AnalysisConfirmation.tsx` — removed
+    - (Superseded) `src/components/admin/ai-chat/EditAnalysisDialog.tsx` — removed
   - New hooks:
     - `src/components/admin/ai-chat/hooks/useChatSession.ts` (text streaming, image/confirm orchestration via server route, AbortController handling)
     - `src/components/admin/ai-chat/hooks/useImageUpload.ts` (wraps `/api/upload` and maps errors)
@@ -90,4 +95,3 @@ Follow‑ups
 - Model overrides via env: add `OPENAI_TEXT_MODEL` and `OPENAI_VISION_MODEL` envs and route selection accordingly.
 - Streaming of tool steps: add an orchestrated streaming endpoint that emits both content deltas and tool step events.
 - Tests: add unit tests for the orchestrator loop (mock OpenAI/tool handlers) and MessageContent rendering.
-

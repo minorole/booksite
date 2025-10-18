@@ -208,24 +208,18 @@ Phase 6 — Cleanup
 - Per‑route rate limits behave as configured (different windows/limits apply).
 - Admin nav links function or are removed; middleware doesn’t guard non‑existent paths.
 - Super Admin panel lists users and updates roles.
-- No TODOs/placeholders remain in admin analysis flow; confirmations are explicit.
+- No TODOs/placeholders remain in admin analysis flow; confirmations are explicit (server‑enforced via tool params).
 - Tests run green and reflect current APIs.
-- Sentry receives errors; logs include request IDs; zod rejects malformed tool call inputs.
-- Admin chat streams tokens; Requests remain responsive under image uploads.
-- Search endpoints leverage FTS; duplicate checks improve via embeddings when enabled.
+- Logs include request IDs (UI surfaces request_id); Sentry integration optional.
+- Admin chat streams tokens; requests remain responsive under image uploads.
+- Duplicate detection stays simple (Supabase search + one vision comparison); pgvector is deferred.
 
-## Evidence Index
+## Evidence Index (current)
 
-- Tool role mapping bug: src/app/api/admin/ai-chat/route.ts:25, src/app/api/admin/ai-chat/route.ts:52
-- Shared limiter instance: src/lib/security/ratelimit.ts:24–31
-- Navbar broken links: src/components/layout/navbar.tsx:20, :23, :24; Orders page exists at src/app/users/orders/page.tsx:1; middleware protectedPaths at src/middleware.ts:52
-- Missing Super Admin endpoints: src/components/super-admin/super-admin-panel.tsx:59
-- Placeholders/TODO: src/lib/admin/function-handlers.ts:348–380; src/components/admin/ai-chat/chat-interface.tsx:538
-- Test drift: tests/unit/ratelimit.test.ts:2; current API at src/lib/security/ratelimit.ts:49
-- FTS mismatch: prisma/schema.prisma:64; migration lacks FTS DDL (prisma/migrations/20241123033651_init/migration.sql:1)
-- Unused deps/config: package.json:1 (next-auth/@auth/prisma-adapter/@sentry/nextjs); next.config.js:20
-- Observability gaps: no Sentry imports in src
-- Server‑heavy uploads: src/lib/admin/image-upload.ts:160
-- Streaming helper unused in UI: src/lib/openai.ts:108; ChatInterface uses JSON fetch
-- Vector unused: prisma/schema.prisma:32 (Book.embedding)
-
+- Stream orchestrator only (no legacy non‑stream route): `src/app/api/admin/ai-chat/stream/orchestrated/route.ts` and `src/lib/admin/chat/orchestrator-agentkit.ts`.
+- Rate limit and concurrency per route: `src/lib/security/limits.ts`, `src/lib/security/ratelimit.ts`.
+- Admin nav links: `src/components/admin/admin-navbar.tsx`.
+- Super Admin role updates API: `src/app/api/users/role/route.ts`.
+- No TODO placeholders in admin AI; server‑enforced confirmations in tools: `src/lib/admin/agents/tools.ts`.
+- Supabase‑first DB layer: `src/lib/db/**`, types in `src/types/supabase.generated.ts`.
+- Uploads via Cloudinary helper with validation/retries: `src/lib/admin/image-upload.ts`.

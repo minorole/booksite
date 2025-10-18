@@ -35,8 +35,8 @@
 ## Primary Objectives (Booksite)
 - Server-centric APIs: keep logic in `src/app/api/**/route.ts` and protect with Supabase.
 - Auth: rely on `src/middleware.ts` and `src/lib/supabase.ts` for gating and clients.
-- OpenAI use: centralize config in `src/lib/openai.ts` (`OPENAI_CONFIG`, retries/timeout).
-- Data model: evolve `prisma/schema.prisma` with migrations; access via `src/lib/prisma.ts`.
+- OpenAI use: centralize config in `src/lib/openai.ts` (`OPENAI_CONFIG`, retries/timeout). Override models via `OPENAI_TEXT_MODEL` / `OPENAI_VISION_MODEL` when needed.
+- Data model: Supabase-first schema and RPCs. Types in `src/types/supabase.generated.ts`. DB access via `src/lib/db/**`.
 - Media: use Cloudinary patterns in `next.config.js` and constants in `src/lib/admin/constants.ts`.
 - Single source of truth: keep limits and constants in `src/lib/**` (do not duplicate).
 
@@ -44,8 +44,8 @@
 - App and API routes: `src/app/**` (e.g., `src/app/api/admin/**/route.ts`).
 - Admin UI: `src/app/admin/**`, components under `src/components/admin/**` and `src/components/ui/**`.
 - AI tooling: `src/lib/openai.ts`, Agents and tools under `src/lib/admin/agents/**`, orchestrator at `src/lib/admin/chat/orchestrator-agentkit.ts`.
-- Supabase/Prisma: `src/lib/{supabase.ts,prisma.ts}`.
-- Database: `prisma/schema.prisma`, `prisma/migrations`, `prisma/seed.ts`.
+- Supabase: `src/lib/supabase.ts` clients; DB helpers in `src/lib/db/**`.
+- Database: Supabase SQL + RPCs; generated types at `src/types/supabase.generated.ts`.
 - Static assets: `public/`; path alias `@/*` per `tsconfig.json`.
 
 ## Key System Areas
@@ -56,24 +56,23 @@
 
 ### Discovery Recipes (repo root)
 - List API routes: `rg --glob "src/app/api/**/route.ts" -n ""`.
-- Find OpenAI usage: `rg -n "openai|createChatCompletion|createVisionChatCompletion|gpt-4o" src`.
-- Find Supabase usage: `rg -n "@supabase|createRouteHandlerClient|createClientComponentClient" src`.
-- Find env var usage: `rg -n "process\.env|NEXT_PUBLIC_" -S src prisma`.
-- Inspect Prisma models: `rg -n "^model " prisma/schema.prisma`.
+- Find OpenAI usage: `rg -n "openai|createChatCompletion|createVisionChatCompletion|gpt-5-mini|responses\.create" src`.
+- Find Supabase usage: `rg -n "@supabase|createServerClient|createBrowserClient" src`.
+- Find env var usage: `rg -n "process\\.env|NEXT_PUBLIC_" -S src`.
+- Inspect DB helpers and types: `rg -n "from '@/lib/db'" src` and open `src/types/supabase.generated.ts`.
 
 ## Maintenance Protocol
 - New API routes belong under `src/app/api/**/route.ts`; keep logic server-side and authenticated.
 - Add limits/settings in `src/lib/**` (e.g., `openai.ts`, `admin/constants.ts`) and import where used.
-- Schema changes: run `npx prisma migrate dev --name <desc>`; update `prisma/seed.ts` when needed.
-- OpenAI changes: update `OPENAI_CONFIG` and review dependent admin functions.
+- Supabase-first: update SQL/RPCs in Supabase; regenerate types with `npm run db:types`.
+- OpenAI changes: update `OPENAI_CONFIG`; override with `OPENAI_TEXT_MODEL` / `OPENAI_VISION_MODEL` as needed.
 
 ## Build, Test, and Development Commands
-- Environment: Node >= 18.17 (Next.js 14).
+- Environment: Node >= 20.18 (Next.js 15).
 - `npm run dev` — start dev server at http://localhost:3000.
 - `npm run build` — production build; `npm start` — run build.
 - `npm run lint` — ESLint with Next rules.
-- `npm run db:seed` — seed via `prisma/seed.ts`.
-- Prisma: `npx prisma migrate dev --name <desc>`, `npx prisma studio`.
+- Supabase types: `npm run db:types` (generates `src/types/supabase.generated.ts`).
 - Quick check (CI-like sweep): `npm run lint && npm run build`.
 
 ## Coding Style & Naming Conventions
@@ -92,6 +91,7 @@
 - DB changes must include migrations and, if applicable, seed updates.
 
 ## Security & Configuration Tips
-- Required envs: `DATABASE_URL`, `DIRECT_URL`, `OPENAI_API_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPER_ADMIN_EMAIL`.
+- Required envs: `OPENAI_API_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPER_ADMIN_EMAIL`, `CLOUDINARY_URL`.
+- Optional envs: `OPENAI_API_KEY_USER`, `DATABASE_URL`, `DIRECT_URL` (not required for Supabase), Upstash Redis: `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`.
 - Use `.env.local`; never commit secrets. Client envs must start with `NEXT_PUBLIC_`.
 - Images: remote patterns configured in `next.config.js`.

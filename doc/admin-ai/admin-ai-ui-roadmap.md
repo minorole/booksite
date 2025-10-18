@@ -8,20 +8,20 @@ Goals (UI‑centric)
 - Two‑pane workspace: chat (left) + persistent result panels (right).
 - Typed, versioned events consumed by UI; request_id shown in UI and used for traceability.
 - Rich, actionable panels for duplicates/search/create‑update/orders.
-- Strong confirm‑before‑apply UX for state‑changing actions.
+- No visible confirm modal; confirmation is enforced server‑side via tool parameters.
 - Bilingual UI (EN/ZH) with consistent strings.
 - E2E coverage for streaming + render correctness.
 
 Status At A Glance
-- Current phase: Planning → Implementation kickoff (two‑pane + store).
+- Current phase: Implementation — two‑pane + store shipped; result panels and i18n shipped; server‑enforced confirmation shipped.
 - Risks/notes:
-  - Event shape versioning to be coordinated with server before UI consumption.
+  - Event shape versioning: UI now consumes unwrapped domain payloads in `tool_result` (see Option B in integration notes).
   - Keep chat responsive while rendering rich panels (virtualization optional later).
 
 Milestones
 
 1) Two‑Pane Layout + Results Store + Typed Events
-- Status: planned
+- Status: done
 - Scope:
   - Add right‑pane `ResultsPanel` rendered alongside chat.
   - Introduce client store to hold the latest tool result and current panel type.
@@ -31,8 +31,8 @@ Milestones
   - Each streamed event in UI carries `request_id`; UI exposes a small copy/peek control.
 - Code anchors:
   - Chat container: src/components/admin/ai-chat/chat-interface.tsx:1
-  - Stream handler (UI): src/components/admin/ai-chat/hooks/useChatSession.ts:51
-  - Event emission (server, reference only): src/lib/admin/chat/orchestrator-agentkit.ts:100,121,141
+  - Stream handler (UI): src/components/admin/ai-chat/hooks/useChatSession.ts:42
+  - Event emission (server, reference only): src/lib/admin/chat/orchestrator-agentkit.ts:104,122,146
   - Stream route (reference only): src/app/api/admin/ai-chat/stream/orchestrated/route.ts:24
 - New files:
   - src/components/admin/ai-chat/state/useResultsStore.ts (client store)
@@ -40,7 +40,7 @@ Milestones
   - src/lib/admin/types/events.ts (UI union for v1 events)
 
 2) Rich Domain Panels (Replace Summary Blocks)
-- Status: planned
+- Status: done (initial set)
 - Scope:
   - Duplicates: grid with cover thumbs, similarity bars, confidence, actions.
   - Search: list/table with cover/title/qty/tags/category, quick refine actions.
@@ -58,29 +58,27 @@ Milestones
   - src/components/admin/ai-chat/results/SearchResultsList.tsx
   - src/components/admin/ai-chat/results/BookSummaryCard.tsx
   - src/components/admin/ai-chat/results/OrderUpdateCard.tsx
+  - Implemented deep‑link “Open in editor” from duplicates to manual editor.
 
-3) Confirm‑Before‑Apply UX
-- Status: planned
+3) Confirmation (Server‑Enforced, No Visible Modal)
+- Status: done
 - Scope:
-  - Add a generic `ConfirmActionDialog` invoked before applying create/update/order.
-  - Detect pending state‑changing proposals from the assistant (“I will …”), or gate when `tool_start` for these tools appears.
+  - Mutating tools (create/update book, update order) require `confirmed: true` in tool parameters; tools fail fast otherwise.
+  - Agents include `confirmed: true` only after explicit admin confirmation in chat.
 - Acceptance:
-  - No state‑changing tool executes without a visible confirm step during the session.
+  - No state‑changing tool executes unless `confirmed: true` is present; UI shows no modal confirmations.
 - Code anchors:
-  - Agent instructions (reference text): src/lib/admin/agents/inventory.ts:7, src/lib/admin/agents/orders.ts:7
-  - Tool names to gate: src/lib/admin/agents/tools.ts:86,111,178
-- New file:
-  - src/components/admin/ai-chat/results/ConfirmActionDialog.tsx
+  - Tool schemas/guards: src/lib/admin/agents/tools.ts:60–86, 99–126, 171–193
+  - Agent instructions: src/lib/admin/agents/inventory.ts:6–11, src/lib/admin/agents/orders.ts:6–11
 
 4) i18n in Result Panels
-- Status: planned
+- Status: done
 - Scope:
   - Wrap panel strings with existing bilingual/i18n patterns used in admin pages.
 - Acceptance:
   - All result panel labels render in the current UI language.
 - Code anchors:
-  - Bilingual usage pattern (reference): src/app/[locale]/admin/ai-chat/page.tsx:6
-  - Current English strings (to replace or wrap): src/components/admin/ai-chat/MessageContent.tsx:110,127,143,157,167
+  - ResultsPane + cards: src/components/admin/ai-chat/results/ResultsPanel.tsx, src/components/admin/ai-chat/results/cards/*
 
 5) Orders Admin Page (UI)
 - Status: planned
@@ -113,25 +111,26 @@ Milestones
   - test/e2e/admin-ai/stream-and-panels.spec.ts (structure TBD)
 
 8) Observability (UI Hooks)
-- Status: planned
+- Status: done (initial)
 - Scope:
   - Display `request_id` from events in a subtle UI element and copyable control; optionally link to logs when available.
 - Acceptance:
   - Given a run, the UI shows a request_id that matches server logs.
 - Code anchors:
   - Stream handling (UI): src/components/admin/ai-chat/hooks/useChatSession.ts:51
+  - Headers + panel copy: src/components/admin/ai-chat/chat-interface.tsx, src/components/admin/ai-chat/results/ResultsPanel.tsx
 
 Tasks (tracked at high level)
-- Two‑pane + store + typed events consumer — owner: ___ — status: planned
-- DuplicateMatchesCard — owner: ___ — status: planned
-- SearchResultsList — owner: ___ — status: planned
-- BookSummaryCard — owner: ___ — status: planned
-- OrderUpdateCard — owner: ___ — status: planned
-- ConfirmActionDialog — owner: ___ — status: planned
-- i18n pass on result panels — owner: ___ — status: planned
-- Orders page scaffold — owner: ___ — status: planned
-- E2E streaming + panels test — owner: ___ — status: planned
-- Observability (request_id in UI) — owner: ___ — status: planned
+- Two‑pane + store + typed events consumer — status: done
+- DuplicateMatchesCard — status: done
+- SearchResultsList — status: done
+- BookSummaryCard — status: done
+- OrderUpdateCard — status: done
+- Server‑enforced confirmation — status: done
+- i18n pass on result panels — status: done
+- Orders page scaffold — status: planned
+- E2E streaming + panels test — status: planned
+- Observability (request_id in UI) — status: done (initial)
 
 References
 - ADR 0004 (Admin AI Simplification): doc/adr/0004-admin-ai-simplification-responses-structured-outputs.md
@@ -140,3 +139,4 @@ References
 
 Changelog
 - 2025‑10‑16: Initial roadmap created (UI focus; no links added to AGENTS.md).
+- 2025‑10‑17: Adopted server‑enforced confirmation (no visible modal). Implemented Option B event contract (unwrapped domain payloads). Shipped i18n on result panels and deep‑link to editor.

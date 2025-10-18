@@ -34,16 +34,18 @@ Gotchas & Time Savers
 
 4) Routing heuristics vs agents
 - Removed route-level heuristics and forced tool_choice. The Router agent handles handoffs. Keep prompts per agent small and focused.
-- The streaming route ignores `imageUrl`/`confirmedInfo` fields; pass confirmations within the messages (UI now embeds confirmed info JSON on user confirmation).
+- Confirmation is enforced at the tool layer: mutating tools require `confirmed: true` param. No visible UI modal; agents include `confirmed: true` only after explicit admin confirmation in chat.
 
 5) SSE bridge
 - `handoff`: `{ to: agentName }` — emitted when AgentKit reports `agent_updated_stream_event`.
 - `assistant_delta`: emit each `output_text` segment.
-- `tool_start`, `tool_result`, `tool_append`: mapped from Function Call/Result events; JSON results forwarded without lossy “[binary]” conversion.
+- `tool_start`, `tool_result`, `tool_append`: mapped from Function Call/Result events.
+  - Event contract (Option B): `tool_result.result` carries the unwrapped domain `data` (if present); `tool_append.message.content` keeps the full envelope JSON for chat summaries.
 
 Adding a New Tool
 - Define Zod schema with required fields; use `nullable()` instead of `optional()`.
 - Implement `execute` by calling service functions; prune nulls as needed.
+- For mutating tools, add a `confirmed: z.boolean()` parameter and reject if not true.
 - Export from `getToolsForAgent(...)` if agent-scoped, or add directly to the agent.
 
 Adding a New Agent
@@ -57,6 +59,7 @@ Testing
 Operational Tips
 - For OCR quality: instruct “Extract text as-is; do not translate.” Ask for manual confirmation when confidence < threshold.
 - For duplicate detection: keep Supabase search + one vision compare now; add pgvector later if recall/precision becomes an issue.
+ - Avoid UI confirmation surfaces; keep confirmation in chat and enforce via tool parameter.
 
 Where to Look
 - Route: `src/app/api/admin/ai-chat/stream/orchestrated/route.ts`
@@ -66,10 +69,10 @@ Where to Look
 - OpenAI vision wrapper: `src/lib/openai/vision.ts`
 
 Future Enhancements / Known Gaps
-- Chat UI renders raw tool JSON for duplicates/search/create/update; consider dedicated renderers.
+- Chat UI renders rich panels for duplicates/search/create/update; continue to refine.
 - Add simple quantity increment/decrement tool and low‑stock warnings.
 - Orders: warn when stock is short; expose `admin_notes` and `override_monthly` in `update_order` tool.
-- Observability: add Sentry and request IDs to route + orchestrator logs.
+- Observability: add Sentry and request IDs to route + orchestrator logs (request_id already displayed in UI).
 - Duplicates: introduce pgvector/embeddings pipeline when needed.
 - Uploads: migrate to signed direct Cloudinary uploads with webhook processing.
 - Tests: add E2E‑style test for `/api/admin/ai-chat/stream/orchestrated` with mocked RL/CC and AgentKit events.

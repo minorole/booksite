@@ -20,7 +20,7 @@ Overview (files)
 
 - `src/lib/admin/services/vision/cover-analysis.ts`
   - `analyzeBookCover(args, adminEmail)` — implements both stages:
-    - `initial` uses `initialCoverAnalysisSchema` and returns natural analysis for confirmation.
+    - `initial` uses `initialCoverAnalysisSchema` and returns natural analysis for review (no UI confirmation modal).
     - `structured` uses `structuredVisionAnalysisSchema` and appends `cover_url`.
   - Uses `callVisionJSON` and logs via `logAnalysisOperation`.
 
@@ -50,7 +50,7 @@ const json = await callVisionJSON('InitialCoverAnalysis', initialCoverAnalysisSc
 ])
 ```
 
-- Structured cover analysis (confirmed info embedded in text):
+- Structured cover analysis (optional confirmed info embedded in text):
 ```
 const structured = await callVisionJSON('VisionAnalysisResult', structuredVisionAnalysisSchema, [
   { role: 'user', content: [
@@ -74,4 +74,3 @@ References
 - Agents/Tools: `src/lib/admin/agents/**`
 - Supabase helpers: `src/lib/db/**`
 - OpenAI wrappers: `src/lib/openai/**`
-
