@@ -49,6 +49,7 @@ import {
 } from "@/components/ui/dialog"
 import { CategoryType } from '@/lib/db/enums'
 import { CATEGORY_LABELS } from '@/lib/admin/constants'
+import { useSearchParams } from 'next/navigation'
 
 type BookWithCategory = Book
 
@@ -62,6 +63,7 @@ export function BookList() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedBook, setSelectedBook] = useState<BookWithCategory | null>(null)
   const { toast } = useToast()
+  const searchParams = useSearchParams()
 
   const fetchBooks = useCallback(async () => {
     try {
@@ -83,6 +85,17 @@ export function BookList() {
   useEffect(() => {
     fetchBooks()
   }, [fetchBooks])
+
+  // Auto-open editor when deep-linked with ?bookId=...
+  useEffect(() => {
+    const id = searchParams.get('bookId')
+    if (!id || books.length === 0) return
+    const found = books.find((b) => b.id === id)
+    if (found) {
+      setSelectedBook(found)
+      setDialogOpen(true)
+    }
+  }, [searchParams, books])
 
   const handleDelete = async (bookId: string) => {
     if (!confirm("Are you sure you want to delete this book?")) return

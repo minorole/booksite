@@ -111,65 +111,18 @@ export function MainList({ items, activeHref, onClose }: MainListProps) {
 }
 
 type AccountSectionProps = {
-  ordersItem?: PillNavItem
-  adminItem?: PillNavItem
   signInItem?: PillNavItem
   hasUserCustom: boolean
   onClose: () => void
   onSignOut: () => void
 }
 
-export function AccountSection({ ordersItem, adminItem, signInItem, hasUserCustom, onClose, onSignOut }: AccountSectionProps) {
-  if (!ordersItem && !adminItem && !signInItem && !hasUserCustom) return null
+export function AccountSection({ signInItem, hasUserCustom, onClose, onSignOut }: AccountSectionProps) {
+  // Show only account-specific actions here: Sign In (when logged out) or Sign out (when logged in via avatar-less state).
+  if (!signInItem && !hasUserCustom) return null
   return (
     <div className="mt-4 pt-3 border-t border-neutral-200">
       <ul className="list-none m-0 p-0 flex flex-col gap-1 items-start">
-        {ordersItem && (
-          isRouterLink(ordersItem.href || '') ? (
-            <li>
-              <Link
-                href={ordersItem.href as string}
-                className="sm-item block w-full py-3 text-xl font-semibold tracking-tight text-neutral-900 transition-colors duration-300 hover:text-[var(--sm-accent,#5227FF)]"
-                onClick={onClose}
-              >
-                {ordersItem.label}
-              </Link>
-            </li>
-          ) : (
-            <li>
-              <a
-                href={ordersItem.href}
-                className="sm-item block w-full py-3 text-xl font-semibold tracking-tight text-neutral-900 transition-colors duration-300 hover:text-[var(--sm-accent,#5227FF)]"
-                onClick={onClose}
-              >
-                {ordersItem.label}
-              </a>
-            </li>
-          )
-        )}
-        {adminItem && (
-          isRouterLink(adminItem.href || '') ? (
-            <li>
-              <Link
-                href={adminItem.href as string}
-                className="sm-item block w-full py-3 text-xl font-semibold tracking-tight text-neutral-900 transition-colors duration-300 hover:text-[var(--sm-accent,#5227FF)]"
-                onClick={onClose}
-              >
-                {adminItem.label}
-              </Link>
-            </li>
-          ) : (
-            <li>
-              <a
-                href={adminItem.href}
-                className="sm-item block w-full py-3 text-xl font-semibold tracking-tight text-neutral-900 transition-colors duration-300 hover:text-[var(--sm-accent,#5227FF)]"
-                onClick={onClose}
-              >
-                {adminItem.label}
-              </a>
-            </li>
-          )
-        )}
         {signInItem && !hasUserCustom && (
           isRouterLink(signInItem.href || '') ? (
             <li>

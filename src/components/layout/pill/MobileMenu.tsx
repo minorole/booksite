@@ -226,20 +226,15 @@ export function MobileMenu({ items, activeHref, ease = "power3.easeOut", onToggl
   // Partition items for mobile: languages row at top; main items; account group at bottom.
   const isLanguageItem = (it: PillNavItem) => typeof it.label === 'string' && (it.label === '中文' || it.label === 'English')
   const isSignInItem = (it: PillNavItem) => typeof it.href === 'string' && it.href.includes('/auth/signin')
-  const isOrdersItem = (it: PillNavItem) => typeof it.href === 'string' && it.href.includes('/users/orders')
-  const isAdminItem = (it: PillNavItem) => typeof it.href === 'string' && it.href.includes('/admin')
 
   const langItems = items.filter(isLanguageItem)
   const signInItem = items.find(isSignInItem)
-  const ordersItem = items.find(isOrdersItem)
-  const adminItem = items.find(isAdminItem)
   const hasUserCustom = items.some((it) => !!it.custom)
 
-  const mainItems: PillNavItem[] = items.filter((it) => !isLanguageItem(it) && !isSignInItem(it) && !isOrdersItem(it) && !isAdminItem(it) && !it.custom)
+  // Keep Admin/Orders in the main list for parity with desktop; exclude only language, sign-in, custom avatar.
+  const mainItems: PillNavItem[] = items.filter((it) => !isLanguageItem(it) && !isSignInItem(it) && !it.custom)
 
-  const sectionTitle = (content: React.ReactNode) => (
-    <div className="px-1.5 py-1 text-[13px] font-semibold text-neutral-500/90 uppercase tracking-wide">{content}</div>
-  )
+  //
 
   const handleSignOut = async () => {
     try {
@@ -321,11 +316,9 @@ export function MobileMenu({ items, activeHref, ease = "power3.easeOut", onToggl
             {/* Main navigation items */}
             <MainList items={mainItems} activeHref={activeHref} onClose={() => setIsOpen(false)} />
 
-            {/* Account group at bottom (hidden when avatar/custom is present) */}
+            {/* Account group at bottom (hidden when avatar/custom is present). Keep account-only actions. */}
             {!hasUserCustom && (
               <AccountSection
-                ordersItem={ordersItem}
-                adminItem={adminItem}
                 signInItem={signInItem}
                 hasUserCustom={hasUserCustom}
                 onClose={() => setIsOpen(false)}

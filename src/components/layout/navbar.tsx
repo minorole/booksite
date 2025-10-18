@@ -30,7 +30,7 @@ export function Navbar() {
     ]
 
     if (user) arr.push({ href: `/${locale}/users/orders`, label: <Bilingual cnText="订单" enText="Orders" /> })
-    if (isAdmin) arr.push({ href: `/${locale}/admin/ai-chat`, label: <Bilingual cnText="管理" enText="Admin" /> })
+    if (isAdmin) arr.push({ href: `/${locale}/admin`, label: <Bilingual cnText="管理" enText="Admin" /> })
 
     // Locale switch as pill links
     const current = pathname || `/${locale}`
