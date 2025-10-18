@@ -3,6 +3,7 @@ import { assertAdmin, UnauthorizedError } from '@/lib/security/guards'
 import { listBooks } from '@/lib/db/books'
 import { CATEGORY_TYPES, type CategoryType } from '@/lib/db/enums'
 import { createBookDb, logAdminAction } from '@/lib/db/admin'
+import { z } from 'zod'
 
 export async function GET() {
   try {
@@ -44,37 +45,42 @@ export async function POST(request: Request) {
 
     const data = await request.json()
 
-    // Validate required fields
-    if (!data.title_zh && !data.title_en) {
+    const CreateBookSchema = z.object({
+      title_zh: z.string().trim().min(1, 'title_zh required'),
+      title_en: z.string().trim().optional(),
+      description_zh: z.string().trim().min(1, 'description_zh required'),
+      description_en: z.string().trim().optional(),
+      category_type: z.enum(CATEGORY_TYPES),
+      quantity: z.number().int().min(0),
+      cover_image: z.string().url().optional(),
+      tags: z.union([z.array(z.string()), z.string()]).optional(),
+    })
+
+    const parsed = CreateBookSchema.safeParse(data)
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'At least one title (Chinese or English) must be provided' },
+        { error: 'Invalid request', details: parsed.error.flatten() },
         { status: 400 }
       )
     }
 
-    // Resolve category by type
-    const categoryType = data.category_type as CategoryType | undefined
-    if (!categoryType || !CATEGORY_TYPES.includes(categoryType)) {
-      return NextResponse.json(
-        { error: 'Invalid or missing category_type' },
-        { status: 400 }
-      )
-    }
+    // Normalize tags to string[]
+    const tagsArray = Array.isArray(parsed.data.tags)
+      ? parsed.data.tags.filter(Boolean)
+      : (typeof parsed.data.tags === 'string'
+          ? parsed.data.tags.split(',').map((t: string) => t.trim()).filter(Boolean)
+          : [])
 
     // Delegate to db helper to insert and normalize tags
     const created = await createBookDb({
-      title_zh: data.title_zh || '',
-      title_en: data.title_en ?? null,
-      description_zh: data.description_zh || '',
-      description_en: data.description_en ?? null,
-      category_type: categoryType,
-      quantity: typeof data.quantity === 'number' ? data.quantity : 0,
-      cover_image: typeof data.cover_image === 'string' ? data.cover_image : '',
-      tags: Array.isArray(data.tags)
-        ? data.tags.filter(Boolean)
-        : (typeof data.tags === 'string'
-            ? data.tags.split(',').map((t: string) => t.trim()).filter(Boolean)
-            : []),
+      title_zh: parsed.data.title_zh,
+      title_en: parsed.data.title_en ?? null,
+      description_zh: parsed.data.description_zh,
+      description_en: parsed.data.description_en ?? null,
+      category_type: parsed.data.category_type as CategoryType,
+      quantity: parsed.data.quantity,
+      cover_image: parsed.data.cover_image ?? null,
+      tags: tagsArray,
     })
 
     // Admin log via helper
@@ -82,8 +88,8 @@ export async function POST(request: Request) {
       action: 'CREATE_BOOK',
       admin_email: user.email!,
       book_id: created.id,
-      book_title: data.title_en || data.title_zh || null,
-      metadata: data,
+      book_title: parsed.data.title_en || parsed.data.title_zh || null,
+      metadata: parsed.data,
     })
 
     return NextResponse.json({ book: { id: created.id } })

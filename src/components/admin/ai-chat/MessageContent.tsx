@@ -4,7 +4,6 @@ import { Expand } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { Message, MessageContent as MsgContent } from '@/lib/admin/types'
-import { AnalysisConfirmation } from './AnalysisConfirmation'
 import Image from 'next/image'
 import { CATEGORY_LABELS } from '@/lib/admin/constants'
 import type { CategoryType } from '@/lib/db/enums'
@@ -12,14 +11,10 @@ import type { CategoryType } from '@/lib/db/enums'
 export function MessageContent({
   message,
   loading,
-  onConfirmAnalysis,
-  onEditAnalysis,
   onSelectImage,
 }: {
   message: Message
   loading: boolean
-  onConfirmAnalysis: (analysis: unknown) => void
-  onEditAnalysis: (analysis: unknown) => void
   onSelectImage: (url: string) => void
 }) {
   // Array content (image + text)
@@ -197,18 +192,7 @@ export function MessageContent({
                 </div>
               ) : null}
             </div>
-            {a.needs_confirmation && (
-              <AnalysisConfirmation analysis={{
-                title_zh: a.title_zh,
-                title_en: a.title_en,
-                author_zh: a.author_zh,
-                author_en: a.author_en,
-                publisher_zh: a.publisher_zh,
-                publisher_en: a.publisher_en,
-                category_type: a.category_suggestion,
-                quality_issues: a.quality_issues,
-              }} onConfirm={() => onConfirmAnalysis(a)} onEdit={() => onEditAnalysis(a)} loading={loading} />
-            )}
+            {/* Removed visible confirmation UI per preference */}
           </div>
         )
       }

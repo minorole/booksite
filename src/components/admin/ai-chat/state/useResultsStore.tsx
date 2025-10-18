@@ -23,6 +23,7 @@ const initialState: ResultState = {
 
 type ResultStore = ResultState & {
   setFromToolResult: (evt: SSEEvent) => void
+  setRequestId: (id: string | null) => void
   reset: () => void
 }
 
@@ -39,7 +40,7 @@ export function ResultStoreProvider({ children }: { children: React.ReactNode })
       let panel: PanelType = null
       if (e.name === 'check_duplicates') panel = 'duplicates'
       else if (e.name === 'search_books') panel = 'search'
-      else if (e.name === 'create_book' || e.name === 'update_book') panel = 'book'
+      else if (e.name === 'create_book' || e.name === 'update_book' || e.name === 'adjust_book_quantity') panel = 'book'
       else if (e.name === 'update_order') panel = 'order'
       setState({
         panel,
@@ -48,6 +49,9 @@ export function ResultStoreProvider({ children }: { children: React.ReactNode })
         toolName: e.name ?? null,
         payload: e.result ?? null,
       })
+    },
+    setRequestId: (id: string | null) => {
+      setState((prev) => ({ ...prev, requestId: id }))
     },
     reset: () => setState(initialState),
   }), [state])

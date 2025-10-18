@@ -10,17 +10,15 @@ import { ChatInput } from './ChatInput';
 import { ErrorBanner } from './ErrorBanner';
 import { LoadingIndicator } from './LoadingIndicator';
 import { useChatSession } from './hooks/useChatSession';
-import { EditAnalysisDialog } from './EditAnalysisDialog';
 import { StepList } from './StepList'
 import Image from 'next/image'
 import { useLocale } from '@/contexts/LocaleContext'
+import { Bilingual } from '@/components/common/bilingual'
 import { ResultStoreProvider, useResultsStore } from './state/useResultsStore'
 import { ResultsPanel } from './results/ResultsPanel'
 
 function ChatBody() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
-  const [editOpen, setEditOpen] = useState(false)
-  const [editInitial, setEditInitial] = useState<Record<string, unknown> | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const { locale } = useLocale()
   const results = useResultsStore()
@@ -35,10 +33,10 @@ function ChatBody() {
     steps,
     sendText,
     attachImage,
-    confirmAnalysis,
     reset,
   } = useChatSession(locale, {
     onToolResult: (evt) => results.setFromToolResult(evt),
+    onRequestId: (id) => results.setRequestId(id),
   })
 
   useEffect(() => {
@@ -49,10 +47,30 @@ function ChatBody() {
     <>
       <ErrorBanner error={error} onClose={() => setError(null)} />
 
-      <div className="flex justify-end p-4">
-        <Button onClick={reset} variant="outline" size="sm" className="gap-2" disabled={loading}>
+      <div className="flex items-center justify-between p-4">
+        <div className="text-xs text-muted-foreground">
+          {results.requestId && (
+            <button
+              className="rounded px-2 py-0.5 hover:bg-muted"
+              onClick={() => navigator.clipboard.writeText(results.requestId!)}
+              title="Copy request id"
+            >
+              <Bilingual as="span" cnText="请求" enText="Request" />: {results.requestId.slice(0, 8)}
+            </button>
+          )}
+        </div>
+        <Button
+          onClick={() => {
+            results.reset()
+            reset()
+          }}
+          variant="outline"
+          size="sm"
+          className="gap-2"
+          disabled={loading}
+        >
           <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
-          New Conversation
+          <Bilingual as="span" cnText="新对话" enText="New Conversation" />
         </Button>
       </div>
 
@@ -62,29 +80,6 @@ function ChatBody() {
             <MessageList
               messages={messages}
               loading={loading}
-              onConfirmAnalysis={confirmAnalysis}
-              onEditAnalysis={(a) => {
-                const x = a as {
-                  title_zh?: string
-                  title_en?: string | null
-                  author_zh?: string | null
-                  author_en?: string | null
-                  publisher_zh?: string | null
-                  publisher_en?: string | null
-                  category_suggestion?: import('@/lib/db/enums').CategoryType
-                }
-                const init = {
-                  title_zh: x.title_zh,
-                  title_en: x.title_en,
-                  author_zh: x.author_zh,
-                  author_en: x.author_en,
-                  publisher_zh: x.publisher_zh,
-                  publisher_en: x.publisher_en,
-                  category_type: x.category_suggestion,
-                }
-                setEditInitial(init)
-                setEditOpen(true)
-              }}
               onSelectImage={(url) => setSelectedImage(url)}
               endRef={messagesEndRef}
             />
@@ -97,7 +92,7 @@ function ChatBody() {
               loading={loading}
             />
         </div>
-        <div className="hidden md:block">
+        <div className="block md:block">
           <ResultsPanel />
         </div>
       </div>
@@ -121,15 +116,7 @@ function ChatBody() {
 
       <LoadingIndicator label={loadingLabel} />
 
-      <EditAnalysisDialog
-        open={editOpen}
-        initial={editInitial || {}}
-        onClose={() => setEditOpen(false)}
-        onSave={(v) => {
-          setEditOpen(false)
-          confirmAnalysis(v)
-        }}
-      />
+      {/* Removed edit/confirm dialog per preference */}
     </>
   )
 }

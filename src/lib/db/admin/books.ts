@@ -85,7 +85,7 @@ export async function searchBooksDb(args: BookSearch): Promise<BookBase[]> {
       category_type: catType,
       quantity: b.quantity,
       tags: names,
-      cover_image: b.cover_image ?? ''
+      cover_image: b.cover_image
     })
   }
   return results
@@ -104,7 +104,7 @@ export async function createBookDb(input: BookCreate): Promise<BookBase & { id: 
     description_en: input.description_en ?? null,
     category_id: categoryId,
     quantity: input.quantity,
-    cover_image: input.cover_image || null,
+    cover_image: input.cover_image ?? null,
     content_summary_zh: input.content_summary_zh ?? null,
     content_summary_en: input.content_summary_en ?? null,
     author_zh: input.author_zh ?? null,
@@ -156,7 +156,7 @@ export async function createBookDb(input: BookCreate): Promise<BookBase & { id: 
     category_type: catType,
     quantity: insert.quantity,
     tags: finalTags,
-    cover_image: insert.cover_image ?? ''
+    cover_image: insert.cover_image ?? null
   }
 }
 
@@ -271,6 +271,6 @@ export async function updateBookDb(id: string, patch: Omit<BookUpdate, 'book_id'
     category_type,
     quantity: br.quantity,
     tags,
-    cover_image: br.cover_image ?? ''
+    cover_image: br.cover_image
   }
 }

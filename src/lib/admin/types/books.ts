@@ -12,7 +12,7 @@ export interface BookBase {
   category_type: CategoryType
   quantity: number
   tags: string[]
-  cover_image: string
+  cover_image: string | null
   analysis_result?: VisionAnalysisResult
   similarity_group?: string
 }

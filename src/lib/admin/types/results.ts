@@ -65,7 +65,6 @@ export type AdminOperationResult = OperationResult<{
       publisher_en?: string
       category_suggestion?: CategoryType
       quality_issues?: string[]
-      needs_confirmation?: boolean
     }
     structured_data?: VisionAnalysisResult
   }

@@ -71,6 +71,6 @@ export async function checkDuplicatesDb(args: {
     category_type: catTypeById.get(b.category_id) ?? ('OTHER_BOOKS' as CategoryType),
     quantity: b.quantity,
     tags: tagsByBook.get(b.id) ?? [],
-    cover_image: b.cover_image ?? ''
+    cover_image: b.cover_image
   }))
 }

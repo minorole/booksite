@@ -2,8 +2,8 @@ import { getServerDb } from '@/lib/db/client'
 
 type OrderItemProjection = {
   book: {
-    title_en: string
-    title_zh: string
+    title_en: string | null
+    title_zh: string | null
   }
   quantity: number
 }
@@ -80,8 +80,9 @@ export async function getUserOrders(userId: string): Promise<UserOrderProjection
     order_items: Array.isArray(o.order_items)
       ? o.order_items.map((oi) => ({
           book: {
+            // Normalize missing English title to empty string to match UI/tests
             title_en: oi.books?.title_en ?? '',
-            title_zh: oi.books?.title_zh ?? '',
+            title_zh: oi.books?.title_zh ?? null,
           },
           quantity: oi.quantity,
         }))

@@ -29,6 +29,9 @@ export async function POST(request: Request) {
     if (rl.enabled && !rl.allowed) {
       return new NextResponse('Rate limit exceeded', { status: 429, headers: rateLimitHeaders(rl) })
     }
+    if (!rl.enabled && process.env.NODE_ENV === 'production') {
+      return new NextResponse('Rate limiting unavailable', { status: 503 })
+    }
 
     // Concurrency control per user
     const sem = await acquireConcurrency({ route: routeKey, userId: user.id, ttlSeconds: 120 })
@@ -46,7 +49,11 @@ export async function POST(request: Request) {
         // Agents decide next steps based solely on messages (including any user-confirmed info embedded in prior turns)
         void runChatWithAgentsStream({ messages, userEmail: user.email!, write, uiLanguage, requestId })
           .then(async () => {
-            try { await releaseConcurrency({ route: routeKey, userId: user.id, ttlSeconds: 120 }) } catch {}
+            try {
+              await releaseConcurrency({ route: routeKey, userId: user.id, ttlSeconds: 120 })
+            } catch (e) {
+              console.error('releaseConcurrency failed', e)
+            }
             controller.close()
           })
           .catch((err) => {
@@ -66,6 +73,7 @@ export async function POST(request: Request) {
       },
     })
   } catch (error) {
+    console.error('Stream error:', error)
     return new NextResponse('Stream error', { status: 500 })
   }
 }

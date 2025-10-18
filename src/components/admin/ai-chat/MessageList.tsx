@@ -16,6 +16,11 @@ const MESSAGE_STYLES = {
     icon: "bg-blue-200 text-blue-700",
     component: <Bot className="w-4 h-4" />,
   },
+  tool: {
+    container: "bg-muted text-muted-foreground",
+    icon: "bg-muted-foreground/20 text-muted-foreground",
+    component: <Info className="w-4 h-4" />,
+  },
   system: {
     container: "bg-muted text-muted-foreground",
     icon: "bg-muted-foreground/20 text-muted-foreground",
@@ -26,22 +31,21 @@ const MESSAGE_STYLES = {
 export function MessageList({
   messages,
   loading,
-  onConfirmAnalysis,
-  onEditAnalysis,
   onSelectImage,
   endRef,
 }: {
   messages: Message[]
   loading: boolean
-  onConfirmAnalysis: (analysis: unknown) => void
-  onEditAnalysis: (analysis: unknown) => void
   onSelectImage: (url: string) => void
   endRef: React.RefObject<HTMLDivElement>
 }) {
   return (
     <div className="flex-1 p-4 overflow-y-auto space-y-6 scroll-smooth">
       {messages.map((message, i) => {
-        const style = MESSAGE_STYLES[(message.role as keyof typeof MESSAGE_STYLES) || 'system']
+        const role = (['user', 'assistant', 'system', 'tool'] as const).includes(message.role as any)
+          ? (message.role as keyof typeof MESSAGE_STYLES)
+          : 'system'
+        const style = MESSAGE_STYLES[role]
         return (
           <div key={i} className={cn("flex gap-3 p-4 rounded-lg", style.container)}>
             <div className={cn("w-8 h-8 rounded-full flex items-center justify-center shrink-0", style.icon)}>
@@ -51,8 +55,6 @@ export function MessageList({
               <MessageContent
                 message={message}
                 loading={loading}
-                onConfirmAnalysis={onConfirmAnalysis}
-                onEditAnalysis={onEditAnalysis}
                 onSelectImage={onSelectImage}
               />
             </div>

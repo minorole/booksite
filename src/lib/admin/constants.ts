@@ -43,3 +43,12 @@ export const CATEGORY_LABELS: Record<CategoryType, string> = {
   DHARMA_ITEMS: '法宝',
   BUDDHA_STATUES: '佛像',
 } as const
+
+// Default limits for admin agents
+export const ADMIN_AGENT_MAX_TURNS_DEFAULT = 12 as const
+
+// Small hint shown in the input after image attach (when not auto-sending)
+export const ADMIN_AI_IMAGE_HINT = {
+  en: 'Add a note for this image (e.g., “Analyze item photo”, “Check duplicates”, “Create a book draft”).',
+  zh: '为此图片添加说明（例如：“分析物品照片”、“检查重复”、“创建书目草稿”）。',
+} as const

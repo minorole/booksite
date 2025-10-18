@@ -1,6 +1,7 @@
 "use client";
 
 import { useResultsStore } from '../state/useResultsStore'
+import { Bilingual } from '@/components/common/bilingual'
 import type { DuplicateDetectionResult } from '@/lib/admin/types/results'
 import { DuplicateMatchesCard } from './cards/DuplicateMatchesCard'
 import { SearchResultsList } from './cards/SearchResultsList'
@@ -11,9 +12,9 @@ export function ResultsPanel() {
   const { panel, payload, toolName, requestId } = useResultsStore()
 
   return (
-    <div className="h-full border-l bg-muted/30 p-4 space-y-3">
+    <div className="h-full md:border-l border-t md:border-t-0 bg-muted/30 p-4 space-y-3">
       <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span>Results</span>
+        <Bilingual as="span" cnText="结果" enText="Results" />
         {requestId && (
           <button
             className="rounded px-2 py-0.5 hover:bg-muted"
@@ -39,7 +40,7 @@ export function ResultsPanel() {
         )}
         {!panel && (
           <p className="text-sm text-muted-foreground">
-            When a tool produces results, you’ll see a detailed view here.
+            <Bilingual cnText="当工具产生结果时，这里会显示详细视图。" enText="When a tool produces results, you’ll see a detailed view here." />
           </p>
         )}
       </div>

@@ -47,7 +47,6 @@ export async function analyzeBookCover(
         publisher_en: json.publisher_en ?? undefined,
         category_suggestion: json.category_suggestion ?? undefined,
         quality_issues: Array.isArray(json.quality_issues) ? json.quality_issues : undefined,
-        needs_confirmation: true,
       }
 
       await logAnalysisOperation('INITIAL_ANALYSIS', {
