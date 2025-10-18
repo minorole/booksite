@@ -61,18 +61,7 @@ export async function checkDuplicates(
     })
 
     const analysis = analyzeResults(
-      visualAnalysis.length > 0
-        ? visualAnalysis.map((v) => ({
-            book_id: v.book.id as string,
-            similarity_score: (v.similarity.layout + v.similarity.content) / 2,
-            differences: v.differences,
-            visual_analysis: {
-              layout_similarity: v.similarity.layout,
-              content_similarity: v.similarity.content,
-              confidence: v.similarity.confidence,
-            },
-          }))
-        : []
+      visualAnalysis.length > 0 ? visualAnalysis.map(toDuplicateMatch) : []
     )
 
     return {
@@ -80,19 +69,7 @@ export async function checkDuplicates(
       message: 'Duplicate check complete',
       data: {
         duplicate_detection: {
-          matches:
-            visualAnalysis.length > 0
-              ? visualAnalysis.map((v) => ({
-                  book_id: v.book.id as string,
-                  similarity_score: (v.similarity.layout + v.similarity.content) / 2,
-                  differences: v.differences,
-                  visual_analysis: {
-                    layout_similarity: v.similarity.layout,
-                    content_similarity: v.similarity.content,
-                    confidence: v.similarity.confidence,
-                  },
-                }))
-              : [],
+          matches: visualAnalysis.length > 0 ? visualAnalysis.map(toDuplicateMatch) : [],
           analysis,
         },
         search: { found: potentialMatches.length > 0, books: potentialMatches },
@@ -128,4 +105,27 @@ function analyzeResults(
   }
 
   return { has_duplicates: false, confidence, recommendation: 'create_new' }
+}
+
+function toDuplicateMatch(v: {
+  book: { id?: unknown }
+  similarity: { layout: number; content: number; confidence: number }
+  differences: { publisher?: boolean; edition?: boolean; layout?: boolean }
+}): {
+  book_id: string
+  similarity_score: number
+  differences: { publisher?: boolean; edition?: boolean; layout?: boolean }
+  visual_analysis: { layout_similarity: number; content_similarity: number; confidence: number }
+} {
+  const avg = (v.similarity.layout + v.similarity.content) / 2
+  return {
+    book_id: String(v.book.id ?? ''),
+    similarity_score: avg,
+    differences: v.differences,
+    visual_analysis: {
+      layout_similarity: v.similarity.layout,
+      content_similarity: v.similarity.content,
+      confidence: v.similarity.confidence,
+    },
+  }
 }

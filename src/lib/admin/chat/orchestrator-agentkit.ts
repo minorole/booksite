@@ -1,4 +1,5 @@
 import { user as msgUser, assistant as msgAssistant, system as msgSystem, Runner } from '@openai/agents-core'
+import { setDefaultOpenAIClient, setOpenAIAPI } from '@openai/agents'
 import type { AgentInputItem } from '@openai/agents-core'
 import { OpenAIProvider } from '@openai/agents-openai'
 import type { Message } from '@/lib/admin/types'
@@ -10,6 +11,15 @@ import { getModel } from '@/lib/openai/models'
 import { logAdminAction } from '@/lib/db/admin'
 import type { UILanguage } from '@/lib/admin/i18n'
 import { adminAiLogsEnabled, adminAiSensitiveEnabled } from '@/lib/observability/toggle'
+import { getAdminClient } from '@/lib/openai/client'
+
+// Configure Agents SDK to use our OpenAI client and API mode
+try {
+  setDefaultOpenAIClient(getAdminClient() as unknown as any)
+  // Default to Responses API for Agents; allow explicit opt-out via OPENAI_USE_RESPONSES=0
+  const apiMode = process.env.OPENAI_USE_RESPONSES === '0' ? 'chat_completions' : 'responses'
+  setOpenAIAPI(apiMode as 'responses' | 'chat_completions')
+} catch {}
 
 type SSEWriter = (event: Record<string, unknown>) => void
 

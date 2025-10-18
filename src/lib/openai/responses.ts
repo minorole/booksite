@@ -1,4 +1,4 @@
-import type OpenAI from 'openai'
+import OpenAI from 'openai'
 import type { ChatCompletion } from 'openai/resources/chat/completions'
 import type { ChatCompletionMessage } from './types'
 import { OpenAIError } from './errors'
@@ -17,12 +17,6 @@ export function toResponsesPayload(messages: ChatCompletionMessage[]) {
   return { instructions, input: text }
 }
 
-type ResponsesCreate = {
-  id?: string
-  usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number }
-  output_text?: string
-}
-
 export async function createViaResponses(
   client: OpenAI,
   model: string,
@@ -30,7 +24,7 @@ export async function createViaResponses(
   temperature: number,
   max_tokens: number
 ): Promise<ChatCompletion> {
-  const rsp: ResponsesCreate = await (client as unknown as { responses: { create: (p: unknown) => Promise<ResponsesCreate> } }).responses.create({
+  const rsp = await client.responses.create({
     model,
     instructions: payload.instructions,
     input: payload.input,
@@ -50,9 +44,6 @@ export async function createViaResponses(
     object: 'chat.completion',
     created: Math.floor(Date.now() / 1000),
     model,
-    ...(rsp.usage && rsp.usage.prompt_tokens !== undefined && rsp.usage.completion_tokens !== undefined && rsp.usage.total_tokens !== undefined
-      ? { usage: { prompt_tokens: rsp.usage.prompt_tokens!, completion_tokens: rsp.usage.completion_tokens!, total_tokens: rsp.usage.total_tokens! } }
-      : {}),
     choices: [
       {
         index: 0,

@@ -1,5 +1,5 @@
 import { Agent } from '@openai/agents'
-import { routerAgent } from './router'
+import { routerConfig } from './router'
 import { visionAgent } from './vision'
 import { inventoryAgent } from './inventory'
 import { ordersAgent } from './orders'
@@ -13,13 +13,10 @@ export type AgentRegistry = {
 }
 
 export function createAgentRegistry(): AgentRegistry {
-  // Wire handoffs from router to specialists
+  // Wire handoffs from router to specialists; avoid duplicating router definitions
   const router = Agent.create({
-    name: 'Router',
+    ...routerConfig,
     handoffs: [visionAgent, inventoryAgent, ordersAgent],
-    instructions: routerAgent.instructions as string,
-    handoffDescription: routerAgent.handoffDescription,
-    tools: [],
   }) as Agent<AgentContext, 'text'>
 
   return {

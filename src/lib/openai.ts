@@ -2,6 +2,7 @@
 export const OPENAI_CONFIG = {
   MODELS: {
     GPT5_MINI: 'gpt-5-mini' as const,
+    VISION_DEFAULT: 'gpt-5-mini' as const,
   },
   TOKENS: {
     MAX_CONTEXT: 128_000,

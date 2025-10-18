@@ -1,6 +1,4 @@
 "use client";
-
-import Image from 'next/image'
 import type { DuplicateDetectionResult } from '@/lib/admin/types/results'
 import { Button } from '@/components/ui/button'
 import { Bilingual } from '@/components/common/bilingual'

@@ -6,5 +6,5 @@ export function getModel(kind: 'text' | 'vision'): string {
     return t ? t : OPENAI_CONFIG.MODELS.GPT5_MINI
   }
   const v = process.env.OPENAI_VISION_MODEL?.trim()
-  return v ? v : OPENAI_CONFIG.MODELS.GPT5_MINI
+  return v ? v : OPENAI_CONFIG.MODELS.VISION_DEFAULT
 }
