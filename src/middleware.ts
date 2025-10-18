@@ -5,6 +5,7 @@ import type { Session } from '@supabase/supabase-js'
 import type { Database } from '@/types/supabase.generated'
 import { detectLocaleFromHeader, COOKIE_NAME, SUPPORTED_LOCALES, type Locale } from '@/lib/i18n/config'
 import { stripLocalePrefix as stripLocalePrefixDynamic, resolveBest as resolveBestLocale } from '@/lib/i18n/middleware-helpers'
+import { env } from '@/lib/config/env'
 
 export async function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname
@@ -50,13 +51,23 @@ export async function middleware(req: NextRequest) {
 
   // Auth gating and role checks (on normalized path)
   const getSupabase = () => createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    env.supabaseUrl(),
+    env.supabaseAnonKey(),
     {
+      cookieOptions: {
+        path: '/',
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+      },
       cookies: {
-        get(name: string) { return req.cookies.get(name)?.value ?? '' },
-        set(name: string, value: string) { res.cookies.set(name, value) },
-        remove(name: string) { res.cookies.delete(name) },
+        getAll() {
+          return req.cookies.getAll().map(c => ({ name: c.name, value: c.value }))
+        },
+        setAll(setCookies: Array<{ name: string; value: string; options?: Record<string, unknown> }>) {
+          for (const { name, value, options } of setCookies) {
+            res.cookies.set({ name, value, ...(options as Record<string, unknown> | undefined) })
+          }
+        },
       },
     }
   )

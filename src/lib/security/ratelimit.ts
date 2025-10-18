@@ -10,10 +10,16 @@ function ensureRedis(): Redis | null {
   try {
     const url = env.upstashUrl()
     const token = env.upstashToken()
-    if (!url || !token) return null
+    if (!url || !token) {
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error('Missing UPSTASH_REDIS_REST_URL or UPSTASH_REDIS_REST_TOKEN in production')
+      }
+      return null
+    }
     if (!redis) redis = new Redis({ url, token })
     return redis
-  } catch {
+  } catch (e) {
+    if (process.env.NODE_ENV === 'production') throw e as Error
     return null
   }
 }

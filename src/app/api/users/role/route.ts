@@ -34,8 +34,11 @@ export async function PUT(request: Request) {
   const arr = (allUsers ?? []) as UserRow[]
   const me = arr.find((u) => u.id === user.id)
   const target = arr.find((u) => u.id === userId)
-    const myRole = (me?.role as Role | undefined) || 'USER'
-    const targetRole = (target?.role as Role | undefined) || 'USER'
+  if (!me || !target) {
+    return NextResponse.json({ error: 'Failed to validate roles' }, { status: 500 })
+  }
+  const myRole = me.role as Role
+  const targetRole = target.role as Role
 
     // Only a SUPER_ADMIN can change a SUPER_ADMIN or assign SUPER_ADMIN
     const isRequesterSuper = myRole === 'SUPER_ADMIN'

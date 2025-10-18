@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint --ext .js,.jsx,.ts,.tsx src/app/api src/lib/db src/lib/security src/lib/supabase.ts src/middleware.ts",
+    "lint": "eslint . --ext .js,.jsx,.ts,.tsx --max-warnings=0 --report-unused-disable-directives",
     "lint:ci": "eslint . --quiet --max-warnings=0 --report-unused-disable-directives",
     "lint:filesize": "node scripts/check-file-lines.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",

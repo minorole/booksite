@@ -22,9 +22,14 @@ export const createServerSupabaseClient = async () => {
     env.supabaseUrl(),
     env.supabaseAnonKey(),
     {
+      cookieOptions: {
+        path: '/',
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+      },
       cookies: {
         get(name: string) {
-          return store.get(name)?.value ?? ''
+          return store.get(name)?.value
         },
         set() {
           // No-op in RSC; writes handled in route handlers/middleware
@@ -47,15 +52,19 @@ export const createRouteSupabaseClient = async () => {
     env.supabaseUrl(),
     env.supabaseAnonKey(),
     {
+      cookieOptions: {
+        path: '/',
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+      },
       cookies: {
-        get(name: string) {
-          return store.get(name)?.value ?? ''
+        getAll() {
+          return store.getAll().map(c => ({ name: c.name, value: c.value }))
         },
-        set(name: string, value: string, _options?: Record<string, unknown>) {
-          store.set(name, value)
-        },
-        remove(name: string, _options?: Record<string, unknown>) {
-          store.delete(name)
+        setAll(setCookies: Array<{ name: string; value: string; options?: Record<string, unknown> }>) {
+          for (const { name, value, options } of setCookies) {
+            store.set({ name, value, ...(options as Record<string, unknown> | undefined) })
+          }
         },
       },
     }

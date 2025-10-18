@@ -27,11 +27,7 @@ export function linkExpired(tsParam?: string | null): boolean {
 }
 
 export function deriveUserRole(email?: string | null): Role {
-  try {
-    return email === env.superAdminEmail() ? 'SUPER_ADMIN' : 'USER'
-  } catch {
-    return 'USER'
-  }
+  return email === env.superAdminEmail() ? 'SUPER_ADMIN' : 'USER'
 }
 
 export async function finalizePostLogin(
@@ -66,7 +62,15 @@ export async function finalizePostLogin(
       (typeof (umeta as Record<string, unknown>).picture === 'string' && ((umeta as Record<string, unknown>).picture as string)) ||
       undefined
 
-    if (provider === 'google' && candidate && !candidate.includes('res.cloudinary.com')) {
+    // Only allow HTTPS avatar sources to avoid mixed content/SSRF risks
+    const isHttpsCandidate = (() => {
+      try {
+        const u = new URL(candidate || '')
+        return u.protocol === 'https:'
+      } catch { return false }
+    })()
+
+    if (provider === 'google' && candidate && isHttpsCandidate && !candidate.includes('res.cloudinary.com')) {
       // Ensure Cloudinary env exists; SDK reads CLOUDINARY_URL
       env.cloudinaryUrl()
       const cloudinary = (await import('cloudinary')).v2

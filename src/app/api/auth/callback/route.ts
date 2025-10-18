@@ -18,6 +18,7 @@ export async function GET(request: Request) {
     }
 
     const supabase = await createRouteSupabaseClient()
+    // Exchange using the code parameter (works with SSR PKCE storage)
     const { data: { user }, error: authError } = await supabase.auth.exchangeCodeForSession(code)
     if (authError || !user?.id || !user?.email) {
       throw new Error(authError?.message || 'Authentication failed')

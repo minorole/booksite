@@ -1,6 +1,8 @@
 "use client"
 
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
+import { useState } from "react"
+import Image from "next/image"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import type { User } from "@supabase/supabase-js"
 import { cn } from "@/lib/utils"
 
@@ -40,14 +42,22 @@ export function UserAvatar({ user, className }: { user: User; className?: string
     "User"
   const initials = getInitials(label)
   const bg = stringToHslColor(user.email || user.id)
+  const [imgError, setImgError] = useState(false)
+  const isCloudinary = typeof imageUrl === 'string' && imageUrl.includes('res.cloudinary.com')
 
   return (
     <Avatar className={cn("h-8 w-8", className)}>
-      {imageUrl ? (
-        <AvatarImage
+      {imageUrl && !imgError ? (
+        <Image
           src={String(imageUrl)}
           alt={label}
+          fill
+          sizes="32px"
+          className="object-cover"
+          onError={() => setImgError(true)}
           referrerPolicy="no-referrer"
+          crossOrigin="anonymous"
+          unoptimized={!isCloudinary}
         />
       ) : null}
       <AvatarFallback
