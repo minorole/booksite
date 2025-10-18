@@ -55,9 +55,9 @@ describe('orchestrator input mapping and config', () => {
 
     const { input, options } = (AgentsCoreMock as any).__getLast()
     expect(Array.isArray(input)).toBe(true)
-    // First item is the controlled system prelude
+    // First item is the controlled system prelude (auto language mirroring)
     expect(input[0]?.role).toBe('system')
-    expect(String(input[0]?.content)).toContain('UI language: zh')
+    expect(String(input[0]?.content)).toContain('mirror the language of the user\'s most recent message')
     // Demoted user system appears as user input with prefix
     const demoted = input.find((x: any) => x?.role === 'user' && typeof x.content === 'string' && x.content.startsWith('[system-note-from-user]'))
     expect(demoted).toBeTruthy()

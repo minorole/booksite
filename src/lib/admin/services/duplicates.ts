@@ -103,7 +103,7 @@ export async function checkDuplicates(
   }
 }
 
-export function analyzeResults(
+function analyzeResults(
   matches: Array<{
     book_id: string
     similarity_score: number

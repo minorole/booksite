@@ -60,6 +60,19 @@
   }
 }
 
+/* Light-only Catppuccin scope for Admin AI */
+@layer base {
+  .theme-catppuccin {
+    /* Accent (Lavender, Latte, softened to a light tint) */
+    --accent: 230.9 97.2% 92%;
+    --accent-foreground: 233.8 16.0% 35.5%;
+    /* Status tokens (Catppuccin Latte) */
+    --geist-success: #40a02b; /* green */
+    --geist-error: #d20f39;   /* red */
+    --geist-warning: #df8e1d; /* yellow */
+  }
+}
+
 /* Tailwind v4 theme tokens mapped to existing CSS vars */
 @theme {
   /* Colors */

@@ -27,8 +27,8 @@ export function StepList({ steps }: { steps: Step[] }) {
       {steps.map((s) => (
         <div key={s.id} className="inline-flex items-center gap-2 px-3 py-1 rounded-full border text-sm bg-muted">
           {s.status === 'running' && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-          {s.status === 'done' && <Check className="h-3.5 w-3.5 text-green-600" />}
-          {s.status === 'error' && <TriangleAlert className="h-3.5 w-3.5 text-red-600" />}
+          {s.status === 'done' && <Check className="h-3.5 w-3.5 text-success" />}
+          {s.status === 'error' && <TriangleAlert className="h-3.5 w-3.5 text-error" />}
           <span>{
             LABELS[s.name] || (s.name.startsWith('handoff:') ? `Handoff to ${s.name.slice(8)}` : s.name)
           }</span>

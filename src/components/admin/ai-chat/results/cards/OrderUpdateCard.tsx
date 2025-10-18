@@ -11,7 +11,7 @@ export function OrderUpdateCard({ data }: { data: { order?: { order_id: string; 
       <div className="rounded border bg-background p-3 text-sm">
         <div className="flex items-center justify-between">
           <span><Bilingual cnText="编号" enText="ID" />: {o.order_id}</span>
-          {o.status && <span className="text-xs rounded px-2 py-0.5 bg-emerald-100 text-emerald-700">{o.status}</span>}
+          {o.status && <span className="text-xs rounded px-2 py-0.5 bg-success/10 text-success">{o.status}</span>}
         </div>
         {o.tracking_number && (
           <div className="mt-1 text-xs text-muted-foreground"><Bilingual cnText="运单号" enText="Tracking" />: {o.tracking_number}</div>

@@ -20,7 +20,7 @@ export function DuplicateMatchesCard({ data }: { data: { duplicate_detection?: D
     <div className="space-y-3">
       <div className="flex items-center gap-2">
         <h3 className="font-semibold"><Bilingual cnText="可能的重复项" enText="Duplicate candidates" /></h3>
-        {rec && <span className="text-xs rounded px-2 py-0.5 bg-blue-100 text-blue-700">{rec}</span>}
+        {rec && <span className="text-xs rounded px-2 py-0.5 bg-accent/15 text-accent-foreground">{rec}</span>}
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {matches.slice(0, 6).map((m, i) => {
@@ -35,7 +35,7 @@ export function DuplicateMatchesCard({ data }: { data: { duplicate_detection?: D
                     <div className="text-xs">{score}%</div>
                   </div>
                   <div className="mt-1 h-1.5 bg-muted rounded">
-                    <div className="h-1.5 bg-blue-500 rounded" style={{ width: `${score}%` }} />
+                    <div className="h-1.5 bg-accent rounded" style={{ width: `${score}%` }} />
                   </div>
                 </div>
               </div>

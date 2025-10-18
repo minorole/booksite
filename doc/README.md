@@ -4,6 +4,7 @@ This folder hosts reusable project documentation. It’s organized for increment
 
 Structure
 - `adr/` — Architecture Decision Records (one file per decision).
+- `changelog.md` — Repository-level release log for notable AMTBCF updates.
 - `guides/` — How‑tos and playbooks (optional; add as needed).
 
 Conventions
@@ -16,4 +17,3 @@ How to add a new ADR
 2. Capture the problem, options considered, and the decision with rationale.
 3. Link impacted files and APIs, and add verification steps.
 4. Keep it concise and focused on the decision at hand.
-

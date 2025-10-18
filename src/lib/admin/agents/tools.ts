@@ -259,6 +259,7 @@ export function orderTools(): Tool<AgentContext>[] {
   return [update, getOrder, searchOrders]
 }
 
+// Compatibility: Some tests reference a helper to fetch tools for an agent by id.
 export function getToolsForAgent(agentId: 'router' | 'vision' | 'inventory' | 'orders'): Tool<AgentContext>[] {
   if (agentId === 'vision') return visionTools()
   if (agentId === 'inventory') return inventoryTools()

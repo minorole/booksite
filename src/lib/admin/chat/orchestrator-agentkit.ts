@@ -9,16 +9,18 @@ import { ADMIN_AGENT_MAX_TURNS_DEFAULT } from '@/lib/admin/constants'
 import { getModel } from '@/lib/openai/models'
 import { logAdminAction } from '@/lib/db/admin'
 import type { UILanguage } from '@/lib/admin/i18n'
+import { adminAiLogsEnabled, adminAiSensitiveEnabled } from '@/lib/observability/toggle'
 
 type SSEWriter = (event: Record<string, unknown>) => void
 
 function toAgentInput(messages: Message[], uiLanguage: UILanguage | undefined): AgentInputItem[] {
   const items: AgentInputItem[] = []
-  // Prepend a small, controlled system prelude to mirror UI language and extraction hints
-  const lang = uiLanguage === 'zh' ? 'Chinese' : 'English'
+  // System prelude: mirror user's last-message language when possible; fall back to UI language
+  // We don't limit languages; the model can respond in any language.
+  const fallbackName = uiLanguage === 'zh' ? 'Chinese' : 'English'
   items.push(
     msgSystem(
-      `UI language: ${uiLanguage || 'en'}. Reply in ${lang}. When extracting text from images or content, preserve original language/script and do not translate user-provided content.`
+      `When replying, mirror the language of the user's most recent message. If the language is unclear or there is no prior user text, default to ${fallbackName}. Preserve user-provided language/script when quoting content; do not translate quoted user text.`
     )
   )
   for (const m of messages) {
@@ -93,7 +95,20 @@ export async function runChatWithAgentsStream(params: {
   const input = toAgentInput(messages, params.uiLanguage)
 
   const model = getModel('text')
-  const runner = new Runner({ modelProvider: provider, model })
+  const traceMeta: Record<string, string> = {
+    route: '/api/admin/ai-chat/stream/orchestrated',
+    userEmail,
+    uiLanguage: params.uiLanguage || 'en',
+  }
+  if (params.requestId) traceMeta.request_id = params.requestId
+  const runner = new Runner({
+    modelProvider: provider,
+    model,
+    workflowName: 'Admin AI Chat',
+    traceMetadata: traceMeta,
+    // Default to redacting sensitive data unless explicitly enabled via env
+    traceIncludeSensitiveData: adminAiSensitiveEnabled(),
+  })
   const stream = await runner.run(startAgent as unknown as Parameters<typeof runner.run>[0], input, {
     stream: true,
     context,
@@ -105,6 +120,9 @@ export async function runChatWithAgentsStream(params: {
       // Agent change
       const e = evt as { type?: string; agent?: { name?: string } }
       if (e.type === 'agent_updated_stream_event') {
+        if (adminAiLogsEnabled()) {
+          try { console.log('[AdminAI orchestrator] agent_updated', { to: e.agent?.name, req: params.requestId?.slice(0, 8) }) } catch {}
+        }
         const events = normalizeAgentUpdatedToSSEEvents({ agent: e.agent })
         for (const ne of events) write(ne as Record<string, unknown>)
         continue
@@ -115,6 +133,9 @@ export async function runChatWithAgentsStream(params: {
         const name = ev.name as string
         const item = ev.item
         const raw = (item as { rawItem?: unknown } | undefined)?.rawItem
+        if (adminAiLogsEnabled()) {
+          try { console.log('[AdminAI orchestrator] run_item', { name, req: params.requestId?.slice(0, 8) }) } catch {}
+        }
         const events = normalizeRunItemToSSEEvents({ name, raw })
         for (const ne of events) {
           write(ne as Record<string, unknown>)
@@ -130,6 +151,13 @@ export async function runChatWithAgentsStream(params: {
               await logAdminAction({ action: 'FUNCTION_SUCCESS', admin_email: userEmail, metadata: { name: ne.name, call_id: ne.id, result: typeof ne.result === 'string' ? ne.result : '[json]' } })
             } catch (e) {
               console.error('logAdminAction failed (FUNCTION_SUCCESS)', e)
+            }
+          } else if (ne.type === 'assistant_delta') {
+            if (adminAiLogsEnabled()) {
+              try {
+                const txt = (ne as unknown as { content?: string }).content || ''
+                console.log('[AdminAI orchestrator] assistant_delta', { req: params.requestId?.slice(0, 8), len: txt.length, preview: txt.slice(0, 80) })
+              } catch {}
             }
           }
         }

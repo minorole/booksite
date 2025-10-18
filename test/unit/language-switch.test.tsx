@@ -7,7 +7,7 @@ import { LocaleProvider } from '@/contexts/LocaleContext'
 let routerPush: ((path: string) => void) | undefined
 vi.mock('next/navigation', () => ({
   usePathname: () => '/en/books/pure-land',
-  useRouter: () => ({ push: (...args: any[]) => routerPush?.(...args) }),
+  useRouter: () => ({ push: (path: string) => routerPush?.(path) }),
 }))
 
 const flush = () => new Promise((r) => setTimeout(r, 0))
@@ -53,7 +53,7 @@ describe('LanguageSwitch', () => {
     routerPush = push
     vi.doMock('next/navigation', () => ({
       usePathname: () => '/zh/books/pure-land',
-      useRouter: () => ({ push: (...args: any[]) => routerPush?.(...args) }),
+      useRouter: () => ({ push: (path: string) => routerPush?.(path) }),
     }))
     const { LanguageSwitch } = await import('@/components/layout/LanguageSwitch')
 
@@ -80,4 +80,3 @@ describe('LanguageSwitch', () => {
     expect(push).toHaveBeenCalledWith('/en/books/pure-land')
   })
 })
-

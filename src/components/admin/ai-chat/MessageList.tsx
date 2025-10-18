@@ -12,8 +12,8 @@ const MESSAGE_STYLES = {
     component: <User className="w-4 h-4" />,
   },
   assistant: {
-    container: "bg-blue-100 text-blue-900",
-    icon: "bg-blue-200 text-blue-700",
+    container: "bg-accent text-accent-foreground",
+    icon: "bg-accent-foreground/10 text-accent-foreground",
     component: <Bot className="w-4 h-4" />,
   },
   tool: {

@@ -4,8 +4,17 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Message } from '@/lib/admin/types'
 import { ERROR_MESSAGES, LOADING_MESSAGES, type UILanguage, mapUnknownError } from '@/lib/admin/i18n'
 import { useImageUpload } from './useImageUpload'
-import { parseSSEEvent, type SSEEvent } from '@/lib/admin/types/events'
+import type { SSEEvent } from '@/lib/admin/types/events'
 import { ADMIN_AI_IMAGE_HINT } from '@/lib/admin/constants'
+import { streamOrchestrated as sseStreamOrchestrated } from '@/lib/admin/chat/client/sse-transport'
+import { createAssistantBuffer } from '@/lib/admin/chat/client/assistant-buffer'
+
+const DEBUG_CLIENT_TRACE = !(
+  process.env.NEXT_PUBLIC_ADMIN_AI_TRACE_DISABLED === '1' ||
+  process.env.NEXT_PUBLIC_ADMIN_AI_TRACE_DISABLED === 'true' ||
+  process.env.NEXT_PUBLIC_ADMIN_AI_TRACE === '0' ||
+  process.env.NEXT_PUBLIC_ADMIN_AI_TRACE === 'false'
+)
 
 export function useChatSession(
   language: UILanguage = 'en',
@@ -33,56 +42,45 @@ export function useChatSession(
     setLoadingKey('processing')
     const ac = new AbortController()
     abortRef.current = ac
+    // local buffering handled by helper (createAssistantBuffer)
     try {
-      const res = await fetch('/api/admin/ai-chat/stream/orchestrated', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: payload.messages, uiLanguage: language }),
-        signal: ac.signal,
-      })
-      if (!res.ok || !res.body) throw new Error(ERROR_MESSAGES[language].network_error)
-
-      // Capture request id from header for observability
-      const headerReqId = res.headers.get('X-Request-ID')
-      if (headerReqId) opts?.onRequestId?.(headerReqId)
-
       // Create an assistant message placeholder
       let assistantIndex: number | null = null
       let haveAssistant = false
+      const buf = createAssistantBuffer()
       setMessages((prev) => {
         assistantIndex = prev.length
         return [...prev, { role: 'assistant', content: '' }]
       })
-
-      const reader = res.body.getReader()
-      const decoder = new TextDecoder()
-      let buffer = ''
-
-      // Find next SSE boundary among common variants (\n\n, \r\n\r\n, \r\r)
-      const findBoundary = (s: string): { idx: number; sepLen: number } => {
-        const seps = ['\r\n\r\n', '\n\n', '\r\r']
-        for (const sep of seps) {
-          const i = s.indexOf(sep)
-          if (i !== -1) return { idx: i, sepLen: sep.length }
-        }
-        return { idx: -1, sepLen: 0 }
-      }
-
-      const processBlock = (raw: string) => {
-        const lines = raw.split(/\r?\n/)
-        for (const ln of lines) {
-          const line = ln.trim()
-          if (!line.startsWith('data:')) continue
-          const json = line.slice(5).trim()
-          if (!json) continue
-          try {
-            const evt = parseSSEEvent(json)
-            if (!evt) continue
-            if (evt.request_id) opts?.onRequestId?.(evt.request_id)
-            switch (evt.type) {
-              case 'assistant_delta': {
-                const delta = evt.content
-                if (typeof delta === 'string' && assistantIndex !== null) {
+      await sseStreamOrchestrated({
+        messages: payload.messages,
+        uiLanguage: language,
+        signal: ac.signal,
+        onRequestId: (id) => id && opts?.onRequestId?.(id),
+        onEvent: (evt) => {
+          if (DEBUG_CLIENT_TRACE) {
+            try {
+              if ((evt as any).type === 'assistant_delta') {
+                const t = (evt as any).content || ''
+                console.debug('[AdminAI client]', { type: 'assistant_delta', req: (evt as any).request_id?.slice?.(0, 8), len: String(t).length, preview: String(t).slice(0, 80) })
+              } else {
+                console.debug('[AdminAI client]', { type: (evt as any).type, req: (evt as any).request_id?.slice?.(0, 8) })
+              }
+            } catch {}
+          }
+          if (evt.request_id) opts?.onRequestId?.(evt.request_id)
+          switch (evt.type) {
+            case 'assistant_delta': {
+              const delta = evt.content
+              if (typeof delta === 'string') {
+                buf.push(delta)
+                if (assistantIndex === null) {
+                  setMessages((prev) => {
+                    assistantIndex = prev.length
+                    return [...prev, { role: 'assistant', content: '' }]
+                  })
+                }
+                if (assistantIndex !== null) {
                   haveAssistant = true
                   setMessages((prev) => {
                     const next = [...prev]
@@ -92,92 +90,67 @@ export function useChatSession(
                     return next
                   })
                 }
-                break
               }
-              case 'handoff': {
-                const target = (evt?.to as string) || 'agent'
-                setSteps((prev) => [
-                  ...prev,
-                  { id: `handoff:${Date.now()}:${target}`, name: `handoff:${target}`, status: 'done' },
-                ])
-                break
-              }
-              case 'assistant_done': {
-                if (!haveAssistant && assistantIndex !== null) {
-                  // Remove empty placeholder
-                  setMessages((prev) => prev.slice(0, -1))
-                }
-                break
-              }
-              case 'error': {
-                // Surface server-side error events to the user
-                // This helps diagnose cases where no assistant/tool output appears
-                setError(
-                  typeof (evt as any).message === 'string'
-                    ? ((evt as any).message as string)
-                    : ERROR_MESSAGES[language].unknown_error
-                )
-                if (!haveAssistant && assistantIndex !== null) {
-                  // Remove empty placeholder on error when nothing streamed
-                  setMessages((prev) => prev.slice(0, -1))
-                }
-                break
-              }
-              case 'tool_start': {
-                setSteps((prev) => [...prev, { id: evt.id, name: evt.name, status: 'running' }])
-                break
-              }
-              case 'tool_result': {
-                setSteps((prev) =>
-                  prev.map((s) => (s.id === evt.id ? { ...s, status: evt.success ? 'done' : 'error' } : s))
-                )
-                opts?.onToolResult?.(evt)
-                break
-              }
-              case 'tool_append': {
-                const msg = evt.message as Message
-                setMessages((prev) => [...prev, msg])
-                break
-              }
-              default:
-                break
+              break
             }
-          } catch {
-            // ignore parse errors for partial lines
+            case 'handoff': {
+              const target = (evt?.to as string) || 'agent'
+              setSteps((prev) => [
+                ...prev,
+                { id: `handoff:${Date.now()}:${target}`, name: `handoff:${target}`, status: 'done' },
+              ])
+              break
+            }
+            case 'assistant_done': {
+              if (assistantIndex !== null) {
+                setMessages((prev) => {
+                  const next = [...prev]
+                  const current = next[assistantIndex!]
+                  const str = typeof current.content === 'string' ? current.content : ''
+                  if (!haveAssistant && buf.length() === 0) {
+                    next.pop()
+                    return next
+                  }
+                  if (buf.length() > str.length) {
+                    next[assistantIndex!] = { ...current, content: buf.value() }
+                  }
+                  return next
+                })
+              } else if (buf.length() > 0) {
+                setMessages((prev) => [...prev, { role: 'assistant', content: buf.value() }])
+              }
+              break
+            }
+            case 'error': {
+              setError(
+                typeof (evt as any).message === 'string'
+                  ? ((evt as any).message as string)
+                  : ERROR_MESSAGES[language].unknown_error
+              )
+              if (!haveAssistant && assistantIndex !== null) {
+                setMessages((prev) => prev.slice(0, -1))
+              }
+              break
+            }
+            case 'tool_start': {
+              setSteps((prev) => [...prev, { id: evt.id, name: evt.name, status: 'running' }])
+              break
+            }
+            case 'tool_result': {
+              setSteps((prev) => prev.map((s) => (s.id === evt.id ? { ...s, status: evt.success ? 'done' : 'error' } : s)))
+              opts?.onToolResult?.(evt)
+              break
+            }
+            case 'tool_append': {
+              const msg = evt.message as Message
+              setMessages((prev) => [...prev, msg])
+              break
+            }
+            default:
+              break
           }
-        }
-      }
-
-      while (true) {
-        const { value, done } = await reader.read()
-        if (done) {
-          // Flush decoder and process any remaining buffered block(s)
-          buffer += decoder.decode()
-          // Process all full blocks
-          while (true) {
-            const { idx, sepLen } = findBoundary(buffer)
-            if (idx === -1) break
-            const raw = buffer.slice(0, idx)
-            buffer = buffer.slice(idx + sepLen)
-            processBlock(raw)
-          }
-          // Process trailing data without a final boundary, if any
-          if (buffer.trim().length > 0) {
-            processBlock(buffer)
-            buffer = ''
-          }
-          break
-        }
-        buffer += decoder.decode(value, { stream: true })
-        // Drain available complete blocks
-        while (true) {
-          const { idx, sepLen } = findBoundary(buffer)
-          if (idx === -1) break
-          const raw = buffer.slice(0, idx)
-          buffer = buffer.slice(idx + sepLen)
-          processBlock(raw)
-        }
-      }
+        },
+      })
     } catch (err) {
       setError(mapUnknownError(language, err))
     } finally {
