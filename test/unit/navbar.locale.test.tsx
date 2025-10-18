@@ -89,6 +89,7 @@ describe('Navbar language links', () => {
 
     const hrefs = Array.from(container.querySelectorAll('a')).map(a => a.getAttribute('href'))
     expect(hrefs).toContain('/en/users/orders')
-    expect(hrefs).toContain('/en/admin/ai-chat')
+    // Admin pill now points to the canonical admin root which redirects to ai-chat
+    expect(hrefs).toContain('/en/admin')
   })
 })
