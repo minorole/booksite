@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 
-export default function AdminPage() {
-  // Mirror the non-localized admin root redirect but keep locale in URL
-  redirect('./ai-chat')
+export default async function AdminPage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params
+  // Redirect to the localized admin AI Chat page with explicit locale
+  redirect(`/${locale}/admin/ai-chat`)
 }
-
