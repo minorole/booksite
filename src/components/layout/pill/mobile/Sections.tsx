@@ -49,7 +49,7 @@ type MainListProps = {
 
 export function MainList({ items, activeHref, onClose }: MainListProps) {
   const sectionTitle = (content: React.ReactNode) => (
-    <div className="px-1.5 py-1 text-[13px] font-semibold text-neutral-500/90 uppercase tracking-wide">{content}</div>
+    <div className="sr-only">{content}</div>
   )
 
   return (
