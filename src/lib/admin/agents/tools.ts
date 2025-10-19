@@ -9,6 +9,7 @@ import { checkDuplicates } from '@/lib/admin/services/duplicates'
 import { createBook, updateBook, searchBooks, adjustBookQuantity } from '@/lib/admin/services/books'
 import { updateOrder } from '@/lib/admin/services/orders'
 import { getOrderDb, searchOrdersDb } from '@/lib/db/admin'
+import { HttpUrl } from '@/lib/schema/http-url'
 
 // Agent context
 export type AgentContext = {
@@ -23,7 +24,7 @@ export function visionTools(): Tool<AgentContext>[] {
       'Analyze a book cover image. For initial analysis, produce a natural summary and tentative fields; for structured stage, return the VisionAnalysisResult JSON.',
     strict: true,
     parameters: z.object({
-      image_url: z.string().url(),
+      image_url: HttpUrl,
       stage: z.enum(['initial', 'structured']),
       confirmed_info: z
         .object({
@@ -55,7 +56,7 @@ export function visionTools(): Tool<AgentContext>[] {
       author_en: z.string().nullable(),
       publisher_zh: z.string().nullable(),
       publisher_en: z.string().nullable(),
-      cover_image: z.string().url().nullable(),
+      cover_image: HttpUrl.nullable(),
     }),
     async execute(input: unknown, context?: RunContext<AgentContext>) {
       const email = context?.context?.userEmail || 'admin@unknown'
@@ -77,7 +78,7 @@ export function visionTools(): Tool<AgentContext>[] {
     description: 'Analyze a non-book item photo and return structured fields (name/type, material/finish, size/dimensions, category suggestion, tags).',
     strict: true,
     parameters: z.object({
-      image_url: z.string().url(),
+      image_url: HttpUrl,
     }),
     async execute(input: unknown, context?: RunContext<AgentContext>) {
       const email = context?.context?.userEmail || 'admin@unknown'
@@ -104,7 +105,7 @@ export function inventoryTools(): Tool<AgentContext>[] {
       category_type: z.enum(['PURE_LAND_BOOKS', 'OTHER_BOOKS', 'DHARMA_ITEMS', 'BUDDHA_STATUES']),
       quantity: z.number().int().min(0),
       tags: z.array(z.string()),
-      cover_image: z.string().url(),
+      cover_image: HttpUrl,
       author_zh: z.string().nullable(),
       author_en: z.string().nullable(),
       publisher_zh: z.string().nullable(),
@@ -137,7 +138,7 @@ export function inventoryTools(): Tool<AgentContext>[] {
       category_type: z.enum(['PURE_LAND_BOOKS', 'OTHER_BOOKS', 'DHARMA_ITEMS', 'BUDDHA_STATUES']).nullable(),
       quantity: z.number().int().min(0).nullable(),
       tags: z.array(z.string()).nullable(),
-      cover_image: z.string().url().nullable(),
+      cover_image: HttpUrl.nullable(),
     }),
     async execute(input: unknown, context?: RunContext<AgentContext>) {
       const email = context?.context?.userEmail || 'admin@unknown'

@@ -47,3 +47,22 @@ Validation: `npm run check:ci` passed (lint, typecheck, tests, build).
 ## 2025-10-16
 ### Added
 - [Docs] Documented the Admin AI UI roadmap to coordinate panel and observability workstreams (`doc/admin-ai/admin-ai-ui-roadmap.md:130`).
+
+## 2025-10-19
+
+### Fixed
+- [Agents] Replace Zod `.url()` with centralized Agents‑safe `HttpUrl` to avoid JSON Schema `format: 'uri'` in tool parameters.
+  - Added: `src/lib/schema/http-url.ts`
+  - Updated: `src/lib/admin/agents/tools.ts` parameters:
+    - `analyze_book_cover.parameters.image_url`
+    - `analyze_item_photo.parameters.image_url`
+    - `check_duplicates.parameters.cover_image`
+    - `create_book.parameters.cover_image`
+    - `update_book.parameters.cover_image`
+
+### Docs
+- [Admin AI] Mark inventory tool schema URI issue as Fixed and reference the `HttpUrl` helper (`doc/admin-ai/inventory-tool-schema-uri-format.md`).
+- Clarify low-stock warnings as planned (`doc/admin-ai/features.md`).
+
+### Build
+- Lint, typecheck, and Next.js build passed locally.

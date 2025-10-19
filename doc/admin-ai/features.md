@@ -31,7 +31,7 @@
 - Inventory help
   - Checks current stock.
   - Increases/decreases quantity on request.
-  - Warns about low stock.
+  - Planned: warns about low stock.
 
 - Search and find
   - Finds products by title/name, tag, category, or quantity range.
