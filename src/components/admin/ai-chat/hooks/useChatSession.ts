@@ -36,6 +36,23 @@ export function useChatSession(
     if (uploadError) setError(uploadError)
   }, [uploadError])
 
+  // Draft persistence (per UI language)
+  useEffect(() => {
+    try {
+      const key = `admin-ai-input-draft:${language}`
+      const saved = localStorage.getItem(key)
+      if (saved && messages.length === 0) setInput(saved)
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [language])
+
+  useEffect(() => {
+    try {
+      const key = `admin-ai-input-draft:${language}`
+      localStorage.setItem(key, input)
+    } catch {}
+  }, [input, language])
+
   const streamOrchestrated = useCallback(async (payload: { messages: Message[] }) => {
     setLoading(true)
     setError(null)
@@ -197,7 +214,10 @@ export function useChatSession(
     setError(null)
     setUploadError(null)
     setSteps([])
-  }, [setUploadError])
+    try {
+      localStorage.removeItem(`admin-ai-input-draft:${language}`)
+    } catch {}
+  }, [setUploadError, language])
 
   return {
     language,

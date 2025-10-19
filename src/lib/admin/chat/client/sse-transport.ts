@@ -1,5 +1,6 @@
 import type { Message } from '@/lib/admin/types'
 import type { UILanguage } from '@/lib/admin/i18n'
+import { ERROR_MESSAGES } from '@/lib/admin/i18n'
 import { parseSSEEvent, type SSEEvent } from '@/lib/admin/types/events'
 
 export async function streamOrchestrated(args: {
@@ -19,7 +20,24 @@ export async function streamOrchestrated(args: {
     body: JSON.stringify({ messages, uiLanguage }),
     signal,
   })
-  if (!res.ok || !res.body) throw new Error('Network error')
+  if (!res.ok || !res.body) {
+    const headerReqId = res.headers?.get?.('X-Request-ID') || null
+    if (headerReqId) onRequestId?.(headerReqId)
+    // Map common HTTP errors to localized messages
+    const lang: UILanguage = uiLanguage || 'en'
+    let msg: string = ERROR_MESSAGES[lang].network_error
+    if (res.status === 401) msg = ERROR_MESSAGES[lang].unauthorized
+    else if (res.status === 429) {
+      const remaining = res.headers.get('X-RateLimit-Remaining')
+      const reset = res.headers.get('X-RateLimit-Reset')
+      msg = ERROR_MESSAGES[lang].rate_limited + (remaining ? ` (remaining: ${remaining}${reset ? `, reset: ${reset}s` : ''})` : '')
+    }
+    else if (res.status === 503) msg = ERROR_MESSAGES[lang].server_unavailable
+    else if (res.status >= 500) msg = ERROR_MESSAGES[lang].server_error
+
+    onEvent({ type: 'error', message: msg, request_id: headerReqId, version: '1' } as any)
+    return
+  }
 
   const headerReqId = res.headers.get('X-Request-ID')
   if (headerReqId) onRequestId?.(headerReqId)

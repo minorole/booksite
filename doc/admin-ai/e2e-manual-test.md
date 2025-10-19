@@ -46,8 +46,8 @@ Helpful toggles/config:
 - UI consumption and rendering:
   - SSE client: src/lib/admin/chat/client/sse-transport.ts:1
   - Message stream buffer: src/components/admin/ai-chat/hooks/useChatSession.ts:1
-  - Results panel routing by tool name: src/components/admin/ai-chat/state/useResultsStore.tsx:1
-  - Cards: Duplicates/Search/Book/Order under src/components/admin/ai-chat/results/cards/**
+  - Inline rendering handled in MessageContent: src/components/admin/ai-chat/MessageContent.tsx:1
+  - Cards: Duplicates/Search/Book/Order under src/components/admin/ai-chat/cards/**
 
 
 ## A. New Book From Photo (Vision → Inventory)
@@ -69,7 +69,7 @@ Helpful toggles/config:
 - Expected SSE:
   - `tool_start` check_duplicates with extracted fields + optional cover (src/lib/admin/agents/tools.ts:47)
   - `tool_result` with `data.duplicate_detection.analysis.recommendation` (src/lib/admin/services/duplicates.ts:67)
-  - Results panel shows “Duplicate candidates” (src/components/admin/ai-chat/results/cards/DuplicateMatchesCard.tsx:1)
+  - Inline card shows “Duplicate candidates” (src/components/admin/ai-chat/cards/DuplicateMatchesCard.tsx:1)
 
 4) Structured analysis confirmation
 - Reply: “好的，继续结构化提取。”
@@ -136,7 +136,7 @@ Helpful toggles/config:
   - `handoff` to `Vision`
   - `tool_start` analyze_item_photo `{ image_url }` (src/lib/admin/agents/tools.ts:75)
   - `tool_result { success:true, data.item_analysis.structured_data }` (src/lib/admin/services/vision/item-analysis.ts:1)
-  - Assistant summarizes; panel remains informational unless you proceed to create an item as a book entry (out of current scope for items).
+  - Assistant summarizes; the inline analysis remains informational unless you proceed to create an item as a book entry (out of current scope for items).
 
 
 ## E. Bilingual Behavior & Language Mirroring
@@ -194,11 +194,11 @@ curl -F 'file=@/path/to/book.jpg' http://localhost:3000/api/upload
 ## UI Mapping Cheat‑Sheet
 
 - Handoff steps list: src/components/admin/ai-chat/hooks/useChatSession.ts:49
-- Results panel routing by tool name: src/components/admin/ai-chat/state/useResultsStore.tsx:21
-- Duplicate candidates card: src/components/admin/ai-chat/results/cards/DuplicateMatchesCard.tsx:1
-- Search results list: src/components/admin/ai-chat/results/cards/SearchResultsList.tsx:1
-- Book summary card: src/components/admin/ai-chat/results/cards/BookSummaryCard.tsx:1
-- Order update card: src/components/admin/ai-chat/results/cards/OrderUpdateCard.tsx:1
+- Inline rendering in MessageContent: src/components/admin/ai-chat/MessageContent.tsx:1
+- Duplicate candidates card: src/components/admin/ai-chat/cards/DuplicateMatchesCard.tsx:1
+- Search results list: src/components/admin/ai-chat/cards/SearchResultsList.tsx:1
+- Book summary card: src/components/admin/ai-chat/cards/BookSummaryCard.tsx:1
+- Order update card: src/components/admin/ai-chat/cards/OrderUpdateCard.tsx:1
 
 
 ## Troubleshooting
@@ -226,4 +226,3 @@ curl -F 'file=@/path/to/book.jpg' http://localhost:3000/api/upload
 ---
 
 If you want this plan as a runnable Playwright/Vitest test suite with mocked AgentKit and Supabase, we can scaffold it under `test/e2e/admin-ai/` following the event contract above.
-

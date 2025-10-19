@@ -8,7 +8,7 @@ export function OrderUpdateCard({ data }: { data: { order?: { order_id: string; 
   return (
     <div className="space-y-2">
       <h3 className="font-semibold"><Bilingual cnText="订单更新" enText="Order update" /></h3>
-      <div className="rounded border bg-background p-3 text-sm">
+      <div className="rounded-xl border bg-background p-3 text-sm shadow-sm">
         <div className="flex items-center justify-between">
           <span><Bilingual cnText="编号" enText="ID" />: {o.order_id}</span>
           {o.status && <span className="text-xs rounded px-2 py-0.5 bg-success/10 text-success">{o.status}</span>}
@@ -20,3 +20,4 @@ export function OrderUpdateCard({ data }: { data: { order?: { order_id: string; 
     </div>
   )
 }
+

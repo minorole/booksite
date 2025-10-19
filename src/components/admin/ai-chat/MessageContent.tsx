@@ -8,10 +8,11 @@ import Image from 'next/image'
 import { CATEGORY_LABELS } from '@/lib/admin/constants'
 import type { CategoryType } from '@/lib/db/enums'
 import type { DuplicateDetectionResult } from '@/lib/admin/types/results'
-import { DuplicateMatchesCard } from '@/components/admin/ai-chat/results/cards/DuplicateMatchesCard'
-import { SearchResultsList } from '@/components/admin/ai-chat/results/cards/SearchResultsList'
-import { BookSummaryCard } from '@/components/admin/ai-chat/results/cards/BookSummaryCard'
-import { OrderUpdateCard } from '@/components/admin/ai-chat/results/cards/OrderUpdateCard'
+import { DuplicateMatchesCard } from '@/components/admin/ai-chat/cards/DuplicateMatchesCard'
+import { SearchResultsList } from '@/components/admin/ai-chat/cards/SearchResultsList'
+import { BookSummaryCard } from '@/components/admin/ai-chat/cards/BookSummaryCard'
+import { OrderUpdateCard } from '@/components/admin/ai-chat/cards/OrderUpdateCard'
+import { Bilingual } from '@/components/common/bilingual'
 
 export function MessageContent({
   message,
@@ -30,23 +31,15 @@ export function MessageContent({
           if (content.type === 'image_url' && content.image_url?.url) {
             const imageUrl = content.image_url.url
             return (
-              <div key={i} className="relative group">
+              <div key={i} className="relative">
                 <Image
                   src={imageUrl}
-                  alt="Uploaded content"
+                  alt="User uploaded image"
                   width={512}
                   height={512}
                   className="max-w-sm h-auto rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
                   onClick={() => onSelectImage(imageUrl)}
                 />
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={() => onSelectImage(imageUrl)}
-                >
-                  <Expand className="h-4 w-4" />
-                </Button>
               </div>
             )
           }
@@ -73,25 +66,25 @@ export function MessageContent({
         const sd = item.structured_data
         return (
           <div className="space-y-2">
-            <p>Item analysis complete. Structured details:</p>
+            <p><Bilingual cnText="物品分析完成。结构化信息：" enText="Item analysis complete. Structured details:" /></p>
             <div className="pl-4 border-l-2 border-primary/20 space-y-1">
-              {sd.name && <p>Name: {sd.name}</p>}
-              {sd.type && <p>Type: {sd.type}</p>}
-              {sd.material && <p>Material: {sd.material}</p>}
-              {sd.finish && <p>Finish: {sd.finish}</p>}
-              {sd.size && <p>Size: {sd.size}</p>}
-              {sd.dimensions && <p>Dimensions: {sd.dimensions}</p>}
+              {sd.name && <p><Bilingual cnText="名称" enText="Name" />: {sd.name}</p>}
+              {sd.type && <p><Bilingual cnText="类型" enText="Type" />: {sd.type}</p>}
+              {sd.material && <p><Bilingual cnText="材质" enText="Material" />: {sd.material}</p>}
+              {sd.finish && <p><Bilingual cnText="表面" enText="Finish" />: {sd.finish}</p>}
+              {sd.size && <p><Bilingual cnText="尺寸" enText="Size" />: {sd.size}</p>}
+              {sd.dimensions && <p><Bilingual cnText="规格" enText="Dimensions" />: {sd.dimensions}</p>}
               {sd.category_suggestion && (
                 <p>
-                  Suggested Category: {sd.category_suggestion} ({CATEGORY_LABELS[sd.category_suggestion as CategoryType]})
+                  <Bilingual cnText="建议分类" enText="Suggested Category" />: {sd.category_suggestion} ({CATEGORY_LABELS[sd.category_suggestion as CategoryType]})
                 </p>
               )}
               {Array.isArray(sd.tags) && sd.tags.length > 0 && (
-                <p>Tags: {sd.tags.join(', ')}</p>
+                <p><Bilingual cnText="标签" enText="Tags" />: {sd.tags.join(', ')}</p>
               )}
               {Array.isArray(sd.quality_issues) && sd.quality_issues.length > 0 && (
                 <div className="mt-2">
-                  <p className="font-medium">Quality Issues:</p>
+                  <p className="font-medium"><Bilingual cnText="质量问题：" enText="Quality Issues:" /></p>
                   <ul className="list-disc list-inside">
                     {sd.quality_issues.map((issue: string, i: number) => (
                       <li key={i}>{issue}</li>
@@ -107,12 +100,12 @@ export function MessageContent({
         const sd = vision.structured_data
         return (
           <div className="space-y-2">
-            <p>Analysis complete! Here’s the structured data:</p>
+            <p><Bilingual cnText="分析完成！以下是结构化数据：" enText="Analysis complete! Here’s the structured data:" /></p>
             <div className="pl-4 border-l-2 border-primary/20 space-y-1">
-              <p>Confidence Score: {Math.round(sd.confidence_scores.overall * 100)}%</p>
-              <p>Language: {sd.language_detection.primary_language.toUpperCase()}</p>
+              <p><Bilingual cnText="置信度" enText="Confidence Score" />: {Math.round(sd.confidence_scores.overall * 100)}%</p>
+              <p><Bilingual cnText="语言" enText="Language" />: {sd.language_detection.primary_language.toUpperCase()}</p>
               {sd.visual_elements.notable_elements.length > 0 && (
-                <p>Notable Elements: {sd.visual_elements.notable_elements.join(', ')}</p>
+                <p><Bilingual cnText="重要元素" enText="Notable Elements" />: {sd.visual_elements.notable_elements.join(', ')}</p>
               )}
             </div>
           </div>
@@ -142,22 +135,22 @@ export function MessageContent({
         const a = vision.natural_analysis
         return (
           <div className="space-y-2">
-            <p>I’ve analyzed this book cover. Here’s what I found:</p>
+            <p><Bilingual cnText="我已分析该书封面，发现如下：" enText="I’ve analyzed this book cover. Here’s what I found:" /></p>
             <div className="pl-4 border-l-2 border-primary/20 space-y-1">
-              {a.title_zh && <p>Title (Chinese): {a.title_zh}</p>}
-              {a.title_en && <p>Title (English): {a.title_en}</p>}
-              {a.author_zh && <p>Author (Chinese): {a.author_zh}</p>}
-              {a.author_en && <p>Author (English): {a.author_en}</p>}
-              {a.publisher_zh && <p>Publisher (Chinese): {a.publisher_zh}</p>}
-              {a.publisher_en && <p>Publisher (English): {a.publisher_en}</p>}
+              {a.title_zh && <p><Bilingual cnText="标题（中文）" enText="Title (Chinese)" />: {a.title_zh}</p>}
+              {a.title_en && <p><Bilingual cnText="标题（英文）" enText="Title (English)" />: {a.title_en}</p>}
+              {a.author_zh && <p><Bilingual cnText="作者（中文）" enText="Author (Chinese)" />: {a.author_zh}</p>}
+              {a.author_en && <p><Bilingual cnText="作者（英文）" enText="Author (English)" />: {a.author_en}</p>}
+              {a.publisher_zh && <p><Bilingual cnText="出版社（中文）" enText="Publisher (Chinese)" />: {a.publisher_zh}</p>}
+              {a.publisher_en && <p><Bilingual cnText="出版社（英文）" enText="Publisher (English)" />: {a.publisher_en}</p>}
               {a.category_suggestion && (
                 <p>
-                  Suggested Category: {a.category_suggestion} ({CATEGORY_LABELS[a.category_suggestion as CategoryType]})
+                  <Bilingual cnText="建议分类" enText="Suggested Category" />: {a.category_suggestion} ({CATEGORY_LABELS[a.category_suggestion as CategoryType]})
                 </p>
               )}
               {a.quality_issues?.length ? (
                 <div className="mt-2">
-                  <p className="font-medium">Quality Issues:</p>
+                  <p className="font-medium"><Bilingual cnText="质量问题：" enText="Quality Issues:" /></p>
                   <ul className="list-disc list-inside">
                     {a.quality_issues.map((issue: string, i: number) => (
                       <li key={i}>{issue}</li>

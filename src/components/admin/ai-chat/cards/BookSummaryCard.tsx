@@ -10,7 +10,7 @@ export function BookSummaryCard({ data, mode }: { data: { book?: SummaryBook } |
   return (
     <div className="space-y-2">
       <h3 className="font-semibold">{mode === 'updated' ? <Bilingual cnText="书籍已更新" enText="Book updated" /> : <Bilingual cnText="书籍已创建" enText="Book created" />}</h3>
-      <div className="rounded border bg-background p-3">
+      <div className="rounded-xl border bg-background p-3 shadow-sm">
         <div className="font-medium">{book.title_en || book.title_zh || 'Untitled'}</div>
         <div className="text-xs text-muted-foreground mt-1 flex gap-2">
           {book.quantity !== undefined && <span><Bilingual cnText="数量" enText="Qty" />: {book.quantity}</span>}
@@ -23,3 +23,4 @@ export function BookSummaryCard({ data, mode }: { data: { book?: SummaryBook } |
     </div>
   )
 }
+

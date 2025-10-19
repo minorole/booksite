@@ -4,8 +4,9 @@ import { Button } from '@/components/ui/button'
 import { Bilingual } from '@/components/common/bilingual'
 import { useRouter } from 'next/navigation'
 import { useLocale } from '@/contexts/LocaleContext'
+import Image from 'next/image'
 
-type BookItem = { id: string; title_en?: string | null; title_zh?: string | null; quantity?: number; tags?: string[] }
+type BookItem = { id: string; title_en?: string | null; title_zh?: string | null; quantity?: number; tags?: string[]; cover_image?: string | null }
 
 export function DuplicateMatchesCard({ data }: { data: { duplicate_detection?: DuplicateDetectionResult; search?: { books: BookItem[] } } | null }) {
   const router = useRouter()
@@ -23,10 +24,17 @@ export function DuplicateMatchesCard({ data }: { data: { duplicate_detection?: D
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {matches.slice(0, 6).map((m, i) => {
           const score = Math.round((m.similarity_score || 0) * 100)
+          const book = (data?.search?.books || []).find((b) => b.id === m.book_id)
           return (
-            <div key={i} className="rounded border bg-background p-2">
+            <div key={i} className="rounded-xl border bg-background p-2 shadow-sm">
               <div className="flex items-start gap-2">
-                <div className="h-16 w-12 bg-muted rounded overflow-hidden" />
+                <div className="h-16 w-12 bg-muted rounded overflow-hidden flex items-center justify-center">
+                  {book?.cover_image ? (
+                    <Image src={book.cover_image} alt="Book cover" width={48} height={64} className="object-cover h-16 w-12" />
+                  ) : (
+                    <div className="h-full w-full bg-muted" />
+                  )}
+                </div>
                 <div className="flex-1">
                   <div className="flex items-center justify-between">
                     <div className="text-sm">Book #{m.book_id.slice(0, 8)}</div>
@@ -49,3 +57,4 @@ export function DuplicateMatchesCard({ data }: { data: { duplicate_detection?: D
     </div>
   )
 }
+

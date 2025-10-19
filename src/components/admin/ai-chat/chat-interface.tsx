@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { RefreshCw } from "lucide-react";
+import { Copy, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MessageList } from './MessageList';
 import { ChatInput } from './ChatInput';
@@ -14,14 +14,15 @@ import { StepList } from './StepList'
 import Image from 'next/image'
 import { useLocale } from '@/contexts/LocaleContext'
 import { Bilingual } from '@/components/common/bilingual'
-import { ResultStoreProvider, useResultsStore } from './state/useResultsStore'
-import { ResultsPanel } from './results/ResultsPanel'
+import { UI_STRINGS } from '@/lib/admin/i18n'
 
-function ChatBody() {
-  const [selectedImage, setSelectedImage] = useState<string | null>(null)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
+  function ChatBody() {
+    const [selectedImage, setSelectedImage] = useState<string | null>(null)
+    const messagesEndRef = useRef<HTMLDivElement>(null)
+    const listRef = useRef<HTMLDivElement>(null)
+    const [atBottom, setAtBottom] = useState(true)
+    const [requestId, setRequestId] = useState<string | null>(null)
   const { locale } = useLocale()
-  const results = useResultsStore()
   const {
     messages,
     input,
@@ -35,33 +36,66 @@ function ChatBody() {
     attachImage,
     reset,
   } = useChatSession(locale, {
-    onToolResult: (evt) => results.setFromToolResult(evt),
-    onRequestId: (id) => results.setRequestId(id),
+    onRequestId: (id) => setRequestId(id),
   })
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, loading])
+    if (atBottom) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [messages, loading, atBottom])
+
+  useEffect(() => {
+    const el = listRef.current
+    if (!el) return
+    const onScroll = () => {
+      const threshold = 64
+      const dist = el.scrollHeight - el.scrollTop - el.clientHeight
+      setAtBottom(dist <= threshold)
+    }
+    el.addEventListener('scroll', onScroll)
+    return () => el.removeEventListener('scroll', onScroll)
+  }, [])
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSelectedImage(null)
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [])
 
   return (
     <>
       <ErrorBanner error={error} onClose={() => setError(null)} />
 
       <div className="flex items-center justify-between p-4">
-        <div className="text-xs text-muted-foreground">
-          {results.requestId && (
-            <button
-              className="rounded px-2 py-0.5 hover:bg-muted"
-              onClick={() => navigator.clipboard.writeText(results.requestId!)}
-              title="Copy request id"
-            >
-              <Bilingual as="span" cnText="请求" enText="Request" />: {results.requestId.slice(0, 8)}
-            </button>
+        <div className="text-xs text-muted-foreground flex items-center gap-1">
+          {requestId && (
+            <>
+              <span><Bilingual as="span" cnText="请求" enText="Request" />: {requestId.slice(0, 8)}</span>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={() => navigator.clipboard.writeText(requestId!)}
+                title="Copy request id"
+                aria-label="Copy request id"
+              >
+                <Copy className="h-3.5 w-3.5" />
+              </Button>
+            </>
           )}
         </div>
-        <Button
+        <div className="flex items-center gap-2">
+          <Button
           onClick={() => {
-            results.reset()
+            if (input && input.trim().length > 0) {
+              const lang = locale === 'zh' ? 'zh' : 'en'
+              const ok = window.confirm(UI_STRINGS[lang].confirm_new_conversation)
+              if (!ok) return
+            }
+            setRequestId(null)
             reset()
           }}
           variant="outline"
@@ -72,17 +106,30 @@ function ChatBody() {
           <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
           <Bilingual as="span" cnText="新对话" enText="New Conversation" />
         </Button>
+        </div>
       </div>
 
       <StepList steps={steps} />
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="md:col-span-2">
+      <div className="grid grid-cols-1 gap-4 flex-1 min-h-0">
+        <div className="flex flex-col h-full min-h-0">
             <MessageList
               messages={messages}
               loading={loading}
               onSelectImage={(url) => setSelectedImage(url)}
               endRef={messagesEndRef}
+              containerRef={listRef}
             />
+
+            {!atBottom && (
+              <div className="px-4 -mt-2 mb-2">
+                <Button size="sm" variant="secondary" onClick={() => {
+                  messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+                  setAtBottom(true)
+                }}>
+                  <Bilingual cnText="跳至最新" enText="Jump to latest" />
+                </Button>
+              </div>
+            )}
 
             <ChatInput
               input={input}
@@ -90,10 +137,8 @@ function ChatBody() {
               onSubmit={sendText}
               onSelectFile={attachImage}
               loading={loading}
+              onError={(m) => setError(m)}
             />
-        </div>
-        <div className="block md:block">
-          <ResultsPanel />
         </div>
       </div>
 
@@ -103,7 +148,7 @@ function ChatBody() {
             <div className="relative w-full h-[85vh]">
               <Image
                 src={selectedImage}
-                alt="Full size content"
+                alt="Full-size image"
                 fill
                 sizes="(max-width: 1024px) 100vw, 1024px"
                 className="object-contain rounded-lg shadow-2xl"
@@ -114,6 +159,8 @@ function ChatBody() {
         </DialogContent>
       </Dialog>
 
+      {/* Single-stream mode: no separate results drawer */}
+
       <LoadingIndicator label={loadingLabel} />
 
       {/* Removed edit/confirm dialog per preference */}
@@ -123,10 +170,8 @@ function ChatBody() {
 
 export function ChatInterface() {
   return (
-    <div className="flex flex-col h-[calc(100vh-12rem)] max-w-[95%] sm:max-w-[90%] md:max-w-[85%] mx-auto">
-      <ResultStoreProvider>
-        <ChatBody />
-      </ResultStoreProvider>
+    <div className="flex flex-col h-[calc(100vh-12rem)] w-full max-w-6xl mx-auto px-4 sm:px-6">
+      <ChatBody />
     </div>
   )
 }

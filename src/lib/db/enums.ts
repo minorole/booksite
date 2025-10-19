@@ -21,14 +21,6 @@ export const CATEGORY_TYPES = [
 export type CategoryType = typeof CATEGORY_TYPES[number]
 
 export const ROLES: Role[] = ['USER', 'ADMIN', 'SUPER_ADMIN']
-export const ORDER_STATUSES: OrderStatus[] = [
-  'PENDING',
-  'CONFIRMED',
-  'PROCESSING',
-  'SHIPPED',
-  'COMPLETED',
-  'CANCELLED',
-]
 
 // Admin action types mirrored from SQL CHECK constraint on public.admin_logs.action
 export type AdminAction =
@@ -58,30 +50,4 @@ export type AdminAction =
   | 'CHAT_COMPLETE'
   | 'LLM_RETRY'
 
-export const ADMIN_ACTIONS: AdminAction[] = [
-  'DELETE_BOOK',
-  'EDIT_BOOK',
-  'CREATE_BOOK',
-  'UPDATE_QUANTITY',
-  'UPDATE_STATUS',
-  'PROCESS_ORDER',
-  'CANCEL_ORDER',
-  'MARK_SHIPPED',
-  'UPDATE_TRACKING',
-  'ANALYZE_IMAGE',
-  'CHECK_DUPLICATE',
-  'APPROVE_TAG',
-  'REJECT_TAG',
-  'UPDATE_TAGS',
-  'OVERRIDE_MONTHLY_LIMIT',
-  'UPDATE_SYSTEM_SETTINGS',
-  'UPDATE_PROMPTS',
-  'CHAT_MESSAGE',
-  'LLM_REQUEST',
-  'LLM_RESPONSE',
-  'FUNCTION_CALL',
-  'FUNCTION_SUCCESS',
-  'CONFIDENCE_CHECK_FAILED',
-  'CHAT_COMPLETE',
-  'LLM_RETRY',
-]
+// Removed unused ADMIN_ACTIONS array to avoid drift; use AdminAction union type instead

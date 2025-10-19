@@ -50,6 +50,10 @@ Validation: `npm run check:ci` passed (lint, typecheck, tests, build).
 
 ## 2025-10-19
 
+### Changed
+- [Admin UI] Switched Admin AI to a single‑stream chat: removed right‑pane ResultsPanel and the client results store. Inline cards remain the single source of truth. References: `src/components/admin/ai-chat/chat-interface.tsx`, removed `src/components/admin/ai-chat/results/ResultsPanel.tsx`, removed `src/components/admin/ai-chat/state/useResultsStore.tsx`.
+- [Admin UI] Removed the inline image "expand" overlay icon to reduce visual noise; click the image itself to zoom. Reference: `src/components/admin/ai-chat/MessageContent.tsx`.
+
 ### Fixed
 - [Agents] Replace Zod `.url()` with centralized Agents‑safe `HttpUrl` to avoid JSON Schema `format: 'uri'` in tool parameters.
   - Added: `src/lib/schema/http-url.ts`
@@ -63,6 +67,15 @@ Validation: `npm run check:ci` passed (lint, typecheck, tests, build).
 ### Docs
 - [Admin AI] Mark inventory tool schema URI issue as Fixed and reference the `HttpUrl` helper (`doc/admin-ai/inventory-tool-schema-uri-format.md`).
 - Clarify low-stock warnings as planned (`doc/admin-ai/features.md`).
+- [Admin UI] Roadmap updated to single‑stream chat; removed panel references and updated anchors to inline cards (`doc/admin-ai/admin-ai-ui-roadmap.md`).
+- [Admin UI] E2E manual test updated to reference inline cards and MessageContent mapping (`doc/admin-ai/e2e-manual-test.md`).
+- [ADR] Updated ADR‑0002 to note single‑stream inline cards replacing the right‑pane (`doc/adr/0002-server-orchestrated-ai-chat-ui-refactor-streaming-and-gpt5-mini.md`).
+
+### Cleanup
+- [Cleanup] Removed locale-less admin wrappers in favor of middleware + localized routes. References: `src/app/admin/page.tsx`, `src/app/admin/ai-chat/page.tsx`, `src/app/admin/manual/page.tsx`, `src/app/super-admin/page.tsx`.
+- [Infra] Pruned unused env getters for direct Postgres URLs (`DATABASE_URL`, `DIRECT_URL`) to reduce drift; retained `OPENAI_API_KEY_USER` and Upstash getters. Reference: `src/lib/config/env.ts`.
+- [Cleanup] Removed unused enum arrays (`ORDER_STATUSES`, `ADMIN_ACTIONS`); union types remain the single source of truth. Reference: `src/lib/db/enums.ts`.
+- [Admin UI] Moved result card components from `src/components/admin/ai-chat/results/cards/*` to `src/components/admin/ai-chat/cards/*` and updated imports; removed remaining panel/store code and mentions.
 
 ### Build
 - Lint, typecheck, and Next.js build passed locally.

@@ -38,7 +38,7 @@ export default function AdminAIChatPage() {
   }
 
   return (
-    <div className="container mx-auto py-8 theme-catppuccin">
+    <div className="container mx-auto py-4 theme-catppuccin">
       <ChatInterface />
     </div>
   );

@@ -1,45 +1,43 @@
-# Admin AI — UI Roadmap (Two‑Pane, Typed Events, Rich Panels)
+# Admin AI — UI Roadmap (Single‑Stream Chat, Typed Events, Rich Cards)
 
 Purpose
 - Provide a single source of truth for Admin AI UI work: milestones, status, acceptance, and code anchors.
 - Keep backend references minimal and only where UI integration depends on them (events, request IDs, uploads).
 
 Goals (UI‑centric)
-- Two‑pane workspace: chat (left) + persistent result panels (right).
+- Single‑stream workspace: chat shows all content including results inline.
 - Typed, versioned events consumed by UI; request_id shown in UI and used for traceability.
-- Rich, actionable panels for duplicates/search/create‑update/orders.
+- Rich, actionable cards for duplicates/search/create‑update/orders (inline in chat).
 - No visible confirm modal; confirmation is enforced server‑side via tool parameters.
 - Bilingual UI (EN/ZH) with consistent strings.
 - E2E coverage for streaming + render correctness.
 
 Status At A Glance
-- Current phase: Implementation — two‑pane + store shipped; result panels and i18n shipped; server‑enforced confirmation shipped.
+- Current phase: Implemented — moved from two‑pane to single‑stream; i18n shipped; server‑enforced confirmation shipped.
 - Risks/notes:
   - Event shape versioning: UI now consumes unwrapped domain payloads in `tool_result` (see Option B in integration notes).
   - Keep chat responsive while rendering rich panels (virtualization optional later).
 
 Milestones
 
-1) Two‑Pane Layout + Results Store + Typed Events
+1) Single‑Stream Chat + Typed Events
 - Status: done
 - Scope:
-  - Add right‑pane `ResultsPanel` rendered alongside chat.
-  - Introduce client store to hold the latest tool result and current panel type.
-  - UI consumes typed SSE events (v1) and includes `request_id` in display.
+  - Remove right pane and client store; render all results inline in chat.
+  - UI consumes typed SSE events (v1) and shows `request_id`.
 - Acceptance:
-  - A `tool_result` updates the right pane without relying on scrolling history.
-  - Each streamed event in UI carries `request_id`; UI exposes a small copy/peek control.
+  - A `tool_result` renders inline as a rich card.
+  - Request id is visible and copyable.
 - Code anchors:
   - Chat container: src/components/admin/ai-chat/chat-interface.tsx:1
   - Stream handler (UI): src/components/admin/ai-chat/hooks/useChatSession.ts:42
   - Event emission (server, reference only): src/lib/admin/chat/orchestrator-agentkit.ts:104,122,146
   - Stream route (reference only): src/app/api/admin/ai-chat/stream/orchestrated/route.ts:24
-- New files:
-  - src/components/admin/ai-chat/state/useResultsStore.ts (client store)
-  - src/components/admin/ai-chat/results/ResultsPanel.tsx (pane switch)
-  - src/lib/admin/types/events.ts (UI union for v1 events)
+  - Removed (legacy two‑pane):
+    - src/components/admin/ai-chat/state/useResultsStore.tsx
+    - src/components/admin/ai-chat/results/ResultsPanel.tsx
 
-2) Rich Domain Panels (Replace Summary Blocks)
+2) Rich Domain Cards Inline (Replace Summary Blocks)
 - Status: done (initial set)
 - Scope:
   - Duplicates: grid with cover thumbs, similarity bars, confidence, actions.
@@ -47,17 +45,17 @@ Milestones
   - Create/Update: summary card (title(s), category chip, qty, tags, cover) with deep‑link to editor.
   - Order Update: status badge, tracking display with copy.
 - Acceptance:
-  - Each tool result renders a dedicated panel in right pane with at least one action (e.g., “Open in editor”).
+  - Each tool result renders a dedicated inline card with at least one action (e.g., “Open in editor”).
 - Code anchors (current summary locations):
   - Duplicates summary: src/components/admin/ai-chat/MessageContent.tsx:127
   - Search summary: src/components/admin/ai-chat/MessageContent.tsx:143
   - Create/Update summary: src/components/admin/ai-chat/MessageContent.tsx:157
   - Order update summary: src/components/admin/ai-chat/MessageContent.tsx:167
 - New files:
-  - src/components/admin/ai-chat/results/DuplicateMatchesCard.tsx
-  - src/components/admin/ai-chat/results/SearchResultsList.tsx
-  - src/components/admin/ai-chat/results/BookSummaryCard.tsx
-  - src/components/admin/ai-chat/results/OrderUpdateCard.tsx
+  - src/components/admin/ai-chat/cards/DuplicateMatchesCard.tsx
+  - src/components/admin/ai-chat/cards/SearchResultsList.tsx
+  - src/components/admin/ai-chat/cards/BookSummaryCard.tsx
+  - src/components/admin/ai-chat/cards/OrderUpdateCard.tsx
   - Implemented deep‑link “Open in editor” from duplicates to manual editor.
 
 3) Confirmation (Server‑Enforced, No Visible Modal)
@@ -71,14 +69,14 @@ Milestones
   - Tool schemas/guards: src/lib/admin/agents/tools.ts:60–86, 99–126, 171–193
   - Agent instructions: src/lib/admin/agents/inventory.ts:6–11, src/lib/admin/agents/orders.ts:6–11
 
-4) i18n in Result Panels
+4) i18n in Result Cards
 - Status: done
 - Scope:
   - Wrap panel strings with existing bilingual/i18n patterns used in admin pages.
 - Acceptance:
   - All result panel labels render in the current UI language.
 - Code anchors:
-  - ResultsPane + cards: src/components/admin/ai-chat/results/ResultsPanel.tsx, src/components/admin/ai-chat/results/cards/*
+  - Cards: src/components/admin/ai-chat/cards/*
 
 5) Orders Admin Page (UI)
 - Status: planned
@@ -118,7 +116,7 @@ Milestones
   - Given a run, the UI shows a request_id that matches server logs.
 - Code anchors:
   - Stream handling (UI): src/components/admin/ai-chat/hooks/useChatSession.ts:51
-  - Headers + panel copy: src/components/admin/ai-chat/chat-interface.tsx, src/components/admin/ai-chat/results/ResultsPanel.tsx
+  - Request id copy: src/components/admin/ai-chat/chat-interface.tsx
 
 Tasks (tracked at high level)
 - Two‑pane + store + typed events consumer — status: done
@@ -129,7 +127,7 @@ Tasks (tracked at high level)
 - Server‑enforced confirmation — status: done
 - i18n pass on result panels — status: done
 - Orders page scaffold — status: planned
-- E2E streaming + panels test — status: planned
+- E2E streaming + inline cards test — status: planned
 - Observability (request_id in UI) — status: done (initial)
 
 References
@@ -138,5 +136,6 @@ References
 - Features (Admin AI): doc/admin-ai/features.md
 
 Changelog
-- 2025‑10‑16: Initial roadmap created (UI focus; no links added to AGENTS.md).
-- 2025‑10‑17: Adopted server‑enforced confirmation (no visible modal). Implemented Option B event contract (unwrapped domain payloads). Shipped i18n on result panels and deep‑link to editor.
+- 2025‑10‑16: Initial roadmap created (two‑pane focus).
+- 2025‑10‑17: Server‑enforced confirmation; Option B event contract; i18n on result cards and deep‑link to editor.
+- 2025‑10‑19: Switched to single‑stream chat; removed ResultsPanel and results store; cards render inline.

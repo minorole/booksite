@@ -10,8 +10,6 @@ const RequiredKeys = [
 ] as const
 
 const OptionalKeys = [
-  'DATABASE_URL',
-  'DIRECT_URL',
   'OPENAI_API_KEY_USER',
   'UPSTASH_REDIS_REST_URL',
   'UPSTASH_REDIS_REST_TOKEN',
@@ -47,8 +45,6 @@ export const env = {
   cloudinaryUrl: () => getEnv('CLOUDINARY_URL'),
 
   // Optional getters
-  databaseUrl: () => getOptionalEnv('DATABASE_URL'),
-  directUrl: () => getOptionalEnv('DIRECT_URL'),
   openaiApiKeyUser: () => getOptionalEnv('OPENAI_API_KEY_USER'),
   upstashUrl: () => getOptionalEnv('UPSTASH_REDIS_REST_URL'),
   upstashToken: () => getOptionalEnv('UPSTASH_REDIS_REST_TOKEN'),

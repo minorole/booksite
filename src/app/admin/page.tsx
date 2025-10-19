@@ -2,8 +2,9 @@ import { redirect } from 'next/navigation'
 import { headers } from 'next/headers'
 import { detectLocaleFromHeader } from '@/lib/i18n/config'
 
-export default async function AdminPage() {
+export default async function AdminRootRedirect() {
   const h = await headers()
   const locale = detectLocaleFromHeader(h.get('accept-language'))
   redirect(`/${locale}/admin/ai-chat`)
 }
+
