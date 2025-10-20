@@ -60,16 +60,30 @@
   }
 }
 
-/* Light-only Catppuccin scope for Admin AI */
+/* Catppuccin scope for Admin AI */
 @layer base {
   .theme-catppuccin {
     /* Accent (Lavender, Latte, softened to a light tint) */
     --accent: 230.9 97.2% 92%;
     --accent-foreground: 233.8 16.0% 35.5%;
+    /* Text tokens (Latte) */
+    --foreground: 233.8 16.0% 35.5%;       /* #4c4f69 */
+    --muted-foreground: 232.8 10.4% 47.3%; /* #6c6f85 */
     /* Status tokens (Catppuccin Latte) */
     --geist-success: #40a02b; /* green */
     --geist-error: #d20f39;   /* red */
     --geist-warning: #df8e1d; /* yellow */
+  }
+}
+
+/* Dark-mode override for Catppuccin (Mocha text) */
+@layer base {
+  .dark .theme-catppuccin {
+    /* Text tokens (Mocha) */
+    --foreground: 226.2 63.9% 88.0%;       /* #cdd6f4 */
+    --muted-foreground: 227.6 23.6% 71.8%; /* #a6adc8 */
+    /* Ensure accent labels remain legible on dark */
+    --accent-foreground: 226.2 63.9% 88.0%;
   }
 }
 

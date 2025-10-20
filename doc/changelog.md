@@ -2,6 +2,13 @@
 
 This log captures repo-wide AMTBCF changes across admin surfaces, shared services, and public-facing features. Entries appear in reverse chronological order, cite workspace-relative references for traceability, and label the affected area in brackets (e.g., `[Admin]`, `[Infra]`, `[Docs]`).
 
+## 2025-10-20
+### Changed
+- [Admin UI] Apply Catppuccin text tokens to Admin AI chat so message and UI text auto-inherit Catppuccin colors without component changes; added dark-mode (Mocha) variant. Scoped to the chat container to avoid side effects elsewhere. References: `src/app/globals.css:65-76`, `src/app/globals.css:81-88`, `src/app/[locale]/admin/ai-chat/page.tsx:41`.
+
+### Validation
+- Local check: token overrides are container-scoped; no background/image styles modified. Build and lint recommended: `npm run lint && npm run build`.
+
 ## 2025-10-18
 ### Added
 - [Admin] Request-scoped tracing and logs across the Admin AI flow; server logs include request lifecycle breadcrumbs and client logs trace SSE events (default ON; disable via env). References: `src/app/api/admin/ai-chat/stream/orchestrated/route.ts`, `src/lib/admin/chat/orchestrator-agentkit.ts`, `src/lib/observability/toggle.ts`, `src/components/admin/ai-chat/hooks/useChatSession.ts`.
