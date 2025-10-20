@@ -1,12 +1,12 @@
 import OpenAI from 'openai'
-import type { ChatCompletion, ChatCompletionChunk, ChatCompletionCreateParamsBase } from 'openai/resources/chat/completions'
+import type { ChatCompletion } from 'openai/resources/chat/completions'
 import { getAdminClient } from './client'
 import { getModel } from './models'
 import { logOperation } from './logging'
 import { OpenAIError } from './errors'
-import { iteratorToStream, createResponseIterator } from './stream'
 import { OPENAI_CONFIG } from './config'
 import type { ChatOptions, ChatResponse } from './types'
+import { createViaResponsesFromMessages } from './responses'
 
 export async function createVisionChatCompletion({
   messages,
@@ -36,23 +36,14 @@ export async function createVisionChatCompletion({
     })
 
     const client = getAdminClient()
-    const params: Pick<ChatCompletionCreateParamsBase, 'messages'> & { model: string; stream?: boolean; max_tokens?: number; temperature?: number; response_format?: unknown } = {
-      model: getModel('vision'),
-      messages,
-      stream,
+    const response = await createViaResponsesFromMessages(client, getModel('vision'), messages as any, {
       max_tokens: maxTokens,
       temperature: 0,
-      ...(response_format ? { response_format } : {}),
-    }
-    const response = await client.chat.completions.create(params as unknown as ChatCompletionCreateParamsBase)
+      response_format,
+    })
 
     const duration = Date.now() - startTime
     logOperation('VISION_RESPONSE', { duration, stream, imageCount, status: 'success' })
-
-    if (stream) {
-      const streamResp = response as unknown as AsyncIterable<ChatCompletionChunk>
-      return iteratorToStream(createResponseIterator(streamResp))
-    }
 
     return response as ChatCompletion
   } catch (error: unknown) {
