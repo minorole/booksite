@@ -4,7 +4,7 @@ This folder hosts reusable project documentation. It’s organized for increment
 
 Structure
 - `adr/` — Architecture Decision Records (one file per decision).
-- `changelog.md` — Repository-level release log for notable AMTBCF updates.
+- See `../CHANGELOG.md` for the repository-level release log.
 - `guides/` — How‑tos and playbooks (optional; add as needed).
 
 Conventions

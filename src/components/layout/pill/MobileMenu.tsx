@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
 import { gsap } from "gsap"
+import * as DialogPrimitive from "@radix-ui/react-dialog"
 import type { PillNavItem } from "./types"
 import { createClient } from "@/lib/supabase"
 import { useRouter } from "next/navigation"
@@ -39,11 +40,12 @@ export function MobileMenu({ items, activeHref, ease = "power3.easeOut", onToggl
 
   // Timelines
   const openTlRef = useRef<gsap.core.Timeline | null>(null)
-  const closeTweenRef = useRef<gsap.core.Tween | null>(null)
+  const closeTweenRef = useRef<gsap.core.Timeline | gsap.core.Tween | null>(null)
   const textTweenRef = useRef<gsap.core.Tween | null>(null)
 
-  // Initial setup for prelayers and text
+  // Initial setup for prelayers and text when mounting open state
   useLayoutEffect(() => {
+    if (!isOpen) return
     const panel = panelRef.current
     const preContainer = preLayersRef.current
     const textInner = textInnerRef.current
@@ -55,11 +57,11 @@ export function MobileMenu({ items, activeHref, ease = "power3.easeOut", onToggl
     }
     preLayerElsRef.current = preLayers
 
-    // Offscreen to the right
+    // Offscreen to the right before opening animation
     gsap.set([panel, ...preLayers], { xPercent: 100 })
     // Text stack initial position
     gsap.set(textInner, { yPercent: 0 })
-  }, [])
+  }, [isOpen])
 
   const buildOpenTimeline = useCallback(() => {
     const panel = panelRef.current
@@ -121,93 +123,24 @@ export function MobileMenu({ items, activeHref, ease = "power3.easeOut", onToggl
     textTweenRef.current = gsap.to(inner, { yPercent: target, duration: 0.45, ease: 'power3.out' })
   }, [])
 
-  // Handle open/close: overlay/panel/layers/items + body lock + focus
+  // Drive open/close via Radix: animate in/out and manage scroll/focus
   useEffect(() => {
-    const overlay = overlayRef.current
-    const panel = panelRef.current
-    if (!overlay || !panel) return
-    const reduce = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (!isOpen) return
+    // body scroll lock while open
+    document.body.classList.add('overflow-hidden')
+    previousFocusRef.current = (document.activeElement as HTMLElement | null) ?? null
 
-    if (isOpen) {
-      // visibility & pointer events (prelayers stay pointer-events: none)
-      gsap.set([overlay, panel], { visibility: 'visible', pointerEvents: 'auto' })
-      if (preLayersRef.current) gsap.set(preLayersRef.current, { visibility: 'visible', pointerEvents: 'none' })
+    // Build and play open animation
+    const tl = buildOpenTimeline()
+    tl?.play(0)
+    animateText(true)
 
-      // scroll lock
-      document.body.classList.add('overflow-hidden')
-
-      // focus restore target
-      previousFocusRef.current = (document.activeElement as HTMLElement | null) ?? null
-
-      // play open timeline
-      const tl = buildOpenTimeline()
-      tl?.play(0)
-
-      // toggle text animation
-      animateText(true)
-
-      // focus first focusable
-      const firstFocusable = panel.querySelector<HTMLElement>('a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"]), input, select, textarea')
-      firstFocusable?.focus()
-    } else {
-      // close timeline to slide out
-      const layers = preLayerElsRef.current
-      const all = [...layers, panel]
-      openTlRef.current?.kill()
-
-      const off = 100
-      closeTweenRef.current?.kill()
-      closeTweenRef.current = gsap.to(all, {
-        xPercent: off,
-        duration: reduce ? 0 : 0.32,
-        ease: 'power3.in',
-        overwrite: 'auto',
-        onComplete: () => {
-          // hide and reset
-          const itemEls = Array.from(panel.querySelectorAll<HTMLElement>('.sm-item'))
-          if (!reduce) gsap.set(itemEls, { yPercent: 140, rotate: 10 })
-          gsap.set([overlay, panel], { visibility: 'hidden', pointerEvents: 'none' })
-          if (preLayersRef.current) gsap.set(preLayersRef.current, { visibility: 'hidden', pointerEvents: 'none' })
-          gsap.set(overlay, { opacity: 0 })
-          
-        }
-      })
-
-      // release scroll
+    return () => {
       document.body.classList.remove('overflow-hidden')
-
-      // toggle text back
-      animateText(false)
-
-      // focus restoration
-      const hb = toggleBtnRef.current
-      if (hb) hb.focus()
-      else previousFocusRef.current?.focus()
     }
   }, [isOpen, buildOpenTimeline, animateText])
 
-  // Keyboard: ESC close + focus trap within panel
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (!isOpen) return
-      if (e.key === 'Escape') {
-        e.preventDefault(); e.stopPropagation(); setIsOpen(false); return
-      }
-      if (e.key === 'Tab') {
-        const panel = panelRef.current
-        if (!panel) return
-        const focusables = Array.from(panel.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"]), input, select, textarea')).filter(el => !el.hasAttribute('disabled') && el.tabIndex !== -1)
-        if (!focusables.length) return
-        const first = focusables[0]
-        const last = focusables[focusables.length - 1]
-        const active = document.activeElement as HTMLElement | null
-        if (!e.shiftKey && active === last) { e.preventDefault(); first.focus() }
-        else if (e.shiftKey && active === first) { e.preventDefault(); last.focus() }
-      }
-    }
-    document.addEventListener('keydown', onKeyDown, true)
-    return () => document.removeEventListener('keydown', onKeyDown, true)
-  }, [isOpen])
+  // Radix handles Escape and focus trap; no custom keydown needed
 
   // Close menu on viewport >= md (768px)
   useEffect(() => {
@@ -221,10 +154,46 @@ export function MobileMenu({ items, activeHref, ease = "power3.easeOut", onToggl
   // Safety: ensure body scroll restored on unmount
   useEffect(() => () => { document.body.classList.remove('overflow-hidden') }, [])
 
-  const toggle = () => { const next = !isOpen; setIsOpen(next); onToggle?.() }
+  // Centralized open/close so we animate out before unmounting Dialog
+  const requestClose = () => {
+    const panel = panelRef.current
+    const overlay = overlayRef.current
+    if (!panel || !overlay) { setIsOpen(false); return }
+    const layers = preLayerElsRef.current
+    const all = [...layers, panel]
+    const reduce = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    openTlRef.current?.kill()
+    animateText(false)
+    closeTweenRef.current?.kill()
+    closeTweenRef.current = gsap.timeline({
+      onComplete: () => {
+        setIsOpen(false)
+        const hb = toggleBtnRef.current
+        if (hb) hb.focus(); else previousFocusRef.current?.focus()
+      },
+    })
+    .to(all, { xPercent: 100, duration: reduce ? 0 : 0.32, ease: 'power3.in', overwrite: 'auto' }, 0)
+    .to(overlay, { opacity: 0, duration: reduce ? 0 : 0.22, ease: 'power3.in' }, 0)
+  }
+
+  const requestOpen = () => {
+    setIsOpen(true)
+  }
+
+  const handleOpenChange = (next: boolean) => {
+    if (next) requestOpen()
+    else requestClose()
+  }
+
+  const toggle = () => {
+    const next = !isOpen
+    if (next) requestOpen()
+    else requestClose()
+    onToggle?.()
+  }
 
   // Partition items for mobile: languages row at top; main items; account group at bottom.
-  const isLanguageItem = (it: PillNavItem) => typeof it.label === 'string' && (it.label === '中文' || it.label === 'English')
+  const isLanguageItem = (it: PillNavItem) => typeof it.label === 'string' && (it.label === '中文' || it.label === 'English' || it.label === 'ENGLISH')
   const isSignInItem = (it: PillNavItem) => typeof it.href === 'string' && it.href.includes('/auth/signin')
 
   const langItems = items.filter(isLanguageItem)
@@ -268,66 +237,67 @@ export function MobileMenu({ items, activeHref, ease = "power3.easeOut", onToggl
         </span>
       </button>
 
-      {/* Overlay */}
-      <div
-        ref={overlayRef}
-        className="md:hidden fixed inset-0 z-[997] bg-black/40"
-        style={{ visibility: 'hidden', opacity: 0, pointerEvents: 'none' }}
-        onClick={() => setIsOpen(false)}
-        aria-hidden={!isOpen}
-      />
+      <DialogPrimitive.Root open={isOpen} onOpenChange={handleOpenChange}>
+        <DialogPrimitive.Portal>
+          {/* Overlay */}
+          <DialogPrimitive.Overlay
+            ref={overlayRef}
+            className="md:hidden fixed inset-0 z-[997] bg-black/40"
+            // opacity animated by GSAP
+            style={{ opacity: 0 }}
+          />
 
-      {/* Prelayers (behind panel) */}
-      <div
-        ref={preLayersRef}
-        className="md:hidden fixed inset-y-0 right-0 z-[998] pointer-events-none"
-        style={{ visibility: 'hidden', opacity: 1, width: 'min(50vw, 420px)' }}
-        aria-hidden="true"
-      >
-        <div className="sm-prelayer absolute inset-y-0 right-0 w-full" style={{ background: 'var(--base, #000)', opacity: 0.10 }} />
-        <div className="sm-prelayer absolute inset-y-0 right-0 w-full" style={{ background: 'var(--base, #000)', opacity: 0.14 }} />
-        <div className="sm-prelayer absolute inset-y-0 right-0 w-full" style={{ background: 'var(--base, #000)', opacity: 0.18 }} />
-      </div>
-
-      {/* Side panel */}
-      <aside
-        ref={panelRef}
-        id={menuId}
-        role="dialog"
-        aria-modal="true"
-        aria-label="Mobile navigation"
-        className="md:hidden fixed inset-y-0 right-0 z-[999] overflow-y-auto overscroll-contain"
-        style={{ visibility: 'hidden', pointerEvents: 'none', width: 'min(50vw, 420px)' }}
-      >
-        <div className="relative h-full w-full bg-white/95 backdrop-blur-md px-5 py-6 flex flex-col gap-4">
-          {/* In-panel close button */}
-          <button
-            type="button"
-            aria-label="Close menu"
-            onClick={() => setIsOpen(false)}
-            className="absolute right-3 top-3 inline-flex items-center justify-center w-9 h-9 rounded-full bg-black/10 text-black hover:bg-black/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-black/30"
+          {/* Prelayers (behind panel) */}
+          <div
+            ref={preLayersRef}
+            className="md:hidden fixed inset-y-0 right-0 z-[998] pointer-events-none"
+            style={{ opacity: 1, width: 'min(50vw, 420px)' }}
+            aria-hidden="true"
           >
-            <span aria-hidden className="text-xl leading-none">×</span>
-          </button>
-          <nav className="flex-1 flex flex-col gap-2" aria-label="Mobile">
-            {/* Languages row at top */}
-            <LanguageRow langItems={langItems} onClose={() => setIsOpen(false)} />
+            <div className="sm-prelayer absolute inset-y-0 right-0 w-full" style={{ background: 'var(--base, #000)', opacity: 0.10 }} />
+            <div className="sm-prelayer absolute inset-y-0 right-0 w-full" style={{ background: 'var(--base, #000)', opacity: 0.14 }} />
+            <div className="sm-prelayer absolute inset-y-0 right-0 w-full" style={{ background: 'var(--base, #000)', opacity: 0.18 }} />
+          </div>
 
-            {/* Main navigation items */}
-            <MainList items={mainItems} activeHref={activeHref} onClose={() => setIsOpen(false)} />
+          {/* Side panel */}
+          <DialogPrimitive.Content
+            ref={panelRef}
+            id={menuId}
+            aria-label="Mobile navigation"
+            className="md:hidden fixed inset-y-0 right-0 z-[999] overflow-y-auto overscroll-contain"
+            style={{ width: 'min(50vw, 420px)' }}
+          >
+            <div className="relative h-full w-full bg-white/95 backdrop-blur-md px-5 py-6 flex flex-col gap-4">
+              {/* In-panel close button */}
+              <button
+                type="button"
+                aria-label="Close menu"
+                onClick={requestClose}
+                className="absolute right-3 top-3 inline-flex items-center justify-center w-9 h-9 rounded-full bg-black/10 text-black hover:bg-black/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-black/30"
+              >
+                <span aria-hidden className="text-xl leading-none">×</span>
+              </button>
+              <nav className="flex-1 flex flex-col gap-2" aria-label="Mobile">
+                {/* Languages row at top */}
+                <LanguageRow langItems={langItems} onClose={requestClose} />
 
-            {/* Account group at bottom (hidden when avatar/custom is present). Keep account-only actions. */}
-            {!hasUserCustom && (
-              <AccountSection
-                signInItem={signInItem}
-                hasUserCustom={hasUserCustom}
-                onClose={() => setIsOpen(false)}
-                onSignOut={handleSignOut}
-              />
-            )}
-          </nav>
-        </div>
-      </aside>
+                {/* Main navigation items */}
+                <MainList items={mainItems} activeHref={activeHref} onClose={requestClose} />
+
+                {/* Account group at bottom (hidden when avatar/custom is present). Keep account-only actions. */}
+                {!hasUserCustom && (
+                  <AccountSection
+                    signInItem={signInItem}
+                    hasUserCustom={hasUserCustom}
+                    onClose={requestClose}
+                    onSignOut={handleSignOut}
+                  />
+                )}
+              </nav>
+            </div>
+          </DialogPrimitive.Content>
+        </DialogPrimitive.Portal>
+      </DialogPrimitive.Root>
     </>
   )
 }

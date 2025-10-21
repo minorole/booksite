@@ -1,8 +1,7 @@
 import type { User, SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/supabase.generated'
 import { env } from '@/lib/config/env'
-
-export type Role = 'USER' | 'ADMIN' | 'SUPER_ADMIN'
+import type { Role } from '@/lib/db/enums'
 
 export const LINK_EXPIRY_MS = 15 * 60 * 1000
 

@@ -587,6 +587,17 @@ export type Database = {
           role: string
         }[]
       }
+      list_users_paginated: {
+        Args: { page_limit?: number; page_offset?: number; q?: string }
+        Returns: {
+          created_at: string
+          email: string
+          id: string
+          name: string
+          role: string
+          total_count: number
+        }[]
+      }
       place_order: {
         Args: { items: Json; shipping_address_id: string; user_id: string }
         Returns: string
@@ -654,6 +665,10 @@ export type Database = {
         Returns: number
       }
       update_user_role: {
+        Args: { new_role: string; uid: string }
+        Returns: undefined
+      }
+      update_user_role_secure: {
         Args: { new_role: string; uid: string }
         Returns: undefined
       }

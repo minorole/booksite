@@ -29,10 +29,9 @@ Environment toggles
   - Disable with `ADMIN_AI_TRACE_DISABLED=1`.
 
 Tests
-- Unit tests for the transport live in `src/lib/admin/chat/client/__tests__/sse-transport.test.ts`.
+- Unit tests for the transport live under the root test suite at `test/unit/sse-transport.test.ts`.
 - Run all tests: `npm run test`.
 
 Notes
 - These helpers are UI-agnostic and can be reused by other chat views.
 - The chat hook `src/components/admin/ai-chat/hooks/useChatSession.ts` composes these utilities and owns React state updates.
-

@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
 import { assertAdmin, UnauthorizedError } from '@/lib/security/guards'
-import { getServerDb } from '@/lib/db/client'
+import { createRouteSupabaseClient } from '@/lib/supabase'
 import { ROLES, type Role } from '@/lib/db/enums'
+import { checkRateLimit, rateLimitHeaders } from '@/lib/security/ratelimit'
+import { logAdminAction } from '@/lib/db/admin'
 
 export async function PUT(request: Request) {
   try {
@@ -23,37 +25,58 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
     }
 
-  const db = await getServerDb()
-
-  // Fetch roles to enforce SUPER_ADMIN protections
-  const { data: allUsers, error: listErr } = await db.rpc('list_users')
-  if (listErr) {
-    return NextResponse.json({ error: 'Failed to validate roles' }, { status: 500 })
-  }
-  type UserRow = { id: string; role: Role }
-  const arr = (allUsers ?? []) as UserRow[]
-  const me = arr.find((u) => u.id === user.id)
-  const target = arr.find((u) => u.id === userId)
-  if (!me || !target) {
-    return NextResponse.json({ error: 'Failed to validate roles' }, { status: 500 })
-  }
-  const myRole = me.role as Role
-  const targetRole = target.role as Role
-
-    // Only a SUPER_ADMIN can change a SUPER_ADMIN or assign SUPER_ADMIN
-    const isRequesterSuper = myRole === 'SUPER_ADMIN'
-    const touchingSuper = targetRole === 'SUPER_ADMIN' || role === 'SUPER_ADMIN'
-    if (!isRequesterSuper && touchingSuper) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    // Rate limit per admin (lightweight guardrail)
+    const rl = await checkRateLimit({ route: '/api/users/role', userId: user.id })
+    if (rl.enabled && !rl.allowed) {
+      return NextResponse.json({ error: 'Too Many Requests' }, { status: 429, headers: rateLimitHeaders(rl) })
     }
-    // Prevent accidental self-demotion from SUPER_ADMIN
-    if (isRequesterSuper && user.id === userId && role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Cannot demote your own SUPER_ADMIN role' }, { status: 400 })
+    if (!rl.enabled && process.env.NODE_ENV === 'production') {
+      return NextResponse.json({ error: 'Rate limiting unavailable' }, { status: 503 })
     }
 
-    const { error } = await db.rpc('update_user_role', { uid: userId, new_role: role })
+    const db = await createRouteSupabaseClient()
+    // Fetch target's current role for audit logging
+    const { data: targetProfile, error: targetErr } = await db
+      .from('profiles')
+      .select('role')
+      .eq('id', userId)
+      .single<{ role: Role }>()
+    if (targetErr || !targetProfile) {
+      return NextResponse.json({ error: 'Target user not found' }, { status: 404 })
+    }
+
+    // Delegate all guardrails to SQL function
+    const { error } = await db.rpc('update_user_role_secure', { uid: userId, new_role: role })
     if (error) {
+      const msg = (error.message || '').toLowerCase()
+      if (msg.includes('forbidden_super')) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
+      if (msg.includes('self_demote_forbidden')) {
+        return NextResponse.json({ error: 'Cannot demote your own SUPER_ADMIN role' }, { status: 400 })
+      }
+      if (msg.includes('last_super_forbidden')) {
+        return NextResponse.json({ error: 'Cannot demote the last SUPER_ADMIN' }, { status: 400 })
+      }
+      if (msg.includes('forbidden')) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
+      if (msg.includes('invalid role')) {
+        return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
+      }
       return NextResponse.json({ error: 'Failed to update role' }, { status: 500 })
+    }
+
+    // Admin audit log for role updates
+    try {
+      await logAdminAction({
+        action: 'UPDATE_USER_ROLE',
+        admin_email: user.email!,
+        metadata: { target_user_id: userId, from_role: targetProfile.role, to_role: role },
+      })
+    } catch (e) {
+      // Non-blocking
+      console.warn('Admin log failed for UPDATE_USER_ROLE', e)
     }
 
     return NextResponse.json({ ok: true })

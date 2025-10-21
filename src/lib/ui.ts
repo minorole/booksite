@@ -7,6 +7,16 @@ export const HOVER_LIFT_SHADOW = [
   "focus-within:ring-2 focus-within:ring-neutral-300",
 ].join(" ")
 
+// Standard focus treatment for input-like controls
+// - Keep an accessible ring; hide the inner border to avoid a double outline
+export const FOCUS_RING = [
+  "focus-visible:outline-none",
+  "focus-visible:border-transparent",
+  "focus-visible:ring-2",
+  "focus-visible:ring-ring",
+  "focus-visible:ring-offset-2",
+].join(" ")
+
 // Home page input thresholds
 // - EN: words (space-separated)
 // - ZH: characters (ignoring whitespace), since spaces are uncommon

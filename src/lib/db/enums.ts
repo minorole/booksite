@@ -49,5 +49,6 @@ export type AdminAction =
   | 'CONFIDENCE_CHECK_FAILED'
   | 'CHAT_COMPLETE'
   | 'LLM_RETRY'
+  | 'UPDATE_USER_ROLE'
 
 // Removed unused ADMIN_ACTIONS array to avoid drift; use AdminAction union type instead

@@ -51,9 +51,15 @@ function toAgentInput(messages: Message[], uiLanguage: UILanguage | undefined): 
       } else if (Array.isArray(m.content)) {
         const content: Array<Record<string, unknown>> = []
         for (const c of m.content) {
-          if (c.type === 'text') content.push({ type: 'input_text', text: c.text })
-          else if (c.type === 'image_url' && c.image_url?.url)
-            content.push({ type: 'input_image', image: c.image_url.url })
+          if (c.type === 'text') {
+            content.push({ type: 'input_text', text: c.text })
+          } else if (c.type === 'image_url' && c.image_url?.url) {
+            const url = c.image_url.url
+            // Provide both the image itself and an explicit text copy of the URL
+            // so tools that require an `image_url` string can be called reliably.
+            content.push({ type: 'input_image', image: url })
+            content.push({ type: 'input_text', text: `image_url: ${url}` })
+          }
         }
         if (content.length > 0) items.push(msgUser(content as unknown as Parameters<typeof msgUser>[0]))
       }

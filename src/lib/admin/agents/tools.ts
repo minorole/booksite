@@ -105,11 +105,15 @@ export function inventoryTools(): Tool<AgentContext>[] {
       category_type: z.enum(['PURE_LAND_BOOKS', 'OTHER_BOOKS', 'DHARMA_ITEMS', 'BUDDHA_STATUES']),
       quantity: z.number().int().min(0),
       tags: z.array(z.string()),
-      cover_image: HttpUrl,
+      // Accept either cover_image or cover_url; map to cover_image in execute
+      cover_image: HttpUrl.nullable(),
+      cover_url: HttpUrl.nullable(),
       author_zh: z.string().nullable(),
       author_en: z.string().nullable(),
       publisher_zh: z.string().nullable(),
       publisher_en: z.string().nullable(),
+      // Optional vision analysis payload passthrough
+      analysis_result: z.any().nullable(),
     }),
     async execute(input: unknown, context?: RunContext<AgentContext>) {
       const email = context?.context?.userEmail || 'admin@unknown'
@@ -119,7 +123,15 @@ export function inventoryTools(): Tool<AgentContext>[] {
       }
       // Remove guard param before calling service
       const { confirmed: _c, ...rest } = payload
-      const result = await createBook(rest as unknown as import('@/lib/admin/types').BookCreate, email)
+      const mapped: Record<string, unknown> = { ...rest }
+      if (!mapped.cover_image && !mapped.cover_url) {
+        return { success: false, message: 'cover image required', error: { code: 'validation_error', details: 'missing_cover' } }
+      }
+      if (!mapped.cover_image && typeof mapped.cover_url === 'string') {
+        mapped.cover_image = mapped.cover_url
+      }
+      delete mapped.cover_url
+      const result = await createBook(mapped as unknown as import('@/lib/admin/types').BookCreate, email)
       return result
     },
   })
@@ -139,6 +151,9 @@ export function inventoryTools(): Tool<AgentContext>[] {
       quantity: z.number().int().min(0).nullable(),
       tags: z.array(z.string()).nullable(),
       cover_image: HttpUrl.nullable(),
+      cover_url: HttpUrl.nullable(),
+      // Allow attaching updated analysis data
+      analysis_result: z.any().nullable(),
     }),
     async execute(input: unknown, context?: RunContext<AgentContext>) {
       const email = context?.context?.userEmail || 'admin@unknown'
@@ -154,6 +169,10 @@ export function inventoryTools(): Tool<AgentContext>[] {
         }
       }
       delete sanitized.confirmed
+      if (!('cover_image' in sanitized) && typeof (sanitized as any).cover_url === 'string') {
+        sanitized.cover_image = (sanitized as any).cover_url
+      }
+      delete (sanitized as any).cover_url
       const result = await updateBook(sanitized as unknown as import('@/lib/admin/types').BookUpdate, email)
       return result
     },
