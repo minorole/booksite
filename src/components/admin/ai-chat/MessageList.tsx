@@ -7,7 +7,7 @@ import { MessageContent } from './MessageContent'
 
 const MESSAGE_STYLES = {
   user: {
-    container: "bg-primary/10 text-foreground border border-primary/20",
+    container: "bg-accent/10 text-foreground border border-accent/20",
     icon: "bg-primary/15 text-primary",
     component: <User className="w-4 h-4" />,
     row: "flex-row-reverse text-right",
