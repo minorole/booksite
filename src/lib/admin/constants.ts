@@ -52,3 +52,6 @@ export const ADMIN_AI_IMAGE_HINT = {
   en: 'Add a note for this image (e.g., “Analyze item photo”, “Check duplicates”, “Create a book draft”).',
   zh: '为此图片添加说明（例如：“分析物品照片”、“检查重复”、“创建书目草稿”）。',
 } as const
+
+// Feature flags for Admin AI UI
+export const ADMIN_AI_RICH_ASSISTANT_TEXT = true as const

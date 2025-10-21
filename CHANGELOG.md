@@ -31,6 +31,16 @@ All notable changes to this project will be documented in this file.
   - Force Latte foreground on user/assistant message text wrapper; tool/system remain muted.
     - File: `src/components/admin/ai-chat/MessageList.tsx:61,66`.
 ### Added
+- [Admin AI Chat • Rich text] Optional auto-styling of assistant messages using Catppuccin palette (feature‑flagged).
+  - New renderer `RichTextAuto` supports lead paragraph, bullet lists, label — description lines, links, and **bold**.
+    - File: `src/components/admin/ai-chat/RichTextAuto.tsx`.
+  - Palette variables and utilities (`text-ctp-*`) added for Latte/Mocha.
+    - File: `src/app/globals.css`.
+  - Flag `ADMIN_AI_RICH_ASSISTANT_TEXT` (default: ON).
+    - File: `src/lib/admin/constants.ts`.
+  - Wired for assistant messages only (array text items and plain text).
+    - File: `src/components/admin/ai-chat/MessageContent.tsx`.
+### Added
 - [Super Admin] SQL guardrails for role updates via `update_user_role_secure`: admin-only; only SUPER_ADMIN can touch/assign SUPER_ADMIN; prevent self-demotion; prevent demoting the last SUPER_ADMIN. Reference: `supabase/migrations/0006_user_mgmt_hardening.sql`.
 - [Super Admin] Paginated users listing RPC with server-side search and `total_count` via window function. Reference: `supabase/migrations/0007_user_list_totalcount.sql`.
 - [Super Admin] One-time backfill to ensure every `auth.users` has a `public.profiles` row (defaults to `USER`). Reference: `supabase/migrations/0008_backfill_profiles.sql`.

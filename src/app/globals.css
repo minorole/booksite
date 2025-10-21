@@ -73,6 +73,15 @@
     --geist-success: #40a02b; /* green */
     --geist-error: #d20f39;   /* red */
     --geist-warning: #df8e1d; /* yellow */
+
+    /* Catppuccin Latte palette (subset) */
+    --ctp-lavender: #7287fd;
+    --ctp-mauve: #8839ef;
+    --ctp-blue: #1e66f5;
+    --ctp-green: #40a02b;
+    --ctp-yellow: #df8e1d;
+    --ctp-red: #d20f39;
+    --ctp-peach: #fe640b;
   }
 }
 
@@ -84,6 +93,15 @@
     --muted-foreground: 227.6 23.6% 71.8%; /* #a6adc8 */
     /* Ensure accent labels remain legible on dark */
     --accent-foreground: 226.2 63.9% 88.0%;
+
+    /* Catppuccin Mocha palette (subset) */
+    --ctp-lavender: #b4befe;
+    --ctp-mauve: #cba6f7;
+    --ctp-blue: #89b4fa;
+    --ctp-green: #a6e3a1;
+    --ctp-yellow: #f9e2af;
+    --ctp-red: #f38ba8;
+    --ctp-peach: #fab387;
   }
 }
 
@@ -186,6 +204,14 @@
 }
 
 @layer utilities {
+  /* Catppuccin color utilities (light/dark resolve via variables) */
+  .text-ctp-lavender { color: var(--ctp-lavender); }
+  .text-ctp-mauve { color: var(--ctp-mauve); }
+  .text-ctp-blue { color: var(--ctp-blue); }
+  .text-ctp-green { color: var(--ctp-green); }
+  .text-ctp-yellow { color: var(--ctp-yellow); }
+  .text-ctp-red { color: var(--ctp-red); }
+  .text-ctp-peach { color: var(--ctp-peach); }
   .animate-delay-0 {
     animation-delay: 0ms;
   }

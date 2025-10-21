@@ -324,6 +324,69 @@ export type Database = {
           },
         ]
       }
+      order_shipping_addresses: {
+        Row: {
+          address1: string
+          address2: string | null
+          city: string
+          country: string
+          created_at: string
+          id: string
+          normalized: Json | null
+          order_id: string
+          phone: string | null
+          recipient_name: string | null
+          state: string
+          user_id: string
+          zip: string
+        }
+        Insert: {
+          address1: string
+          address2?: string | null
+          city: string
+          country?: string
+          created_at?: string
+          id?: string
+          normalized?: Json | null
+          order_id: string
+          phone?: string | null
+          recipient_name?: string | null
+          state: string
+          user_id: string
+          zip: string
+        }
+        Update: {
+          address1?: string
+          address2?: string | null
+          city?: string
+          country?: string
+          created_at?: string
+          id?: string
+          normalized?: Json | null
+          order_id?: string
+          phone?: string | null
+          recipient_name?: string | null
+          state?: string
+          user_id?: string
+          zip?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_shipping_addresses_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_shipping_addresses_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           admin_notes: string | null
@@ -331,6 +394,7 @@ export type Database = {
           id: string
           llm_processing_log: Json | null
           notes: string | null
+          order_shipping_address_id: string | null
           override_monthly: boolean
           processed_by: string | null
           processing_started_at: string | null
@@ -347,6 +411,7 @@ export type Database = {
           id?: string
           llm_processing_log?: Json | null
           notes?: string | null
+          order_shipping_address_id?: string | null
           override_monthly?: boolean
           processed_by?: string | null
           processing_started_at?: string | null
@@ -363,6 +428,7 @@ export type Database = {
           id?: string
           llm_processing_log?: Json | null
           notes?: string | null
+          order_shipping_address_id?: string | null
           override_monthly?: boolean
           processed_by?: string | null
           processing_started_at?: string | null
@@ -374,6 +440,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "orders_order_shipping_address_id_fkey"
+            columns: ["order_shipping_address_id"]
+            isOneToOne: false
+            referencedRelation: "order_shipping_addresses"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "orders_shipping_address_id_fkey"
             columns: ["shipping_address_id"]
@@ -422,13 +495,17 @@ export type Database = {
       }
       shipping_addresses: {
         Row: {
+          address_hash: string | null
           address1: string
           address2: string | null
           city: string
           country: string
           created_at: string
           id: string
+          is_default: boolean
           is_valid: boolean
+          phone: string | null
+          recipient_name: string | null
           state: string
           updated_at: string
           user_id: string
@@ -436,13 +513,17 @@ export type Database = {
           zip: string
         }
         Insert: {
+          address_hash?: string | null
           address1: string
           address2?: string | null
           city: string
           country?: string
           created_at?: string
           id?: string
+          is_default?: boolean
           is_valid?: boolean
+          phone?: string | null
+          recipient_name?: string | null
           state: string
           updated_at?: string
           user_id: string
@@ -450,13 +531,17 @@ export type Database = {
           zip: string
         }
         Update: {
+          address_hash?: string | null
           address1?: string
           address2?: string | null
           city?: string
           country?: string
           created_at?: string
           id?: string
+          is_default?: boolean
           is_valid?: boolean
+          phone?: string | null
+          recipient_name?: string | null
           state?: string
           updated_at?: string
           user_id?: string

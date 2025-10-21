@@ -13,6 +13,8 @@ import { SearchResultsList } from '@/components/admin/ai-chat/cards/SearchResult
 import { BookSummaryCard } from '@/components/admin/ai-chat/cards/BookSummaryCard'
 import { OrderUpdateCard } from '@/components/admin/ai-chat/cards/OrderUpdateCard'
 import { Bilingual } from '@/components/common/bilingual'
+import { ADMIN_AI_RICH_ASSISTANT_TEXT } from '@/lib/admin/constants'
+import { RichTextAuto } from './RichTextAuto'
 
 export function MessageContent({
   message,
@@ -43,7 +45,13 @@ export function MessageContent({
               </div>
             )
           }
-          return content.type === 'text' && <p key={i}>{content.text}</p>
+          if (content.type === 'text') {
+            if (message.role === 'assistant' && ADMIN_AI_RICH_ASSISTANT_TEXT) {
+              return <RichTextAuto key={i} text={content.text || ''} />
+            }
+            return <p key={i}>{content.text}</p>
+          }
+          return null
         })}
       </div>
     )
@@ -169,5 +177,8 @@ export function MessageContent({
     }
   }
 
+  if (message.role === 'assistant' && ADMIN_AI_RICH_ASSISTANT_TEXT) {
+    return <RichTextAuto text={String(message.content)} />
+  }
   return <p>{String(message.content)}</p>
 }

@@ -24,6 +24,8 @@ type ShippingAddress = {
   state?: string | null
   zip?: string | null
   country?: string | null
+  recipient_name?: string | null
+  phone?: string | null
 }
 
 function formatAddress(addr: ShippingAddress | null | undefined): string {
@@ -43,8 +45,8 @@ export async function getUserOrders(userId: string): Promise<UserOrderProjection
 
   const sel = `
     id, status, total_items, created_at,
-    shipping_addresses:shipping_addresses!orders_shipping_address_id_fkey (
-      address1, address2, city, state, zip, country
+    order_shipping_addresses (
+      recipient_name, phone, address1, address2, city, state, zip, country
     ),
     order_items (
       quantity,
@@ -67,7 +69,7 @@ export async function getUserOrders(userId: string): Promise<UserOrderProjection
     status: string
     total_items: number
     created_at: string
-    shipping_addresses: ShippingAddress | null
+    order_shipping_addresses: ShippingAddress | null
     order_items: Array<{ quantity: number; books: { title_en: string | null; title_zh: string | null } | null }>
   }
 
@@ -76,7 +78,7 @@ export async function getUserOrders(userId: string): Promise<UserOrderProjection
     status: o.status,
     total_items: o.total_items,
     created_at: o.created_at,
-    shipping_address: formatAddress(o.shipping_addresses),
+    shipping_address: formatAddress(o.order_shipping_addresses),
     order_items: Array.isArray(o.order_items)
       ? o.order_items.map((oi) => ({
           book: {

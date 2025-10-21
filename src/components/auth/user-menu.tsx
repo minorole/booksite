@@ -14,7 +14,7 @@ import { createClient } from "@/lib/supabase"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/AuthContext"
 import Link from "next/link"
-import { LogOut, Package, Shield } from "lucide-react"
+import { LogOut, Package, Shield, MapPin } from "lucide-react"
 import { Bilingual } from "@/components/common/bilingual"
 import { useLocale } from "@/contexts/LocaleContext"
 import { cn } from "@/lib/utils"
@@ -74,6 +74,12 @@ export function UserMenu() {
           <Link href={`/${locale}/users/orders`} className="cursor-pointer flex items-center">
             <Package className="mr-2 h-4 w-4" />
             <Bilingual as="span" cnText="我的订单" enText="My Orders" />
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href={`/${locale}/users/addresses`} className="cursor-pointer flex items-center">
+            <MapPin className="mr-2 h-4 w-4" />
+            <Bilingual as="span" cnText="我的地址" enText="My Addresses" />
           </Link>
         </DropdownMenuItem>
         {isSuperAdmin && (
