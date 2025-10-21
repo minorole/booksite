@@ -9,8 +9,44 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 - fix(vision): resolve `400 Unsupported parameter: 'max_tokens'` on `gpt-5-mini` by using Responses `max_output_tokens` via the centralized path. Vision tools now return structured JSON without error.
+- fix(vision): resolve `400 Unsupported parameter: 'temperature'` on `gpt-5-mini` image runs by omitting `temperature` for vision calls and guarding `temperature` in the Responses wrapper when any `input_image` is present.
+  - Files: `src/lib/openai/vision.ts:39`, `src/lib/openai/responses.ts:118`.
 
 ## 2025-10-21
+### Fixed
+- [Super Admin • Users API] 500 on `GET /api/users` when DB RPCs return varchar vs text. Casted RPC return columns to `text` and normalized `total_count` parsing.
+  - Files: `supabase/migrations/0010_fix_user_list_types.sql`, `src/app/api/users/route.ts:39`.
+- [Users API] Auth context not forwarded to admin RPCs. Switched to route-scoped Supabase client so `auth.uid()` is present under RLS.
+  - Files: `src/app/api/users/route.ts:1,24`, `src/app/api/users/role/route.ts:1,37`.
+- [Orders API • History] 500 on `GET /api/orders/user` due to ambiguous join. Explicitly selected the snapshot relation and switched to route client.
+  - File: `src/lib/db/orders.ts:44`.
+
+### Added
+- [Addresses • API] New endpoints to manage a user’s address (RLS-protected):
+  - `GET /api/addresses` — returns the current (active) address.
+  - `POST /api/addresses` — upserts the current address (update in place or insert if none).
+  - `PUT /api/addresses/[id]` — updates only the user’s active address by id.
+  - Files: `src/app/api/addresses/route.ts`, `src/app/api/addresses/[id]/route.ts`.
+- [Addresses • UI] “My Addresses” page with a single editable form for the current address; added menu link.
+  - Files: `src/app/[locale]/users/addresses/page.tsx`, `src/components/auth/user-menu.tsx`.
+- [Orders • Snapshots] Introduced immutable per-order address snapshots to preserve history.
+  - Tables/links: `public.order_shipping_addresses`, `orders.order_shipping_address_id`.
+  - Migrations: `supabase/migrations/0011_order_address_snapshot.sql`, `0012_replace_place_order_snapshot.sql`, `0013_backfill_order_address_snapshots.sql`.
+
+### Changed
+- [Orders • place_order] Hardened and disambiguated the SQL function:
+  - Validates address ownership; snapshots address; uses non-conflicting param names `p_user_id`, `p_shipping_address_id`.
+  - Migration: `supabase/migrations/0017_fix_place_order_and_seed.sql`.
+- [Addresses • Data Model] Enforced “one current address per user” while retaining order history:
+  - Added `shipping_addresses.is_archived` and a partial unique index to allow exactly one active address per user; archived rows keep FKs for legacy refs.
+  - Migration: `supabase/migrations/0018_single_active_address.sql`.
+- [Orders • History Reader] Switched reader to snapshot source and explicit FK selector; uses route-scoped client.
+  - File: `src/lib/db/orders.ts`.
+
+### Notes
+- Seed migrations that proved unreliable via CLI were removed in favor of the consolidated fix+seed in `0017`.
+  - Removed files (staged earlier, then deleted): `0014_seed_test_orders_junpeng_me_com.sql`, `0015_seed_orders_for_super_admin.sql`, `0016_seed_super_admin_function.sql`.
+
 ### Fixed
 - [Admin AI Chat] Remove the large outer outline around the input area.
   - Dropped container border/shadow on the sticky bar so no outer rectangle renders.

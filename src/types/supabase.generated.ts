@@ -502,6 +502,7 @@ export type Database = {
           country: string
           created_at: string
           id: string
+          is_archived: boolean
           is_default: boolean
           is_valid: boolean
           phone: string | null
@@ -520,6 +521,7 @@ export type Database = {
           country?: string
           created_at?: string
           id?: string
+          is_archived?: boolean
           is_default?: boolean
           is_valid?: boolean
           phone?: string | null
@@ -538,6 +540,7 @@ export type Database = {
           country?: string
           created_at?: string
           id?: string
+          is_archived?: boolean
           is_default?: boolean
           is_valid?: boolean
           phone?: string | null
@@ -684,7 +687,7 @@ export type Database = {
         }[]
       }
       place_order: {
-        Args: { items: Json; shipping_address_id: string; user_id: string }
+        Args: { items: Json; p_shipping_address_id: string; p_user_id: string }
         Returns: string
       }
       search_books: {

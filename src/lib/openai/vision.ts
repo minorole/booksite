@@ -38,7 +38,6 @@ export async function createVisionChatCompletion({
     const client = getAdminClient()
     const response = await createViaResponsesFromMessages(client, getModel('vision'), messages as any, {
       max_tokens: maxTokens,
-      temperature: 0,
       response_format,
     })
 

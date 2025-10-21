@@ -1,4 +1,4 @@
-import { getServerDb } from '@/lib/db/client'
+import { createRouteSupabaseClient } from '@/lib/supabase'
 
 type OrderItemProjection = {
   book: {
@@ -41,11 +41,11 @@ function formatAddress(addr: ShippingAddress | null | undefined): string {
 }
 
 export async function getUserOrders(userId: string): Promise<UserOrderProjection[]> {
-  const db = await getServerDb()
+  const db = await createRouteSupabaseClient()
 
   const sel = `
     id, status, total_items, created_at,
-    order_shipping_addresses (
+    order_shipping_addresses:order_shipping_addresses!orders_order_shipping_address_id_fkey (
       recipient_name, phone, address1, address2, city, state, zip, country
     ),
     order_items (

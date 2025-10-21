@@ -115,14 +115,25 @@ export async function createViaResponsesFromMessages(
     }
   }
 
-  const rsp = await client.responses.create({
+  // Only include temperature when there are no image inputs.
+  // Some vision models via Responses API reject top-level `temperature` when images are present.
+  const hasImage = Array.isArray(input) && input.some((it: any) => {
+    const content = (it && Array.isArray((it as any).content)) ? (it as any).content : []
+    return content.some((c: any) => c && (c.type === 'input_image'))
+  })
+
+  const payload: any = {
     model,
     input,
     instructions,
-    temperature: opts?.temperature,
     max_output_tokens: opts?.max_tokens,
     ...(textConfig ? { text: textConfig } : {}),
-  } as any)
+  }
+  if (!hasImage && typeof opts?.temperature === 'number') {
+    payload.temperature = opts.temperature
+  }
+
+  const rsp = await client.responses.create(payload as any)
 
   if (!rsp.id) throw new OpenAIError('Responses API returned no id', 'api_error')
 

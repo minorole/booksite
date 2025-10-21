@@ -8,16 +8,16 @@ export async function GET() {
     const db = await createRouteSupabaseClient()
     const { data, error } = await db
       .from('shipping_addresses')
-      .select('id, recipient_name, phone, address1, address2, city, state, zip, country, is_default, is_valid, validation_log, created_at')
+      .select('id, recipient_name, phone, address1, address2, city, state, zip, country, is_valid, validation_log, created_at')
       .eq('user_id', user.id)
-      .order('is_default', { ascending: false })
-      .order('created_at', { ascending: false })
+      .eq('is_archived', false)
+      .maybeSingle()
     if (error) throw error
-    return NextResponse.json({ addresses: data ?? [] })
+    return NextResponse.json({ address: data ?? null })
   } catch (e) {
     if (e instanceof UnauthorizedError) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     console.error('addresses GET error', e)
-    return NextResponse.json({ error: 'Failed to fetch addresses' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to fetch address' }, { status: 500 })
   }
 }
 
@@ -35,42 +35,66 @@ export async function POST(request: Request) {
       state,
       zip,
       country = 'US',
-      is_default = false,
     } = body || {}
 
     if (!address1 || !city || !state || !zip) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    // Simple normalized hash for dedupe (lowercase + trim)
     const norm = (v: unknown) => typeof v === 'string' ? v.trim().toLowerCase() : ''
     const address_hash = [recipient_name, phone, address1, address2, city, state, zip, country].map(norm).join('|')
 
-    // If setting default, clear previous default first (best-effort)
-    if (is_default) {
-      await db.from('shipping_addresses').update({ is_default: false }).eq('user_id', user.id).eq('is_default', true)
-    }
-
-    const { data, error } = await db
+    // Upsert: update existing active address, else insert new active
+    const { data: existing } = await db
       .from('shipping_addresses')
-      .insert({
-        user_id: user.id,
-        recipient_name: recipient_name ?? null,
-        phone: phone ?? null,
-        address1,
-        address2: address2 ?? null,
-        city,
-        state,
-        zip,
-        country,
-        is_default: Boolean(is_default),
-        is_valid: false,
-        address_hash,
-      })
       .select('id')
-      .single()
-    if (error) throw error
-    return NextResponse.json({ id: data?.id })
+      .eq('user_id', user.id)
+      .eq('is_archived', false)
+      .maybeSingle()
+
+    if (existing?.id) {
+      const { error: upErr } = await db
+        .from('shipping_addresses')
+        .update({
+          recipient_name: recipient_name ?? null,
+          phone: phone ?? null,
+          address1,
+          address2: address2 ?? null,
+          city,
+          state,
+          zip,
+          country,
+          address_hash,
+          is_archived: false,
+        })
+        .eq('id', existing.id)
+        .eq('user_id', user.id)
+        .eq('is_archived', false)
+      if (upErr) throw upErr
+      return NextResponse.json({ id: existing.id })
+    } else {
+      const { data, error } = await db
+        .from('shipping_addresses')
+        .insert({
+          user_id: user.id,
+          recipient_name: recipient_name ?? null,
+          phone: phone ?? null,
+          address1,
+          address2: address2 ?? null,
+          city,
+          state,
+          zip,
+          country,
+          is_valid: false,
+          address_hash,
+          is_archived: false,
+          is_default: true,
+        })
+        .select('id')
+        .single()
+      if (error) throw error
+      return NextResponse.json({ id: data?.id })
+    }
   } catch (e) {
     if (e instanceof UnauthorizedError) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     console.error('addresses POST error', e)
@@ -81,4 +105,3 @@ export async function POST(request: Request) {
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 export const revalidate = 0
-

@@ -3,6 +3,7 @@
 BEGIN;
 
 -- 1) Fix place_order to avoid ambiguous column/variable names
+DROP FUNCTION IF EXISTS public.place_order(uuid, uuid, jsonb);
 CREATE OR REPLACE FUNCTION public.place_order(
   p_user_id uuid,
   p_shipping_address_id uuid,
@@ -185,4 +186,3 @@ WHERE id = (
 );
 
 COMMIT;
-

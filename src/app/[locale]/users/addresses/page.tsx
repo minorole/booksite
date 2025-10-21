@@ -17,14 +17,13 @@ type Address = {
   state: string
   zip: string
   country: string
-  is_default: boolean
   is_valid: boolean
   created_at: string
-}
+} | null
 
 export default function AddressesPage() {
   const { user } = useAuth()
-  const [addresses, setAddresses] = useState<Address[]>([])
+  const [address, setAddress] = useState<Address>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({
@@ -36,7 +35,6 @@ export default function AddressesPage() {
     state: '',
     zip: '',
     country: 'US',
-    is_default: false,
   })
 
   const load = async () => {
@@ -44,7 +42,19 @@ export default function AddressesPage() {
     try {
       const res = await fetch('/api/addresses')
       const data = await res.json()
-      setAddresses(data.addresses ?? [])
+      setAddress(data.address ?? null)
+      if (data.address) {
+        setForm({
+          recipient_name: data.address.recipient_name ?? '',
+          phone: data.address.phone ?? '',
+          address1: data.address.address1 ?? '',
+          address2: data.address.address2 ?? '',
+          city: data.address.city ?? '',
+          state: data.address.state ?? '',
+          zip: data.address.zip ?? '',
+          country: data.address.country ?? 'US',
+        })
+      }
     } finally {
       setLoading(false)
     }
@@ -52,18 +62,13 @@ export default function AddressesPage() {
 
   useEffect(() => { if (user) load() }, [user])
 
-  const setDefault = async (id: string) => {
-    await fetch(`/api/addresses/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'set_default' }) })
-    await load()
-  }
-
   const add = async () => {
     setSaving(true)
     try {
       const res = await fetch('/api/addresses', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
       const data = await res.json()
       if (data.error) throw new Error(data.error)
-      setForm({ recipient_name: '', phone: '', address1: '', address2: '', city: '', state: '', zip: '', country: 'US', is_default: false })
+      setForm({ recipient_name: form.recipient_name, phone: form.phone, address1: form.address1, address2: form.address2, city: form.city, state: form.state, zip: form.zip, country: form.country })
       await load()
     } finally {
       setSaving(false)
@@ -91,34 +96,15 @@ export default function AddressesPage() {
           <Input placeholder="Country" value={form.country} onChange={(e) => setForm(f => ({ ...f, country: e.target.value }))} />
         </div>
         <div className="flex items-center gap-3">
-          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.is_default} onChange={(e) => setForm(f => ({ ...f, is_default: e.target.checked }))} /> Set as default</label>
-          <Button onClick={add} disabled={saving || !form.address1 || !form.city || !form.state || !form.zip}>{saving ? 'Saving…' : 'Add Address'}</Button>
+          <Button onClick={add} disabled={saving || !form.address1 || !form.city || !form.state || !form.zip}>{saving ? 'Saving…' : (address ? 'Save Address' : 'Add Address')}</Button>
         </div>
       </Card>
 
-      <div className="space-y-4">
-        {addresses.map(a => (
-          <Card key={a.id} className="p-6">
-            <div className="flex justify-between items-start">
-              <div className="text-sm">
-                <div className="font-medium">{a.recipient_name || 'Recipient'}</div>
-                <div className="whitespace-pre-line">
-                  {a.address1}{a.address2 ? `\n${a.address2}` : ''}\n{a.city}, {a.state} {a.zip}{a.country ? `\n${a.country}` : ''}
-                </div>
-                {a.phone && <div className="text-muted-foreground">{a.phone}</div>}
-              </div>
-              <div className="flex items-center gap-2">
-                {a.is_default ? (
-                  <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700">Default</span>
-                ) : (
-                  <Button variant="outline" size="sm" onClick={() => setDefault(a.id)}>Set Default</Button>
-                )}
-              </div>
-            </div>
-          </Card>
-        ))}
-      </div>
+      {address && (
+        <div className="text-sm text-muted-foreground">
+          Current address saved on {new Date(address.created_at).toLocaleDateString()}
+        </div>
+      )}
     </div>
   )
 }
-
