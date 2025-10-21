@@ -170,7 +170,7 @@ import { UI_STRINGS } from '@/lib/admin/i18n'
 
 export function ChatInterface() {
   return (
-    <div className="flex flex-col h-[calc(100vh-12rem)] w-full max-w-6xl mx-auto px-4 sm:px-6">
+    <div className="theme-catppuccin flex flex-col h-[calc(100vh-12rem)] w-full max-w-6xl mx-auto px-4 sm:px-6 text-foreground">
       <ChatBody />
     </div>
   )

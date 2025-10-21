@@ -58,12 +58,13 @@ export function MessageList({
           ? (message.role as keyof typeof MESSAGE_STYLES)
           : 'system'
         const style = MESSAGE_STYLES[role]
+        const textClass = role === 'assistant' || role === 'user' ? 'text-foreground' : ''
         return (
           <div key={i} className={cn("flex gap-3 p-4 rounded-2xl shadow-sm", style.container, style.row, style.align, "max-w-[65ch]") }>
             <div className={cn("w-8 h-8 rounded-full flex items-center justify-center shrink-0", style.icon)}>
               {style.component}
             </div>
-            <div className="flex-1 space-y-3 leading-6 text-[15px] overflow-hidden whitespace-pre-line">
+            <div className={cn("flex-1 space-y-3 leading-6 text-[15px] overflow-hidden whitespace-pre-line", textClass)}>
               <MessageContent
                 message={message}
                 loading={loading}

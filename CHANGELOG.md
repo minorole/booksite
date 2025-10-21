@@ -12,9 +12,24 @@ All notable changes to this project will be documented in this file.
 
 ## 2025-10-21
 ### Fixed
-- [Admin UI] Remove double-outline on the Admin AI chat input by hiding the inner border while focused; keep a single accessible focus ring. References: `src/components/ui/textarea.tsx`, `src/components/ui/input.tsx`.
+- [Admin AI Chat] Remove the large outer outline around the input area.
+  - Dropped container border/shadow on the sticky bar so no outer rectangle renders.
+    - File: `src/components/admin/ai-chat/ChatInput.tsx:42`.
+  - Made the textarea borderless with a subtle inner shadow (Option A) and removed all focus rings/offsets on this control.
+    - File: `src/components/admin/ai-chat/ChatInput.tsx:61`.
 ### Changed
-- [UI] Standardize focus behavior for input-like controls via a shared `FOCUS_RING` constant and refactor `Input` and `Textarea` to use it. This centralizes `focus-visible` styles (outline-none, border-transparent, ring-2, ring-ring, ring-offset-2) to avoid drift. References: `src/lib/ui.ts`, `src/components/ui/textarea.tsx`, `src/components/ui/input.tsx`.
+- [UI • Focus] Eliminate outer focus halo globally by removing ring offsets and relying on a border highlight; keep accessibility.
+  - Updated shared `FOCUS_RING` to `ring-0 ring-offset-0` with `border-ring` fallback.
+    - File: `src/lib/ui.ts:12`.
+  - Normalized components that used ring offsets: buttons, select trigger, toast action/close, dialog close; homepage textarea no longer adds a ring.
+    - Files: `src/components/ui/button.tsx:8`, `src/components/ui/select.tsx:22`, `src/components/ui/toast.tsx:65,80`, `src/components/ui/dialog.tsx:47`, `src/app/[locale]/HomeClient.tsx:83`.
+- [Admin AI Chat] Prevent any container-level outline: wrapper now explicitly disables `focus-within` rings/offsets and borders.
+  - File: `src/components/admin/ai-chat/ChatInput.tsx:45`.
+- [Admin AI Chat • Theme] Apply Catppuccin Latte text to message content (not only bubbles).
+  - Scoped `theme-catppuccin` and `text-foreground` at the chat root.
+    - File: `src/components/admin/ai-chat/chat-interface.tsx:173`.
+  - Force Latte foreground on user/assistant message text wrapper; tool/system remain muted.
+    - File: `src/components/admin/ai-chat/MessageList.tsx:61,66`.
 ### Added
 - [Super Admin] SQL guardrails for role updates via `update_user_role_secure`: admin-only; only SUPER_ADMIN can touch/assign SUPER_ADMIN; prevent self-demotion; prevent demoting the last SUPER_ADMIN. Reference: `supabase/migrations/0006_user_mgmt_hardening.sql`.
 - [Super Admin] Paginated users listing RPC with server-side search and `total_count` via window function. Reference: `supabase/migrations/0007_user_list_totalcount.sql`.
