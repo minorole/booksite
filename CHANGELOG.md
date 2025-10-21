@@ -4,8 +4,20 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+### Added
+- [Admin • Users API] Admin-only endpoint to view a specific user’s order history (includes per-order address snapshot).
+  - `GET /api/users/[userId]/orders`
+  - Files: `src/app/api/users/[userId]/orders/route.ts`, reuses `getUserOrders` from `src/lib/db/orders.ts`.
+- [Admin • User Management] New read‑only Admin page to view users and open per-user order history.
+  - Page: `src/app/[locale]/admin/users/page.tsx` (normal admins cannot see SUPER_ADMIN rows; super admins see all).
+  - Shared dialog: `src/components/super-admin/UserOrdersDialog.tsx` to display orders, items, and shipping address.
+- [Super Admin • User Management] Added “View Orders” action per user with the same dialog.
+  - File: `src/components/super-admin/super-admin-panel.tsx`.
+
 ### Changed
 - refactor(openai): migrate both text and vision to the Responses API (`client.responses.create`) with a centralized helper that converts chat-style messages (text + images) to Responses input and maps JSON schema output to `text.format`. Eliminates usage of Chat Completions in our wrappers.
+- [Admin • Navigation] Added "User Management" to Admin navbar and user menu for admins.
+  - Files: `src/components/admin/admin-navbar.tsx`, `src/components/auth/user-menu.tsx`.
 
 ### Fixed
 - fix(vision): resolve `400 Unsupported parameter: 'max_tokens'` on `gpt-5-mini` by using Responses `max_output_tokens` via the centralized path. Vision tools now return structured JSON without error.

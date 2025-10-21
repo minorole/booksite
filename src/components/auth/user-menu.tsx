@@ -14,7 +14,7 @@ import { createClient } from "@/lib/supabase"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/AuthContext"
 import Link from "next/link"
-import { LogOut, Package, Shield, MapPin } from "lucide-react"
+import { LogOut, Package, Shield, MapPin, Users } from "lucide-react"
 import { Bilingual } from "@/components/common/bilingual"
 import { useLocale } from "@/contexts/LocaleContext"
 import { cn } from "@/lib/utils"
@@ -38,7 +38,7 @@ function GlowSignIn() {
 export function UserMenu() {
   const router = useRouter()
   const supabase = createClient()
-  const { user, isSuperAdmin } = useAuth()
+  const { user, isSuperAdmin, isAdmin } = useAuth()
   const { locale } = useLocale()
 
   if (!user?.email) {
@@ -82,6 +82,14 @@ export function UserMenu() {
             <Bilingual as="span" cnText="我的地址" enText="My Addresses" />
           </Link>
         </DropdownMenuItem>
+        {isAdmin && (
+          <DropdownMenuItem asChild>
+            <Link href={`/${locale}/admin/users`} className="cursor-pointer flex items-center">
+              <Users className="mr-2 h-4 w-4" />
+              <Bilingual as="span" cnText="用户管理" enText="User Management" />
+            </Link>
+          </DropdownMenuItem>
+        )}
         {isSuperAdmin && (
           <DropdownMenuItem asChild>
             <Link href={`/${locale}/super-admin`} className="cursor-pointer flex items-center">

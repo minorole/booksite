@@ -18,6 +18,10 @@ export function AdminNavbar() {
     {
       href: `/${locale}/admin/manual`,
       label: "Listing Management"
+    },
+    {
+      href: `/${locale}/admin/users`,
+      label: "User Management"
     }
   ]
 
