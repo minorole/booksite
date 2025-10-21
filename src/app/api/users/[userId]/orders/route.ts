@@ -2,7 +2,10 @@ import { NextResponse } from 'next/server'
 import { assertAdmin, UnauthorizedError } from '@/lib/security/guards'
 import { getUserOrders } from '@/lib/db/orders'
 
-export async function GET(_req: Request, context: any) {
+export async function GET(
+  _req: Request,
+  context: { params: Promise<{ userId: string }> }
+) {
   try {
     try {
       await assertAdmin()
@@ -13,7 +16,7 @@ export async function GET(_req: Request, context: any) {
       throw e
     }
 
-    const userId = context?.params?.userId as string | undefined
+    const { userId } = await context.params
     if (!userId || typeof userId !== 'string') {
       return NextResponse.json({ error: 'Invalid userId' }, { status: 400 })
     }

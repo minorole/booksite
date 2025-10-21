@@ -15,8 +15,9 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { UserOrdersDialog } from '@/components/super-admin/UserOrdersDialog'
+import { UserOrdersDialog } from '@/components/admin/users/UserOrdersDialog'
 import type { Role } from '@/lib/db/enums'
+import { Bilingual } from '@/components/common/bilingual'
 
 type User = {
   id: string
@@ -56,6 +57,7 @@ export default function AdminUsersPage() {
       if (debouncedQuery.trim()) params.set('q', debouncedQuery.trim())
       params.set('limit', String(limit))
       params.set('offset', String(page * limit))
+      if (!isSuperAdmin) params.set('hide_super_admin', 'true')
       const resp = await fetch(`/api/users?${params.toString()}`)
       const data = await resp.json()
       if (data.error) throw new Error(data.error)
@@ -66,29 +68,37 @@ export default function AdminUsersPage() {
       setUsers([])
       setTotal(0)
     }
-  }, [debouncedQuery, page, limit])
+  }, [debouncedQuery, page, limit, isSuperAdmin])
 
   useEffect(() => { const t = setTimeout(() => setDebouncedQuery(query), 300); return () => clearTimeout(t) }, [query])
   useEffect(() => { setPage(0) }, [debouncedQuery])
   useEffect(() => { if (isAdmin) fetchUsers() }, [isAdmin, fetchUsers])
 
-  if (loading) return <div className="p-6 text-sm text-muted-foreground">Loading users…</div>
+  if (loading) return (
+    <div className="p-6 text-sm text-muted-foreground">
+      <Bilingual cnText="正在加载用户…" enText="Loading users…" />
+    </div>
+  )
   if (!user || !isAdmin) return null
 
   const visibleUsers = isSuperAdmin ? users : users.filter(u => u.role !== 'SUPER_ADMIN')
 
   return (
-    <div className="container mx-auto py-10">
-      <h1 className="text-2xl font-bold mb-6">User Management</h1>
+    <div>
+      <h1 className="text-2xl font-bold mb-6">
+        <Bilingual cnText="用户管理" enText="User Management" />
+      </h1>
       <div className="mb-4 flex items-center gap-2">
         <Input
-          placeholder="Search by email or name"
+          placeholder={locale === 'zh' ? '按邮箱或姓名搜索' : 'Search by email or name'}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="max-w-sm"
         />
         <div className="ml-auto flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Rows per page</span>
+          <span className="text-sm text-muted-foreground">
+            <Bilingual cnText="每页行数" enText="Rows per page" />
+          </span>
           <Select value={String(limit)} onValueChange={(v) => { setPage(0); setLimit(Number(v)) }}>
             <SelectTrigger className="w-[110px]"><SelectValue placeholder="50" /></SelectTrigger>
             <SelectContent>
@@ -103,15 +113,21 @@ export default function AdminUsersPage() {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Email</TableHead>
-            <TableHead>Name</TableHead>
-            <TableHead>Role</TableHead>
-            <TableHead>Joined</TableHead>
-            <TableHead>Orders</TableHead>
+            <TableHead><Bilingual cnText="邮箱" enText="Email" /></TableHead>
+            <TableHead><Bilingual cnText="姓名" enText="Name" /></TableHead>
+            <TableHead><Bilingual cnText="角色" enText="Role" /></TableHead>
+            <TableHead><Bilingual cnText="加入日期" enText="Joined" /></TableHead>
+            <TableHead><Bilingual cnText="订单" enText="Orders" /></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {visibleUsers.map((row) => (
+          {visibleUsers.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={5} className="text-center text-sm text-muted-foreground py-8">
+                <Bilingual cnText="暂无用户" enText="No users found." />
+              </TableCell>
+            </TableRow>
+          ) : visibleUsers.map((row) => (
             <TableRow key={row.id}>
               <TableCell>{row.email}</TableCell>
               <TableCell>{row.name || '-'}</TableCell>
@@ -123,7 +139,7 @@ export default function AdminUsersPage() {
                   size="sm"
                   onClick={() => { setOrdersFor({ id: row.id, email: row.email }); setOrdersOpen(true) }}
                 >
-                  View
+                  <Bilingual cnText="查看" enText="View" />
                 </Button>
               </TableCell>
             </TableRow>
@@ -154,4 +170,3 @@ export default function AdminUsersPage() {
     </div>
   )
 }
-

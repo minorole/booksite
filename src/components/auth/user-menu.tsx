@@ -94,7 +94,7 @@ export function UserMenu() {
           <DropdownMenuItem asChild>
             <Link href={`/${locale}/super-admin`} className="cursor-pointer flex items-center">
               <Shield className="mr-2 h-4 w-4" />
-              <Bilingual as="span" cnText="用户管理" enText="User Management" />
+              <Bilingual as="span" cnText="超级管理员" enText="Super Admin" />
             </Link>
           </DropdownMenuItem>
         )}

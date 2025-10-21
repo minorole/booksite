@@ -22,7 +22,9 @@ import { type Role } from '@/lib/db/enums'
 import { useRouter } from 'next/navigation'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { UserOrdersDialog } from '@/components/super-admin/UserOrdersDialog'
+import { UserOrdersDialog } from '@/components/admin/users/UserOrdersDialog'
+import { Bilingual } from '@/components/common/bilingual'
+import { useLocale } from '@/contexts/LocaleContext'
 
 type User = {
   id: string
@@ -45,6 +47,7 @@ export function SuperAdminPanel() {
   const [total, setTotal] = useState<number | undefined>(undefined)
   const [ordersOpen, setOrdersOpen] = useState(false)
   const [ordersFor, setOrdersFor] = useState<{ id: string; email: string } | null>(null)
+  const { locale } = useLocale()
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -60,8 +63,8 @@ export function SuperAdminPanel() {
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Failed to fetch users"
+        title: <Bilingual cnText="错误" enText="Error" />,
+        description: <Bilingual cnText="获取用户失败" enText="Failed to fetch users" />
       })
     }
   }, [toast, debouncedQuery, page, limit])
@@ -102,36 +105,44 @@ export function SuperAdminPanel() {
       setUsers(prev => prev.map(u => (u.id === userId ? { ...u, role: newRole } : u)))
       
       toast({
-        title: "Success",
-        description: "User role updated successfully"
+        title: <Bilingual cnText="成功" enText="Success" />,
+        description: <Bilingual cnText="用户角色已更新" enText="User role updated successfully" />
       })
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to update role"
+        title: <Bilingual cnText="错误" enText="Error" />,
+        description: <Bilingual cnText="更新角色失败" enText="Failed to update role" />
       })
     } finally {
       setUpdating(null)
     }
   }
 
-  if (loading) return <div className="p-6 text-sm text-muted-foreground">Loading users…</div>
+  if (loading) return (
+    <div className="p-6 text-sm text-muted-foreground">
+      <Bilingual cnText="正在加载用户…" enText="Loading users…" />
+    </div>
+  )
 
   const authUser = user
 
   return (
-    <div className="container mx-auto py-10">
-      <h1 className="text-2xl font-bold mb-6">User Management</h1>
+    <div>
+      <h1 className="text-2xl font-bold mb-6">
+        <Bilingual cnText="用户管理" enText="User Management" />
+      </h1>
       <div className="mb-4 flex items-center gap-2">
         <Input
-          placeholder="Search by email or name"
+          placeholder={locale === 'zh' ? '按邮箱或姓名搜索' : 'Search by email or name'}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="max-w-sm"
         />
         <div className="ml-auto flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Rows per page</span>
+          <span className="text-sm text-muted-foreground">
+            <Bilingual cnText="每页行数" enText="Rows per page" />
+          </span>
           <Select value={String(limit)} onValueChange={(v) => { setPage(0); setLimit(Number(v)) }}>
             <SelectTrigger className="w-[110px]"><SelectValue placeholder="50" /></SelectTrigger>
             <SelectContent>
@@ -146,15 +157,21 @@ export function SuperAdminPanel() {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Email</TableHead>
-            <TableHead>Name</TableHead>
-            <TableHead>Role</TableHead>
-            <TableHead>Joined</TableHead>
-            <TableHead>Orders</TableHead>
+            <TableHead><Bilingual cnText="邮箱" enText="Email" /></TableHead>
+            <TableHead><Bilingual cnText="姓名" enText="Name" /></TableHead>
+            <TableHead><Bilingual cnText="角色" enText="Role" /></TableHead>
+            <TableHead><Bilingual cnText="加入日期" enText="Joined" /></TableHead>
+            <TableHead><Bilingual cnText="订单" enText="Orders" /></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {users.map((row) => (
+          {users.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={5} className="text-center text-sm text-muted-foreground py-8">
+                <Bilingual cnText="暂无用户" enText="No users found." />
+              </TableCell>
+            </TableRow>
+          ) : users.map((row) => (
             <TableRow key={row.id}>
               <TableCell>{row.email}</TableCell>
               <TableCell>{row.name || '-'}</TableCell>
@@ -178,12 +195,12 @@ export function SuperAdminPanel() {
                   }}
                 >
                   <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Select role" />
+                    <SelectValue placeholder={locale === 'zh' ? '选择角色' : 'Select role'} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="USER">User</SelectItem>
-                    <SelectItem value="ADMIN">Admin</SelectItem>
-                    <SelectItem value="SUPER_ADMIN">Super Admin</SelectItem>
+                    <SelectItem value="USER"><Bilingual cnText="用户" enText="User" /></SelectItem>
+                    <SelectItem value="ADMIN"><Bilingual cnText="管理员" enText="Admin" /></SelectItem>
+                    <SelectItem value="SUPER_ADMIN"><Bilingual cnText="超级管理员" enText="Super Admin" /></SelectItem>
                   </SelectContent>
                 </Select>
               </TableCell>
@@ -196,7 +213,7 @@ export function SuperAdminPanel() {
                   size="sm"
                   onClick={() => { setOrdersFor({ id: row.id, email: row.email }); setOrdersOpen(true) }}
                 >
-                  View
+                  <Bilingual cnText="查看" enText="View" />
                 </Button>
               </TableCell>
             </TableRow>

@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
-import { Edit2, Trash2, Plus } from "lucide-react"
+import { Edit2, Trash2 } from "lucide-react"
 import { BookDialog } from "./book-dialog"
 // Define the shape returned by the Supabase-based API
 type Category = {
@@ -47,15 +47,18 @@ import {
   DialogContent,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { CategoryType } from '@/lib/db/enums'
 import { CATEGORY_LABELS } from '@/lib/admin/constants'
 import { useSearchParams } from 'next/navigation'
+import { LoadingSpinner } from "@/components/ui/loading-spinner"
+import { Bilingual } from "@/components/common/bilingual"
+import { useLocale } from "@/contexts/LocaleContext"
 
 type BookWithCategory = Book
 
 // Category labels centralized in '@/lib/admin/constants'
 
 export function BookList() {
+  const { locale } = useLocale()
   const [books, setBooks] = useState<BookWithCategory[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
@@ -74,8 +77,8 @@ export function BookList() {
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Failed to fetch books"
+        title: <Bilingual cnText="错误" enText="Error" />,
+        description: <Bilingual cnText="获取书籍失败" enText="Failed to fetch books" />
       })
     } finally {
       setLoading(false)
@@ -98,7 +101,7 @@ export function BookList() {
   }, [searchParams, books])
 
   const handleDelete = async (bookId: string) => {
-    if (!confirm("Are you sure you want to delete this book?")) return
+    if (!confirm(locale === 'zh' ? '确定要删除此书吗？' : 'Are you sure you want to delete this book?')) return
 
     try {
       const response = await fetch(`/api/admin/manual/books/${bookId}`, {
@@ -108,16 +111,16 @@ export function BookList() {
       if (data.error) throw new Error(data.error)
       
       toast({
-        title: "Success",
-        description: "Book deleted successfully"
+        title: <Bilingual cnText="成功" enText="Success" />,
+        description: <Bilingual cnText="书籍已删除" enText="Book deleted successfully" />
       })
       
       fetchBooks()
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Failed to delete book"
+        title: <Bilingual cnText="错误" enText="Error" />,
+        description: <Bilingual cnText="删除书籍失败" enText="Failed to delete book" />
       })
     }
   }
@@ -137,15 +140,25 @@ export function BookList() {
     return matchesSearch && matchesCategory
   })
 
+  if (loading) {
+    return (
+      <div className="py-12 flex items-center justify-center text-muted-foreground">
+        <LoadingSpinner />
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Book Management</h1>
+        <h1 className="text-2xl font-bold">
+          <Bilingual cnText="书籍管理" enText="Book Management" />
+        </h1>
       </div>
 
       <div className="flex gap-4 mb-4">
         <Input
-          placeholder="Search books..."
+          placeholder={locale === 'zh' ? '搜索书籍…' : 'Search books...'}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="max-w-sm"
@@ -155,10 +168,12 @@ export function BookList() {
           onValueChange={setCategoryFilter}
         >
           <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="All Categories" />
+            <SelectValue placeholder={locale === 'zh' ? '所有分类' : 'All Categories'} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="ALL">All Categories</SelectItem>
+            <SelectItem value="ALL">
+              <Bilingual cnText="所有分类" enText="All Categories" />
+            </SelectItem>
             {Object.entries(CATEGORY_LABELS).map(([key, value]) => (
               <SelectItem key={key} value={key}>
                 {value}
@@ -172,13 +187,13 @@ export function BookList() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[100px]">Cover</TableHead>
-              <TableHead>Chinese Title</TableHead>
-              <TableHead>English Title</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead>Quantity</TableHead>
-              <TableHead>Tags</TableHead>
-              <TableHead className="w-[100px]">Actions</TableHead>
+              <TableHead className="w-[100px]"><Bilingual cnText="封面" enText="Cover" /></TableHead>
+              <TableHead><Bilingual cnText="中文标题" enText="Chinese Title" /></TableHead>
+              <TableHead><Bilingual cnText="英文标题" enText="English Title" /></TableHead>
+              <TableHead><Bilingual cnText="分类" enText="Category" /></TableHead>
+              <TableHead><Bilingual cnText="数量" enText="Quantity" /></TableHead>
+              <TableHead><Bilingual cnText="标签" enText="Tags" /></TableHead>
+              <TableHead className="w-[100px]"><Bilingual cnText="操作" enText="Actions" /></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -214,7 +229,9 @@ export function BookList() {
                     </Dialog>
                   ) : (
                     <div className="w-[50px] h-[70px] bg-muted flex items-center justify-center rounded-sm">
-                      <span className="text-xs text-muted-foreground">No image</span>
+                      <span className="text-xs text-muted-foreground">
+                        <Bilingual cnText="无图片" enText="No image" />
+                      </span>
                     </div>
                   )}
                 </TableCell>
@@ -229,6 +246,8 @@ export function BookList() {
                       variant="ghost"
                       size="icon"
                       onClick={() => handleEdit(book)}
+                      aria-label="Edit book"
+                      title="Edit book"
                     >
                       <Edit2 className="h-4 w-4" />
                     </Button>
@@ -236,6 +255,8 @@ export function BookList() {
                       variant="ghost"
                       size="icon"
                       onClick={() => handleDelete(book.id)}
+                      aria-label="Delete book"
+                      title="Delete book"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>

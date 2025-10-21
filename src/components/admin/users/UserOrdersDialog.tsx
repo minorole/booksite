@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import { type OrderStatus } from '@/lib/db/enums'
+import { Bilingual } from '@/components/common/bilingual'
 
 type Order = {
   id: string
@@ -55,7 +56,11 @@ export function UserOrdersDialog({
     }
   }, [open, user?.id])
 
-  const title = user?.email ? `Orders for ${user.email}` : (user?.id ? `Orders for ${user.id}` : 'Orders')
+  const title = user?.email
+    ? (<Bilingual cnText={`用户 ${user.email} 的订单`} enText={`Orders for ${user.email}`} />)
+    : (user?.id
+      ? (<Bilingual cnText={`用户 ${user.id} 的订单`} enText={`Orders for ${user.id}`} />)
+      : (<Bilingual cnText="订单" enText="Orders" />))
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -66,17 +71,25 @@ export function UserOrdersDialog({
         {loading ? (
           <div className="py-8 flex items-center justify-center"><LoadingSpinner /></div>
         ) : error ? (
-          <div className="py-4 text-sm text-destructive">{error}</div>
+          <div className="py-4 text-sm text-destructive">
+            <Bilingual cnText="获取订单失败" enText="Failed to fetch orders" />
+          </div>
         ) : !orders || orders.length === 0 ? (
-          <div className="py-4 text-sm text-muted-foreground">No orders found.</div>
+          <div className="py-4 text-sm text-muted-foreground">
+            <Bilingual cnText="暂无订单" enText="No orders found." />
+          </div>
         ) : (
           <div className="space-y-4 max-h-[70vh] overflow-auto pr-1">
             {orders.map((order) => (
               <Card key={order.id} className="p-4">
                 <div className="flex items-start justify-between mb-2">
                   <div>
-                    <div className="text-xs text-muted-foreground">Order ID: {order.id}</div>
-                    <div className="text-xs text-muted-foreground">Date: {new Date(order.created_at).toLocaleDateString()}</div>
+                    <div className="text-xs text-muted-foreground">
+                      <Bilingual cnText="订单号：" enText="Order ID: " />{order.id}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      <Bilingual cnText="日期：" enText="Date: " />{new Date(order.created_at).toLocaleDateString()}
+                    </div>
                   </div>
                   <Badge variant={
                     order.status === 'PENDING' ? 'default' :
@@ -104,8 +117,12 @@ export function UserOrdersDialog({
                   ))}
                 </div>
                 <div className="mt-3 pt-3 border-t">
-                  <div className="text-xs text-muted-foreground whitespace-pre-line">Shipping Address: {order.shipping_address}</div>
-                  <div className="text-sm font-medium mt-1">Total Items: {order.total_items}</div>
+                  <div className="text-xs text-muted-foreground whitespace-pre-line">
+                    <Bilingual cnText="收货地址：" enText="Shipping Address: " />{order.shipping_address}
+                  </div>
+                  <div className="text-sm font-medium mt-1">
+                    <Bilingual cnText="总件数：" enText="Total Items: " />{order.total_items}
+                  </div>
                 </div>
               </Card>
             ))}
@@ -115,4 +132,3 @@ export function UserOrdersDialog({
     </Dialog>
   )
 }
-

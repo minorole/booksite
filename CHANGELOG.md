@@ -5,24 +5,41 @@ All notable changes to this project will be documented in this file.
 ## Unreleased
 
 ### Added
+- [Admin • Navigation] Language switch (zh/en) with active highlight and account `UserMenu` in Admin navbar. Super Admin tab appears only for superadmins.
+  - File: `src/components/admin/admin-navbar.tsx`
 - [Admin • Users API] Admin-only endpoint to view a specific user’s order history (includes per-order address snapshot).
   - `GET /api/users/[userId]/orders`
   - Files: `src/app/api/users/[userId]/orders/route.ts`, reuses `getUserOrders` from `src/lib/db/orders.ts`.
 - [Admin • User Management] New read‑only Admin page to view users and open per-user order history.
   - Page: `src/app/[locale]/admin/users/page.tsx` (normal admins cannot see SUPER_ADMIN rows; super admins see all).
-  - Shared dialog: `src/components/super-admin/UserOrdersDialog.tsx` to display orders, items, and shipping address.
+  - Shared dialog: `src/components/admin/users/UserOrdersDialog.tsx` to display orders, items, and shipping address.
 - [Super Admin • User Management] Added “View Orders” action per user with the same dialog.
   - File: `src/components/super-admin/super-admin-panel.tsx`.
-
+  
 ### Changed
+- [Admin • Navigation] Centralized a single Admin navbar across Admin and Super Admin via layouts; removed page-level container wrappers; preserved Back-to-Site.
+  - Files: `src/app/[locale]/admin/layout.tsx`, `src/app/[locale]/super-admin/layout.tsx`, `src/app/[locale]/admin/ai-chat/page.tsx`, `src/app/[locale]/admin/users/page.tsx`
+- [Admin/Super Admin • User Management] Localized UI (titles, headers, placeholders, actions), added explicit empty states, and consistent loading labels.
+  - Files: `src/app/[locale]/admin/users/page.tsx`, `src/components/super-admin/super-admin-panel.tsx`
+- [Admin • Book Management] Localized list and editor dialog; added loading spinner for list; added a11y labels for icon-only buttons.
+  - Files: `src/components/admin/manual/book-list.tsx`, `src/components/admin/manual/book-dialog.tsx`
+- [Admin AI Chat] Unified spacing to rely on layout; removed inner horizontal padding from chat container.
+  - File: `src/components/admin/ai-chat/chat-interface.tsx`
+
 - refactor(openai): migrate both text and vision to the Responses API (`client.responses.create`) with a centralized helper that converts chat-style messages (text + images) to Responses input and maps JSON schema output to `text.format`. Eliminates usage of Chat Completions in our wrappers.
 - [Admin • Navigation] Added "User Management" to Admin navbar and user menu for admins.
   - Files: `src/components/admin/admin-navbar.tsx`, `src/components/auth/user-menu.tsx`.
 
 ### Fixed
+- [Admin • Users API] Support `hide_super_admin=true` to filter SUPER_ADMIN rows for non-superadmins. Avoid pagination drift by omitting `total` in the RPC path and computing accurate totals in the fallback path. Client now uses this flag.
+  - Files: `src/app/api/users/route.ts`, `src/app/[locale]/admin/users/page.tsx`
 - fix(vision): resolve `400 Unsupported parameter: 'max_tokens'` on `gpt-5-mini` by using Responses `max_output_tokens` via the centralized path. Vision tools now return structured JSON without error.
 - fix(vision): resolve `400 Unsupported parameter: 'temperature'` on `gpt-5-mini` image runs by omitting `temperature` for vision calls and guarding `temperature` in the Responses wrapper when any `input_image` is present.
   - Files: `src/lib/openai/vision.ts:39`, `src/lib/openai/responses.ts:118`.
+
+### Removed
+- [Cleanup] Moved shared `UserOrdersDialog` to `src/components/admin/users/UserOrdersDialog.tsx` and removed the legacy location.
+  - File removed: `src/components/super-admin/UserOrdersDialog.tsx`
 
 ## 2025-10-21
 ### Fixed

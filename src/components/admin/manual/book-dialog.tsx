@@ -27,10 +27,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { CategoryType, CATEGORY_TYPES } from '@/lib/db/enums'
 import { CATEGORY_LABELS } from '@/lib/admin/constants'
+import { Bilingual } from "@/components/common/bilingual"
+import { useLocale } from "@/contexts/LocaleContext"
 // Align dialog props with Supabase-based API shapes
 type Category = {
   id: string
@@ -81,6 +82,7 @@ export function BookDialog({
 }: BookDialogProps) {
   const [loading, setLoading] = useState(false)
   const { toast } = useToast()
+  const { locale } = useLocale()
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -133,8 +135,8 @@ export function BookDialog({
       if (data.error) throw new Error(data.error)
 
       toast({
-        title: "Success",
-        description: "Book updated successfully"
+        title: <Bilingual cnText="成功" enText="Success" />,
+        description: <Bilingual cnText="书籍更新成功" enText="Book updated successfully" />
       })
 
       onSuccess()
@@ -142,8 +144,8 @@ export function BookDialog({
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Failed to update book"
+        title: <Bilingual cnText="错误" enText="Error" />,
+        description: <Bilingual cnText="更新书籍失败" enText="Failed to update book" />
       })
     } finally {
       setLoading(false)
@@ -154,7 +156,9 @@ export function BookDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Edit Book</DialogTitle>
+          <DialogTitle>
+            <Bilingual cnText="编辑书籍" enText="Edit Book" />
+          </DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -163,7 +167,9 @@ export function BookDialog({
               name="title_zh"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Chinese Title</FormLabel>
+                  <FormLabel>
+                    <Bilingual cnText="中文标题" enText="Chinese Title" />
+                  </FormLabel>
                   <FormControl>
                     <Input {...field} />
                   </FormControl>
@@ -176,7 +182,9 @@ export function BookDialog({
               name="title_en"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>English Title</FormLabel>
+                  <FormLabel>
+                    <Bilingual cnText="英文标题" enText="English Title" />
+                  </FormLabel>
                   <FormControl>
                     <Input {...field} />
                   </FormControl>
@@ -189,14 +197,16 @@ export function BookDialog({
               name="category_type"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Category</FormLabel>
+                  <FormLabel>
+                    <Bilingual cnText="分类" enText="Category" />
+                  </FormLabel>
                   <Select
                     onValueChange={field.onChange}
                     defaultValue={field.value}
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a category" />
+                        <SelectValue placeholder={locale === 'zh' ? '选择分类' : 'Select a category'} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -216,7 +226,9 @@ export function BookDialog({
               name="quantity"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Quantity</FormLabel>
+                  <FormLabel>
+                    <Bilingual cnText="数量" enText="Quantity" />
+                  </FormLabel>
                   <FormControl>
                     <Input 
                       type="number" 
@@ -233,7 +245,9 @@ export function BookDialog({
               name="tags"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Tags (comma separated)</FormLabel>
+                  <FormLabel>
+                    <Bilingual cnText="标签（用逗号分隔）" enText="Tags (comma separated)" />
+                  </FormLabel>
                   <FormControl>
                     <Input {...field} />
                   </FormControl>
@@ -247,10 +261,14 @@ export function BookDialog({
                 variant="outline"
                 onClick={() => onOpenChange(false)}
               >
-                Cancel
+                <Bilingual cnText="取消" enText="Cancel" />
               </Button>
               <Button type="submit" disabled={loading}>
-                {loading ? "Saving..." : "Save"}
+                {loading ? (
+                  <Bilingual cnText="保存中…" enText="Saving..." />
+                ) : (
+                  <Bilingual cnText="保存" enText="Save" />
+                )}
               </Button>
             </div>
           </form>

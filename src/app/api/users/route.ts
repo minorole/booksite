@@ -19,6 +19,7 @@ export async function GET(request: Request) {
 
     const url = new URL(request.url)
     const q = url.searchParams.get('q') || null
+    const hideSuper = url.searchParams.get('hide_super_admin') === 'true'
     const limitParam = Number(url.searchParams.get('limit'))
     const offsetParam = Number(url.searchParams.get('offset'))
     const limit = Number.isFinite(limitParam) ? Math.max(1, Math.min(limitParam, 200)) : 200
@@ -42,8 +43,14 @@ export async function GET(request: Request) {
         role: (u.role as 'USER' | 'ADMIN' | 'SUPER_ADMIN') ?? 'USER',
         created_at: u.created_at,
       }))
-      const tc = rows.length > 0 ? rows[0].total_count : undefined
-      total = typeof tc === 'number' ? tc : (typeof tc === 'string' ? Number(tc) : undefined)
+      if (hideSuper) {
+        // When client asks to hide SUPER_ADMINs, filter the current page and omit total to avoid drift.
+        users = users.filter(u => u.role !== 'SUPER_ADMIN')
+        total = undefined
+      } else {
+        const tc = rows.length > 0 ? rows[0].total_count : undefined
+        total = typeof tc === 'number' ? tc : (typeof tc === 'string' ? Number(tc) : undefined)
+      }
     } catch (err) {
       if (process.env.NODE_ENV !== 'production') {
         try { console.error('[users api] list_users_paginated error', err) } catch {}
@@ -57,7 +64,7 @@ export async function GET(request: Request) {
       }
       type UserRow = { id: string; email: string; name: string | null; role: 'USER' | 'ADMIN' | 'SUPER_ADMIN'; created_at: string }
       const rows = (data ?? []) as UserRow[]
-      const mapped = rows.map((u) => ({
+      let mapped = rows.map((u) => ({
         id: u.id,
         email: u.email,
         name: u.name ?? null,
@@ -66,6 +73,7 @@ export async function GET(request: Request) {
       }))
       // Apply sorting and in-memory filter as fallback
       mapped.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      if (hideSuper) mapped = mapped.filter(u => u.role !== 'SUPER_ADMIN')
       if (q) {
         const needle = q.toLowerCase()
         users = mapped.filter(u => u.email.toLowerCase().includes(needle) || (u.name ?? '').toLowerCase().includes(needle))
