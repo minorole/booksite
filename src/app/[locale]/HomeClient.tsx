@@ -80,7 +80,7 @@ function LoadingOverlay({ progress, fading }: { progress: number; fading: boolea
         onChange={(e) => setValue(e.target.value)}
         placeholder=""
         aria-label={locale === 'zh' ? '消息输入' : 'Message input'}
-        className="min-h-[10rem] sm:min-h-[12rem] text-base sm:text-lg rounded-2xl shadow-sm pr-20 py-5 px-5 resize-y focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+        className="min-h-[10rem] sm:min-h-[12rem] text-base sm:text-lg rounded-2xl shadow-sm pr-20 py-5 px-5 resize-y focus-visible:outline-none focus-visible:ring-0"
         onFocus={() => {
           setIsFocused(true)
         }}

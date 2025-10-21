@@ -10,11 +10,16 @@ export const HOVER_LIFT_SHADOW = [
 // Standard focus treatment for input-like controls
 // - Keep an accessible ring; hide the inner border to avoid a double outline
 export const FOCUS_RING = [
+  // Global focus style: no outer ring/offset; highlight with inner border
   "focus-visible:outline-none",
-  "focus-visible:border-transparent",
-  "focus-visible:ring-2",
-  "focus-visible:ring-ring",
-  "focus-visible:ring-offset-2",
+  "focus-visible:ring-0",
+  "focus-visible:ring-offset-0",
+  "focus-visible:border-ring",
+  // Include non-:visible fallbacks for components using plain :focus
+  "focus:outline-none",
+  "focus:ring-0",
+  "focus:ring-offset-0",
+  "focus:border-ring",
 ].join(" ")
 
 // Home page input thresholds

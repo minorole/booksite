@@ -39,10 +39,10 @@ export function ChatInput({
     onSelectFile(file)
   }
   return (
-    <div className="p-4 border-t bg-background/80 backdrop-blur-sm sticky bottom-0 z-10 shadow-sm">
+    <div className="p-4 bg-background/80 backdrop-blur-sm sticky bottom-0 z-10">
       <div className="max-w-2xl mx-auto">
         <div
-          className="relative"
+          className="relative isolate border-0 focus-within:outline-none focus-within:ring-0 focus-within:ring-offset-0 focus-within:border-0"
           onDragOver={(e) => {
             if (loading) return
             e.preventDefault()
@@ -58,7 +58,7 @@ export function ChatInput({
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={UI_STRINGS[locale === 'zh' ? 'zh' : 'en'].input_placeholder}
-            className="min-h-[3rem] max-h-[20rem] pr-24 resize-none bg-background w-full"
+            className="min-h-[3rem] max-h-[20rem] pr-24 resize-none bg-background w-full rounded-lg border-0 shadow-inner focus-visible:ring-0 focus:ring-0 focus-visible:ring-offset-0 focus:ring-offset-0 focus-visible:border-transparent focus:border-transparent"
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 if (e.metaKey || e.ctrlKey) {
