@@ -13,6 +13,11 @@ const OptionalKeys = [
   'OPENAI_API_KEY_USER',
   'UPSTASH_REDIS_REST_URL',
   'UPSTASH_REDIS_REST_TOKEN',
+  // Image embeddings provider (self-hosted CLIP or others)
+  'IMAGE_EMBEDDINGS_PROVIDER',
+  'CLIP_EMBEDDINGS_URL',
+  'CLIP_EMBEDDINGS_API_KEY',
+  'IMAGE_EMBEDDINGS_STRICT',
 ] as const
 
 export type RequiredEnvKey = typeof RequiredKeys[number]
@@ -48,4 +53,8 @@ export const env = {
   openaiApiKeyUser: () => getOptionalEnv('OPENAI_API_KEY_USER'),
   upstashUrl: () => getOptionalEnv('UPSTASH_REDIS_REST_URL'),
   upstashToken: () => getOptionalEnv('UPSTASH_REDIS_REST_TOKEN'),
+  imageEmbProvider: () => getOptionalEnv('IMAGE_EMBEDDINGS_PROVIDER'),
+  clipUrl: () => getOptionalEnv('CLIP_EMBEDDINGS_URL'),
+  clipToken: () => getOptionalEnv('CLIP_EMBEDDINGS_API_KEY'),
+  imageEmbStrict: () => getOptionalEnv('IMAGE_EMBEDDINGS_STRICT'),
 }

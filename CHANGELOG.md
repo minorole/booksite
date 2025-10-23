@@ -15,6 +15,30 @@ All notable changes to this project will be documented in this file.
   - Shared dialog: `src/components/admin/users/UserOrdersDialog.tsx` to display orders, items, and shipping address.
 - [Super Admin • User Management] Added “View Orders” action per user with the same dialog.
   - File: `src/components/super-admin/super-admin-panel.tsx`.
+
+ - [Docs • Admin AI] Added duplicate detection plan to align with ADR 0004 (OpenAI‑only), with optional pHash/dHash prefilter, provider‑agnostic embeddings details, and a concrete evaluation plan.
+  - File: `doc/admin-ai/duplicate-detection-plan.md`
+- [Admin AI • Tools] Unified `check_duplicates` tool to accept item inputs (name/type/tags/category) in addition to book fields.
+  - File: `src/lib/admin/agents/tools.ts`
+- [Vision] Neutralized visual similarity prompt and switched comparisons to normalized Cloudinary derivatives (512×512, crop:fill, gravity:auto).
+  - Files: `src/lib/admin/services/vision/similarity.ts`, `src/lib/admin/image-upload.ts`
+- [DB • Embeddings] Text embeddings: table + HNSW index + KNN RPC.
+  - Migration: `supabase/migrations/0019_text_embeddings.sql`
+  - Helpers: `src/lib/openai/embeddings.ts`, `src/lib/db/admin/embeddings.ts`
+  - Backfill API: `POST /api/admin/embeddings/backfill` (`src/app/api/admin/embeddings/backfill/route.ts`)
+- [DB • Embeddings] Image embeddings (self‑hosted CLIP, 512‑dim): table + HNSW index + KNN RPC.
+  - Migration: `supabase/migrations/0020_image_embeddings_clip.sql`
+  - Provider client: `src/lib/admin/services/image-embeddings/openclip.ts`
+  - Helpers: `src/lib/db/admin/image-embeddings.ts`, service: `src/lib/admin/services/image-embeddings.ts`
+  - Backfill API: `POST /api/admin/image-embeddings/backfill` (`src/app/api/admin/image-embeddings/backfill/route.ts`)
+- [Docs • Infra] Deploy CPU‑only CLIP embeddings to Cloud Run (CPU on request, min_instances=1). Includes containerized service under `infra/clip-embed-service` and step‑by‑step guide.
+  - Files: `infra/clip-embed-service/*`, `doc/admin-ai/clip-deploy-cloudrun.md`
+- [Super Admin] CLIP health monitor card with secure server-side health proxy (superadmin only).
+  - UI: `src/components/super-admin/super-admin-panel.tsx`
+  - API: `GET /api/super-admin/clip/health` (`src/app/api/super-admin/clip/health/route.ts`)
+- [Config] Added env support for self‑hosted CLIP provider.
+  - Keys: `IMAGE_EMBEDDINGS_PROVIDER`, `CLIP_EMBEDDINGS_URL`, `CLIP_EMBEDDINGS_API_KEY`
+  - Files: `.env.example`, `src/lib/config/env.ts`
   
 ### Changed
 - [Admin • Navigation] Centralized a single Admin navbar across Admin and Super Admin via layouts; removed page-level container wrappers; preserved Back-to-Site.
@@ -30,6 +54,15 @@ All notable changes to this project will be documented in this file.
 - [Admin • Navigation] Added "User Management" to Admin navbar and user menu for admins.
   - Files: `src/components/admin/admin-navbar.tsx`, `src/components/auth/user-menu.tsx`.
 
+- [Admin AI • Duplicates] Embeddings‑first shortlist with fallback to ILIKE; fused scoring (0.6 text + 0.4 image); visual tie‑breaker limited to top‑3 candidates; richer audit metadata.
+  - Files: `src/lib/admin/services/duplicates.ts`, `src/lib/db/admin/duplicates.ts`
+- [Admin • Create/Update Book] Auto‑embed text on create/update; if image provider=clip and cover present, auto‑embed image vectors as best‑effort.
+  - File: `src/lib/admin/services/books.ts`
+ - [Embeddings • Strict Mode] Introduced `IMAGE_EMBEDDINGS_STRICT` (opt‑in). When `1` and provider=clip:
+   - Duplicate checks fail if image embedding/KNN path is unavailable.
+   - Create/Update will fail if image embedding upsert fails when a cover image is present.
+   - Files: `.env.example`, `src/lib/config/env.ts`, `src/lib/admin/services/duplicates.ts`, `src/lib/admin/services/books.ts`
+
 ### Fixed
 - [Admin • Users API] Support `hide_super_admin=true` to filter SUPER_ADMIN rows for non-superadmins. Avoid pagination drift by omitting `total` in the RPC path and computing accurate totals in the fallback path. Client now uses this flag.
   - Files: `src/app/api/users/route.ts`, `src/app/[locale]/admin/users/page.tsx`
@@ -40,6 +73,9 @@ All notable changes to this project will be documented in this file.
 ### Removed
 - [Cleanup] Moved shared `UserOrdersDialog` to `src/components/admin/users/UserOrdersDialog.tsx` and removed the legacy location.
   - File removed: `src/components/super-admin/UserOrdersDialog.tsx`
+
+- [Infra] Removed legacy Supabase schema dumps to avoid drift and large diffs.
+  - Files removed: `supabase/_remote_schema.sql`, `supabase/public_dump.sql`
 
 ## 2025-10-21
 ### Fixed

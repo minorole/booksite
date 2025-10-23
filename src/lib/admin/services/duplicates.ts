@@ -1,29 +1,110 @@
 import { checkDuplicatesDb, logAdminAction } from '@/lib/db/admin'
+import { searchBooksByTextEmbedding, getBooksByIds } from '@/lib/db/admin/embeddings'
+import { createImageEmbeddingClip } from '@/lib/admin/services/image-embeddings/openclip'
+import { searchBooksByImageEmbeddingClip } from '@/lib/db/admin/image-embeddings'
+import { buildQueryTextForEmbedding } from './embeddings'
+import { createTextEmbedding } from '@/lib/openai/embeddings'
 import { analyzeVisualSimilarity } from './vision'
 import { handleOperationError } from './utils'
 import { type AdminOperationResult } from '@/lib/admin/types'
 
 export async function checkDuplicates(
   args: {
-    title_zh: string
-    title_en?: string
-    author_zh?: string
-    author_en?: string
-    publisher_zh?: string
-    publisher_en?: string
-    cover_image?: string
+    // Book fields (optional)
+    title_zh?: string | null
+    title_en?: string | null
+    author_zh?: string | null
+    author_en?: string | null
+    publisher_zh?: string | null
+    publisher_en?: string | null
+    // Item fields (optional)
+    item_name_zh?: string | null
+    item_name_en?: string | null
+    item_type_zh?: string | null
+    item_type_en?: string | null
+    tags?: string[] | null
+    category_type?: import('@/lib/db/enums').CategoryType | null
+    // Visual
+    cover_image?: string | null
   },
   adminEmail: string
 ): Promise<AdminOperationResult> {
   try {
-    const potentialMatches = await checkDuplicatesDb({
-      title_zh: args.title_zh,
-      title_en: args.title_en,
-      author_zh: args.author_zh,
-      author_en: args.author_en,
-      publisher_zh: args.publisher_zh,
-      publisher_en: args.publisher_en,
-    })
+    // Determine search keys: prefer explicit book titles; if absent, map item name to title fields
+    const titleZh = args.title_zh ?? args.item_name_zh ?? undefined
+    const titleEn = args.title_en ?? args.item_name_en ?? undefined
+
+    // If no textual fields provided, return early with empty results to avoid broad scans
+    const hasText = Boolean(titleZh || titleEn || args.author_zh || args.author_en)
+    let potentialMatches: Awaited<ReturnType<typeof checkDuplicatesDb>> = []
+    let fusedRanking: Array<{ id: string; score: number }> = []
+    if (hasText) {
+      // Try vector KNN first; fallback to ILIKE search if unavailable or no results
+      try {
+        const queryText = buildQueryTextForEmbedding({
+          title_zh: titleZh,
+          title_en: titleEn,
+          author_zh: args.author_zh,
+          author_en: args.author_en,
+          publisher_zh: args.publisher_zh,
+          publisher_en: args.publisher_en,
+          tags: args.tags ?? null,
+        })
+        const embedding = await createTextEmbedding(queryText)
+        const textKnn = await searchBooksByTextEmbedding({ embedding, limit: 20, category_type: args.category_type ?? null })
+
+        // Optional image KNN if provider configured and cover image present
+        let imageKnn: Array<{ book_id: string; distance: number }> = []
+        const provider = (process.env.IMAGE_EMBEDDINGS_PROVIDER || '').toLowerCase()
+        if (provider === 'clip' && args.cover_image) {
+          try {
+            const ivec = await createImageEmbeddingClip(args.cover_image)
+            imageKnn = await searchBooksByImageEmbeddingClip({ embedding: ivec, limit: 20, category_type: args.category_type ?? null })
+          } catch (e) {
+            const strict = (process.env.IMAGE_EMBEDDINGS_STRICT || '').trim() === '1'
+            if (strict) {
+              throw new Error('image_embeddings_unavailable')
+            }
+            // non-strict: ignore image path errors; proceed with text only
+          }
+        }
+
+        const textScores = new Map<string, number>()
+        for (const r of textKnn) textScores.set(r.book_id, 1 - r.distance)
+        const imageScores = new Map<string, number>()
+        for (const r of imageKnn) imageScores.set(r.book_id, 1 - r.distance)
+        const fused = new Map<string, number>()
+        const ids = new Set<string>([...textScores.keys(), ...imageScores.keys()])
+        for (const id of ids) {
+          const ts = textScores.get(id) ?? 0
+          const is = imageScores.get(id) ?? 0
+          const score = 0.6 * ts + 0.4 * is
+          fused.set(id, score)
+        }
+        fusedRanking = Array.from(fused.entries()).map(([id, score]) => ({ id, score }))
+          .sort((a, b) => b.score - a.score)
+
+        const orderedIds = fusedRanking.map((x) => x.id)
+        potentialMatches = orderedIds.length > 0 ? await getBooksByIds(orderedIds) : []
+        // Keep potentialMatches ordered by fused ranking
+        if (potentialMatches.length > 0) {
+          const order = new Map(orderedIds.map((id, i) => [id, i]))
+          potentialMatches.sort((a, b) => (order.get(a.id!) ?? 0) - (order.get(b.id!) ?? 0))
+        }
+      } catch {
+        // Fallback: ILIKE search
+        potentialMatches = await checkDuplicatesDb({
+          title_zh: titleZh ?? null,
+          title_en: titleEn ?? null,
+          author_zh: args.author_zh ?? null,
+          author_en: args.author_en ?? null,
+          publisher_zh: args.publisher_zh ?? null,
+          publisher_en: args.publisher_en ?? null,
+          category_type: args.category_type ?? null,
+          tags: args.tags ?? null,
+        })
+      }
+    }
 
     let visualAnalysis: Array<{
       book: typeof potentialMatches[0]
@@ -32,8 +113,9 @@ export async function checkDuplicates(
     }> = []
 
     if (args.cover_image && potentialMatches.length > 0) {
+      const subset = potentialMatches.slice(0, 3)
       visualAnalysis = await Promise.all(
-        potentialMatches.map(async (match) => {
+        subset.map(async (match) => {
           if (!match.cover_image) return null
           const analysis = await analyzeVisualSimilarity(args.cover_image!, match.cover_image)
           return {
@@ -53,7 +135,19 @@ export async function checkDuplicates(
       action: 'CHECK_DUPLICATE',
       admin_email: adminEmail,
       metadata: {
-        search_criteria: args,
+        search_criteria: {
+          title_zh: titleZh,
+          title_en: titleEn,
+          author_zh: args.author_zh,
+          author_en: args.author_en,
+          publisher_zh: args.publisher_zh,
+          publisher_en: args.publisher_en,
+          item_type_zh: args.item_type_zh,
+          item_type_en: args.item_type_en,
+          tags: args.tags,
+          category_type: args.category_type,
+          has_cover_image: Boolean(args.cover_image),
+        },
         text_matches: potentialMatches.length,
         visual_matches: visualAnalysis.length,
         has_visual_comparison: !!args.cover_image,

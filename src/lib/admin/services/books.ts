@@ -1,10 +1,31 @@
 import { createBookDb, logAdminAction, searchBooksDb, updateBookDb, getBookDb } from '@/lib/db/admin'
+import { createTextEmbedding } from '@/lib/openai/embeddings'
+import { upsertBookTextEmbedding } from '@/lib/db/admin/embeddings'
+import { buildQueryTextForEmbedding } from './embeddings'
+import { createImageEmbeddingClip } from '@/lib/admin/services/image-embeddings/openclip'
+import { upsertBookImageEmbeddingClip } from '@/lib/db/admin/image-embeddings'
 import { isValidUUID, handleOperationError } from './utils'
 import { type AdminOperationResult, type BookCreate, type BookUpdate, type BookSearch } from '@/lib/admin/types'
 
 export async function createBook(args: BookCreate, adminEmail: string): Promise<AdminOperationResult> {
   try {
     const book = await createBookDb(args)
+    // Fire-and-forget embedding upsert (best effort)
+    try {
+      const text = buildQueryTextForEmbedding({
+        title_zh: args.title_zh,
+        title_en: args.title_en ?? null,
+        author_zh: args.author_zh ?? null,
+        author_en: args.author_en ?? null,
+        publisher_zh: args.publisher_zh ?? null,
+        publisher_en: args.publisher_en ?? null,
+        tags: args.tags ?? [],
+      })
+      if (text.trim()) {
+        const vec = await createTextEmbedding(text)
+        await upsertBookTextEmbedding(book.id, vec)
+      }
+    } catch {}
     await logAdminAction({
       action: 'CREATE_BOOK',
       admin_email: adminEmail,
@@ -19,6 +40,20 @@ export async function createBook(args: BookCreate, adminEmail: string): Promise<
         ai_analysis: args.analysis_result ? true : false,
       },
     })
+
+    // Image embedding upsert (if provider configured and cover present)
+    try {
+      const provider = (process.env.IMAGE_EMBEDDINGS_PROVIDER || '').toLowerCase()
+      if (provider === 'clip' && args.cover_image) {
+        const ivec = await createImageEmbeddingClip(args.cover_image)
+        await upsertBookImageEmbeddingClip(book.id!, ivec)
+      }
+    } catch (e) {
+      const strict = (process.env.IMAGE_EMBEDDINGS_STRICT || '').trim() === '1'
+      if (strict) {
+        throw e instanceof Error ? e : new Error('image_embeddings_unavailable')
+      }
+    }
 
     return { success: true, message: 'Book created successfully', data: { book } }
   } catch (error) {
@@ -37,6 +72,23 @@ export async function updateBook(args: BookUpdate, adminEmail: string): Promise<
     }
 
     const updatedBook = await updateBookDb(args.book_id, args)
+    // Best-effort embedding refresh based on updated fields
+    try {
+      const text = buildQueryTextForEmbedding({
+        title_zh: typeof args.title_zh === 'string' ? args.title_zh : updatedBook.title_zh,
+        title_en: args.title_en !== undefined ? args.title_en : updatedBook.title_en ?? null,
+        // We don't have authors/publishers in BookBase; rely on titles and tags for now
+        author_zh: null,
+        author_en: null,
+        publisher_zh: null,
+        publisher_en: null,
+        tags: args.tags ?? undefined,
+      })
+      if (text.trim()) {
+        const vec = await createTextEmbedding(text)
+        await upsertBookTextEmbedding(args.book_id, vec)
+      }
+    } catch {}
     await logAdminAction({
       action: 'EDIT_BOOK',
       book_id: args.book_id,
@@ -52,6 +104,21 @@ export async function updateBook(args: BookUpdate, adminEmail: string): Promise<
         },
       },
     })
+
+    // Image embedding refresh when cover_image is updated
+    try {
+      const provider = (process.env.IMAGE_EMBEDDINGS_PROVIDER || '').toLowerCase()
+      const newCover = (args as any).cover_image as string | undefined
+      if (provider === 'clip' && newCover) {
+        const ivec = await createImageEmbeddingClip(newCover)
+        await upsertBookImageEmbeddingClip(args.book_id, ivec)
+      }
+    } catch (e) {
+      const strict = (process.env.IMAGE_EMBEDDINGS_STRICT || '').trim() === '1'
+      if (strict) {
+        throw e instanceof Error ? e : new Error('image_embeddings_unavailable')
+      }
+    }
 
     return { success: true, message: 'Book updated successfully', data: { book: updatedBook } }
   } catch (error) {
