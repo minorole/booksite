@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import React from 'react'
-import { createRoot } from 'react-dom/client'
-import { act } from 'react'
+import { render, screen } from '@testing-library/react'
 import { LocaleProvider } from '@/contexts/LocaleContext'
 
 // Capture items passed to PillNav
@@ -35,30 +34,21 @@ vi.mock('next/navigation', () => ({
   usePathname: () => '/en/books/pure-land',
 }))
 
-const flush = () => new Promise((r) => setTimeout(r, 0))
-
 describe('Navbar language links', () => {
   beforeEach(() => { lastItems = undefined })
 
   it('renders zh/en links based on current pathname (desktop/mobile data)', async () => {
     const { Navbar } = await import('@/components/layout/navbar')
 
-    const container = document.createElement('div')
-    document.body.appendChild(container)
-    const root = createRoot(container)
-
-    await act(async () => {
-      root.render(
-        <LocaleProvider initialLocale="en">
-          <Navbar />
-        </LocaleProvider>
-      )
-      await flush()
-    })
+    render(
+      <LocaleProvider initialLocale="en">
+        <Navbar />
+      </LocaleProvider>
+    )
 
     // Items should include zh/en links derived from current pathname
     expect(Array.isArray(lastItems)).toBe(true)
-    const hrefs = Array.from(container.querySelectorAll('a')).map(a => a.getAttribute('href'))
+    const hrefs = Array.from(document.querySelectorAll('a')).map(a => a.getAttribute('href'))
     expect(hrefs).toContain('/zh/books/pure-land')
     expect(hrefs).toContain('/en/books/pure-land')
     // Should include sign-in link when user is not signed in
@@ -74,20 +64,13 @@ describe('Navbar language links', () => {
     const { Navbar } = await import('@/components/layout/navbar')
     const { LocaleProvider: Provider } = await import('@/contexts/LocaleContext')
 
-    const container = document.createElement('div')
-    document.body.appendChild(container)
-    const root = createRoot(container)
+    render(
+      <Provider initialLocale="en">
+        <Navbar />
+      </Provider>
+    )
 
-    await act(async () => {
-      root.render(
-        <Provider initialLocale="en">
-          <Navbar />
-        </Provider>
-      )
-      await flush()
-    })
-
-    const hrefs = Array.from(container.querySelectorAll('a')).map(a => a.getAttribute('href'))
+    const hrefs = Array.from(document.querySelectorAll('a')).map(a => a.getAttribute('href'))
     expect(hrefs).toContain('/en/users/orders')
     // Admin pill now points to the canonical admin root which redirects to ai-chat
     expect(hrefs).toContain('/en/admin')

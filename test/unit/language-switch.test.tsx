@@ -1,7 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import React from 'react'
-import { createRoot } from 'react-dom/client'
-import { act } from 'react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { LocaleProvider } from '@/contexts/LocaleContext'
 
 let routerPush: ((path: string) => void) | undefined
@@ -10,41 +9,24 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: (path: string) => routerPush?.(path) }),
 }))
 
-const flush = () => new Promise((r) => setTimeout(r, 0))
-
 describe('LanguageSwitch', () => {
   it('navigates to zh and en paths based on current pathname', async () => {
     const push = vi.fn()
     routerPush = push
     const { LanguageSwitch } = await import('@/components/layout/LanguageSwitch')
+    render(
+      <LocaleProvider initialLocale="en">
+        <LanguageSwitch />
+      </LocaleProvider>
+    )
 
-    const container = document.createElement('div')
-    document.body.appendChild(container)
-    const root = createRoot(container)
+    const zh = await screen.findByText('中文')
+    const en = await screen.findByText('English')
 
-    await act(async () => {
-      root.render(
-        <LocaleProvider initialLocale="en">
-          <LanguageSwitch />
-        </LocaleProvider>
-      )
-      await flush()
-    })
-
-    const spans = Array.from(container.querySelectorAll('span'))
-    const zh = spans.find((el) => el.textContent === '中文') as HTMLElement
-    const en = spans.find((el) => el.textContent === 'English') as HTMLElement
-
-    await act(async () => {
-      zh?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
-      await flush()
-    })
+    fireEvent.click(zh)
     expect(push).toHaveBeenCalledWith('/zh/books/pure-land')
 
-    await act(async () => {
-      en?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
-      await flush()
-    })
+    fireEvent.click(en)
     expect(push).toHaveBeenCalledWith('/en/books/pure-land')
   })
 
@@ -56,27 +38,14 @@ describe('LanguageSwitch', () => {
       useRouter: () => ({ push: (path: string) => routerPush?.(path) }),
     }))
     const { LanguageSwitch } = await import('@/components/layout/LanguageSwitch')
+    render(
+      <LocaleProvider initialLocale="zh">
+        <LanguageSwitch />
+      </LocaleProvider>
+    )
 
-    const container = document.createElement('div')
-    document.body.appendChild(container)
-    const root = createRoot(container)
-
-    await act(async () => {
-      root.render(
-        <LocaleProvider initialLocale="zh">
-          <LanguageSwitch />
-        </LocaleProvider>
-      )
-      await flush()
-    })
-
-    const spans = Array.from(container.querySelectorAll('span'))
-    const en = spans.find((el) => el.textContent === 'English') as HTMLElement
-
-    await act(async () => {
-      en?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
-      await flush()
-    })
+    const en = await screen.findByText('English')
+    fireEvent.click(en)
     expect(push).toHaveBeenCalledWith('/en/books/pure-land')
   })
 })

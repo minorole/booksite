@@ -9,7 +9,12 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
-    setupFiles: [],
+    setupFiles: ['test/setup.ts'],
+    environmentMatchGlobs: [
+      ['test/api/**/*.test.ts', 'node'],
+      ['test/unit/**/*.test.ts', 'node'],
+      ['test/admin-ai/**/*.test.ts', 'node'],
+    ],
   },
   resolve: {
     alias: {

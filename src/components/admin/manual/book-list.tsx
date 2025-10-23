@@ -42,11 +42,7 @@ type Book = {
   category: Category
 }
 import Image from "next/image"
-import {
-  Dialog,
-  DialogContent,
-  DialogTrigger,
-} from "@/components/ui/dialog"
+import ImagePreviewDialog from "@/components/ui/image-preview-dialog"
 import { CATEGORY_LABELS } from '@/lib/admin/constants'
 import { useSearchParams } from 'next/navigation'
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
@@ -201,32 +197,26 @@ export function BookList() {
               <TableRow key={book.id}>
                 <TableCell>
                   {book.cover_image ? (
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <div className="cursor-pointer hover:opacity-80 transition-opacity">
-                          <Image
-                            src={book.cover_image}
-                            alt={book.title_zh || book.title_en || 'Book cover'}
-                            width={50}
-                            height={70}
-                            className="object-cover rounded-sm"
-                            unoptimized
-                          />
-                        </div>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-3xl">
-                        <div className="relative w-full h-[80vh]">
-                          <Image
-                            src={book.cover_image}
-                            alt={book.title_zh || book.title_en || 'Book cover'}
-                            fill
-                            className="object-contain"
-                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                            unoptimized
-                          />
-                        </div>
-                      </DialogContent>
-                    </Dialog>
+                    <ImagePreviewDialog
+                      src={book.cover_image}
+                      alt={book.title_zh || book.title_en || 'Book cover'}
+                      contentClassName="max-w-3xl"
+                      containerClassName="relative w-full h-[80vh]"
+                      imageClassName="object-contain"
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      unoptimized
+                    >
+                      <div className="cursor-pointer hover:opacity-80 transition-opacity">
+                        <Image
+                          src={book.cover_image}
+                          alt={book.title_zh || book.title_en || 'Book cover'}
+                          width={50}
+                          height={70}
+                          className="object-cover rounded-sm"
+                          unoptimized
+                        />
+                      </div>
+                    </ImagePreviewDialog>
                   ) : (
                     <div className="w-[50px] h-[70px] bg-muted flex items-center justify-center rounded-sm">
                       <span className="text-xs text-muted-foreground">

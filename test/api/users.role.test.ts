@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { installRouteSupabaseMock } from '../utils/supabase'
 
 vi.mock('@/lib/security/guards', async () => {
   const UnauthorizedError = class extends Error { status = 401 }
@@ -50,7 +51,8 @@ describe('PUT /api/users/role', () => {
   })
 
   it('forbids non-super touching SUPER_ADMIN', async () => {
-    vi.doMock('@/lib/db/client', () => ({ getServerDb: vi.fn(async () => dbFactory({ targetRole: 'SUPER_ADMIN', rpcError: 'forbidden_super' })) }))
+    installRouteSupabaseMock().setResponse([], { message: 'forbidden_super' })
+    vi.doMock('@/lib/supabase', () => ({ createRouteSupabaseClient: async () => dbFactory({ targetRole: 'SUPER_ADMIN', rpcError: 'forbidden_super' }) }))
     const mod = await import('@/app/api/users/role/route')
     const req = new Request('http://localhost/api/users/role', { method: 'PUT', body: JSON.stringify({ userId: 't1', role: 'ADMIN' }), headers: { 'Content-Type': 'application/json' } })
     const rsp = await mod.PUT(req)
@@ -58,7 +60,8 @@ describe('PUT /api/users/role', () => {
   })
 
   it('blocks self-demotion', async () => {
-    vi.doMock('@/lib/db/client', () => ({ getServerDb: vi.fn(async () => dbFactory({ targetRole: 'SUPER_ADMIN', rpcError: 'self_demote_forbidden' })) }))
+    installRouteSupabaseMock().setResponse([], { message: 'self_demote_forbidden' })
+    vi.doMock('@/lib/supabase', () => ({ createRouteSupabaseClient: async () => dbFactory({ targetRole: 'SUPER_ADMIN', rpcError: 'self_demote_forbidden' }) }))
     const mod = await import('@/app/api/users/role/route')
     const req = new Request('http://localhost/api/users/role', { method: 'PUT', body: JSON.stringify({ userId: 'req-1', role: 'ADMIN' }), headers: { 'Content-Type': 'application/json' } })
     const rsp = await mod.PUT(req)
@@ -66,7 +69,8 @@ describe('PUT /api/users/role', () => {
   })
 
   it('blocks last SUPER_ADMIN demotion', async () => {
-    vi.doMock('@/lib/db/client', () => ({ getServerDb: vi.fn(async () => dbFactory({ targetRole: 'SUPER_ADMIN', rpcError: 'last_super_forbidden' })) }))
+    installRouteSupabaseMock().setResponse([], { message: 'last_super_forbidden' })
+    vi.doMock('@/lib/supabase', () => ({ createRouteSupabaseClient: async () => dbFactory({ targetRole: 'SUPER_ADMIN', rpcError: 'last_super_forbidden' }) }))
     const mod = await import('@/app/api/users/role/route')
     const req = new Request('http://localhost/api/users/role', { method: 'PUT', body: JSON.stringify({ userId: 't2', role: 'ADMIN' }), headers: { 'Content-Type': 'application/json' } })
     const rsp = await mod.PUT(req)
@@ -74,7 +78,8 @@ describe('PUT /api/users/role', () => {
   })
 
   it('returns 404 when target not found', async () => {
-    vi.doMock('@/lib/db/client', () => ({ getServerDb: vi.fn(async () => dbFactory({ targetRole: undefined, rpcError: null })) }))
+    installRouteSupabaseMock().setResponse([], null)
+    vi.doMock('@/lib/supabase', () => ({ createRouteSupabaseClient: async () => dbFactory({ targetRole: undefined, rpcError: null }) }))
     const mod = await import('@/app/api/users/role/route')
     const req = new Request('http://localhost/api/users/role', { method: 'PUT', body: JSON.stringify({ userId: 'missing', role: 'ADMIN' }), headers: { 'Content-Type': 'application/json' } })
     const rsp = await mod.PUT(req)
@@ -82,7 +87,8 @@ describe('PUT /api/users/role', () => {
   })
 
   it('updates role successfully', async () => {
-    vi.doMock('@/lib/db/client', () => ({ getServerDb: vi.fn(async () => dbFactory({ targetRole: 'ADMIN', rpcError: null })) }))
+    installRouteSupabaseMock().setResponse([], null)
+    vi.doMock('@/lib/supabase', () => ({ createRouteSupabaseClient: async () => dbFactory({ targetRole: 'ADMIN', rpcError: null }) }))
     const mod = await import('@/app/api/users/role/route')
     const req = new Request('http://localhost/api/users/role', { method: 'PUT', body: JSON.stringify({ userId: 't3', role: 'USER' }), headers: { 'Content-Type': 'application/json' } })
     const rsp = await mod.PUT(req)
@@ -91,4 +97,3 @@ describe('PUT /api/users/role', () => {
     expect(body.ok).toBe(true)
   })
 })
-

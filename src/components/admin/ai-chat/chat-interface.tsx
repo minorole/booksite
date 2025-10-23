@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import ImagePreviewDialog from "@/components/ui/image-preview-dialog";
 import { Copy, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MessageList } from './MessageList';
@@ -144,22 +144,17 @@ import { UI_STRINGS } from '@/lib/admin/i18n'
         </div>
       </div>
 
-      <Dialog open={selectedImage !== null} onOpenChange={() => setSelectedImage(null)}>
-        <DialogContent className="max-w-4xl w-full p-0 overflow-hidden bg-transparent border-0">
-          {selectedImage && (
-            <div className="relative w-full h-[85vh]">
-              <Image
-                src={selectedImage}
-                alt="Full-size image"
-                fill
-                sizes="(max-width: 1024px) 100vw, 1024px"
-                className="object-contain rounded-lg shadow-2xl"
-                priority
-              />
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      <ImagePreviewDialog
+        open={selectedImage !== null}
+        onOpenChange={() => setSelectedImage(null)}
+        src={selectedImage || ''}
+        alt="Full-size image"
+        sizes="(max-width: 1024px) 100vw, 1024px"
+        priority
+        contentClassName="max-w-4xl w-full p-0 overflow-hidden bg-transparent border-0"
+        containerClassName="relative w-full h-[85vh]"
+        imageClassName="object-contain rounded-lg shadow-2xl"
+      />
 
       {/* Single-stream mode: no separate results drawer */}
 

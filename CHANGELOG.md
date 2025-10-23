@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 ## Unreleased
 
 ### Added
+- [Tests] Shared utilities for predictable server/UI testing:
+  - `test/utils/supabase.ts` (mock `createRouteSupabaseClient` with `setResponse`)
+  - `test/utils/next.ts` (stubs for `next/headers` and `next/navigation`)
+  - `test/utils/fetch.ts` (stub `fetch` for image HEAD checks)
+  - `test/utils/openai.ts` (opt-in OpenAI wrapper mock)
+  - Global setup: `test/setup.ts`
+- [Tests • UI] Adopted Testing Library for component tests to simplify rendering and interactions.
+  - Dev deps: `@testing-library/react`, `@testing-library/dom`
+  - Updated tests: `test/unit/language-switch.test.tsx`, `test/unit/navbar.locale.test.tsx`, `test/unit/locale-context.test.tsx`, `test/unit/bilingual.test.tsx`, `test/unit/auth.verify.locale-link.test.tsx`
+- [UI] Reusable, accessible image preview dialog component that guarantees a hidden `DialogTitle` and `DialogDescription` while preserving visuals.
+  - File: `src/components/ui/image-preview-dialog.tsx`
+- [Lint/CI] Local ESLint rule to enforce dialog accessibility: every `DialogContent` must have an accessible name (title or aria-*) and description (description or aria-*). Enabled in CI.
+  - Files: `tools/eslint-rules/dialog-a11y.mjs`, `eslint.config.mjs`
 - [Admin • Navigation] Language switch (zh/en) with active highlight and account `UserMenu` in Admin navbar. Super Admin tab appears only for superadmins.
   - File: `src/components/admin/admin-navbar.tsx`
 - [Admin • Users API] Admin-only endpoint to view a specific user’s order history (includes per-order address snapshot).
@@ -41,6 +54,23 @@ All notable changes to this project will be documented in this file.
   - Files: `.env.example`, `src/lib/config/env.ts`
   
 ### Changed
+- [Tests] Unified Vitest configuration; removed `vite.config.ts`. Tests now use `vitest.config.ts` with `environmentMatchGlobs` (node for server/unit, jsdom for UI) and a shared setup file.
+  - Files: removed `vite.config.ts`; updated `vitest.config.ts`, added `test/setup.ts`
+- [Tests] Refactored server tests to use shared Supabase mock and stable alias imports.
+  - Files: `test/api/users.role.test.ts`, `test/unit/db.orders.test.ts`
+- [Vision] Standardized internal imports in similarity service to `@/…` for reliable mocking; updated similarity test to use deterministic JSON path.
+  - Files: `src/lib/admin/services/vision/similarity.ts`, `test/admin-ai/vision.similarity.test.ts`
+- [DB] `getUserOrders` now accepts an optional `db` client parameter for easier unit testing; default behavior unchanged.
+  - File: `src/lib/db/orders.ts`
+- [Admin • AI Chat] Switched the image lightbox to `ImagePreviewDialog`; same appearance, now a11y-compliant and reusable.
+  - File: `src/components/admin/ai-chat/chat-interface.tsx`
+- [Admin • Manual • Book List] Switched book cover preview to `ImagePreviewDialog`; consistent behavior and a11y.
+  - File: `src/components/admin/manual/book-list.tsx`
+- [Admin • Users/Manual] Added hidden descriptions to existing dialogs to satisfy a11y requirements.
+  - Files: `src/components/admin/users/UserOrdersDialog.tsx`, `src/components/admin/manual/book-dialog.tsx`
+
+### Fixed
+- [A11y] Resolved Radix warnings: “DialogContent requires a DialogTitle” and “Missing Description/aria-describedby” across image preview dialogs and user/book dialogs.
 - [Admin • Navigation] Centralized a single Admin navbar across Admin and Super Admin via layouts; removed page-level container wrappers; preserved Back-to-Site.
   - Files: `src/app/[locale]/admin/layout.tsx`, `src/app/[locale]/super-admin/layout.tsx`, `src/app/[locale]/admin/ai-chat/page.tsx`, `src/app/[locale]/admin/users/page.tsx`
 - [Admin/Super Admin • User Management] Localized UI (titles, headers, placeholders, actions), added explicit empty states, and consistent loading labels.

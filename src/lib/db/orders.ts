@@ -40,8 +40,8 @@ function formatAddress(addr: ShippingAddress | null | undefined): string {
   return lines.filter(Boolean).join('\n')
 }
 
-export async function getUserOrders(userId: string): Promise<UserOrderProjection[]> {
-  const db = await createRouteSupabaseClient()
+export async function getUserOrders(userId: string, db?: any): Promise<UserOrderProjection[]> {
+  const client = db ?? (await createRouteSupabaseClient())
 
   const sel = `
     id, status, total_items, created_at,
@@ -54,7 +54,7 @@ export async function getUserOrders(userId: string): Promise<UserOrderProjection
     )
   `
 
-  const { data, error } = await db
+  const { data, error } = await client
     .from('orders')
     .select(sel)
     .eq('user_id', userId)

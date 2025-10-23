@@ -2,6 +2,7 @@ import { FlatCompat } from '@eslint/eslintrc'
 import js from '@eslint/js'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import localA11y from './tools/eslint-rules/dialog-a11y.mjs'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -67,6 +68,16 @@ const config = [
       },
     ],
   }),
+  // Local custom rules
+  {
+    files: ['src/**/*.tsx'],
+    plugins: {
+      'local-a11y': localA11y,
+    },
+    rules: {
+      'local-a11y/dialog-needs-title-and-description': 'error',
+    },
+  },
 ]
 
 export default config

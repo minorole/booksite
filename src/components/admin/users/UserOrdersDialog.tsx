@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
@@ -68,6 +68,9 @@ export function UserOrdersDialog({
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
+        <DialogDescription className="sr-only">
+          <Bilingual cnText="此对话框显示该用户的订单列表。" enText="This dialog shows the user's orders." />
+        </DialogDescription>
         {loading ? (
           <div className="py-8 flex items-center justify-center"><LoadingSpinner /></div>
         ) : error ? (

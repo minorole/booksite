@@ -1,6 +1,6 @@
-import { standardizeImageUrl, getSimilarityImageUrl } from '../../image-upload'
-import { visualSimilaritySchema } from './schemas'
-import { callVisionJSON } from './helpers'
+import { standardizeImageUrl, getSimilarityImageUrl } from '@/lib/admin/image-upload'
+import { visualSimilaritySchema } from '@/lib/admin/services/vision/schemas'
+import { callVisionJSON } from '@/lib/admin/services/vision/helpers'
 
 export async function analyzeVisualSimilarity(
   newImageUrl: string,

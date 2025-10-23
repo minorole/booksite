@@ -1,47 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { installRouteSupabaseMock } from '../utils/supabase'
 
-// Mock the Supabase server client used by the helper
-vi.mock('@/lib/db/client', () => {
-  let mockData: any[] = []
-  let mockError: { message: string } | null = null
-
-  const api = {
-    __setResponse(data: any[], error: { message: string } | null = null) {
-      mockData = data
-      mockError = error
-    },
-    getServerDb: async () => {
-      return {
-        from() {
-          return {
-            select() {
-              return {
-                eq() {
-                  return {
-                    order() {
-                      return Promise.resolve({ data: mockData, error: mockError })
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      } as any
-    }
-  }
-
-  return api
-})
-
+const control = installRouteSupabaseMock()
 import { getUserOrders } from '@/lib/db/orders'
-
-// Access the mock control API
-const clientMock = await import('@/lib/db/client') as any
 
 describe('getUserOrders', () => {
   beforeEach(() => {
-    clientMock.__setResponse([])
+    vi.resetModules()
+    control.setResponse([])
   })
 
   it('maps orders with shipping address and items correctly', async () => {
@@ -51,7 +17,7 @@ describe('getUserOrders', () => {
         status: 'PENDING',
         total_items: 3,
         created_at: '2025-01-01T00:00:00.000Z',
-        shipping_addresses: {
+        order_shipping_addresses: {
           address1: '123 Main St',
           address2: 'Apt 5',
           city: 'Springfield',
@@ -66,7 +32,7 @@ describe('getUserOrders', () => {
       }
     ]
 
-    clientMock.__setResponse(sample)
+    control.setResponse(sample)
     const orders = await getUserOrders('user-1')
 
     expect(orders).toHaveLength(1)
@@ -89,7 +55,7 @@ describe('getUserOrders', () => {
         status: 'COMPLETED',
         total_items: 0,
         created_at: '2025-02-02T00:00:00.000Z',
-        shipping_addresses: {
+        order_shipping_addresses: {
           address1: '456 Side Rd',
           address2: null,
           city: 'Metropolis',
@@ -101,7 +67,7 @@ describe('getUserOrders', () => {
       }
     ]
 
-    clientMock.__setResponse(sample)
+    control.setResponse(sample)
     const orders = await getUserOrders('user-2')
     expect(orders).toHaveLength(1)
     const o = orders[0]
@@ -109,4 +75,3 @@ describe('getUserOrders', () => {
     expect(o.order_items).toEqual([])
   })
 })
-

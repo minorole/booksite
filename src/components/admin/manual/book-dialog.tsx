@@ -10,6 +10,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog"
 import {
   Form,
@@ -160,6 +161,9 @@ export function BookDialog({
             <Bilingual cnText="编辑书籍" enText="Edit Book" />
           </DialogTitle>
         </DialogHeader>
+        <DialogDescription className="sr-only">
+          <Bilingual cnText="更新书籍的标题、分类、数量和标签。" enText="Update the book's title, category, quantity, and tags." />
+        </DialogDescription>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
