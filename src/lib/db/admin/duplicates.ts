@@ -5,12 +5,14 @@ import type { SearchBooksRow, TagJoinRow } from '@/lib/db/types'
 
 // Simple duplicate check based on titles/authors, returns basic projections
 export async function checkDuplicatesDb(args: {
-  title_zh: string
+  title_zh?: string | null
   title_en?: string | null
   author_zh?: string | null
   author_en?: string | null
   publisher_zh?: string | null
   publisher_en?: string | null
+  category_type?: CategoryType | null
+  tags?: string[] | null
 }): Promise<BookBase[]> {
   const db = await getServerDb()
   let query = db
@@ -62,7 +64,20 @@ export async function checkDuplicatesDb(args: {
     }
   }
 
-  return list.map((b) => ({
+  // Optional post-filters: category type and tags
+  let filtered = list
+  if (args.category_type) {
+    filtered = filtered.filter((b) => (catTypeById.get(b.category_id as string) ?? 'OTHER_BOOKS') === args.category_type)
+  }
+  if (args.tags && args.tags.length > 0) {
+    const tagSet = new Set(args.tags.filter(Boolean))
+    filtered = filtered.filter((b) => {
+      const bt = tagsByBook.get(b.id as string) ?? []
+      return bt.some((t) => tagSet.has(t))
+    })
+  }
+
+  return filtered.map((b) => ({
     id: b.id as string,
     title_zh: b.title_zh,
     title_en: b.title_en ?? null,

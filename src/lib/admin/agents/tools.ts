@@ -47,28 +47,30 @@ export function visionTools(): Tool<AgentContext>[] {
 
   const dup = tool({
     name: 'check_duplicates',
-    description: 'Check for duplicate books based on extracted fields and optional cover image.',
+    description: 'Check for duplicate books or items based on extracted fields and optional cover image. Provide either book fields (title/author/publisher) or item fields (name/type/tags).',
     strict: true,
     parameters: z.object({
-      title_zh: z.string(),
+      // Book-style fields (optional)
+      title_zh: z.string().nullable(),
       title_en: z.string().nullable(),
       author_zh: z.string().nullable(),
       author_en: z.string().nullable(),
       publisher_zh: z.string().nullable(),
       publisher_en: z.string().nullable(),
+      // Item-style fields (optional)
+      item_name_zh: z.string().nullable(),
+      item_name_en: z.string().nullable(),
+      item_type_zh: z.string().nullable(),
+      item_type_en: z.string().nullable(),
+      tags: z.array(z.string()).nullable(),
+      // Optional category hint
+      category_type: z.enum(['PURE_LAND_BOOKS', 'OTHER_BOOKS', 'DHARMA_ITEMS', 'BUDDHA_STATUES']).nullable(),
+      // Visual input
       cover_image: HttpUrl.nullable(),
     }),
     async execute(input: unknown, context?: RunContext<AgentContext>) {
       const email = context?.context?.userEmail || 'admin@unknown'
-      const result = await checkDuplicates(input as {
-        title_zh: string
-        title_en?: string
-        author_zh?: string
-        author_en?: string
-        publisher_zh?: string
-        publisher_en?: string
-        cover_image?: string
-      }, email)
+      const result = await checkDuplicates(input as any, email)
       return result
     },
   })

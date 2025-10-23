@@ -1,4 +1,4 @@
-import { standardizeImageUrl } from '../../image-upload'
+import { standardizeImageUrl, getSimilarityImageUrl } from '../../image-upload'
 import { visualSimilaritySchema } from './schemas'
 import { callVisionJSON } from './helpers'
 
@@ -16,6 +16,11 @@ export async function analyzeVisualSimilarity(
       standardizeImageUrl(existingImageUrl),
     ])
 
+    const [similarNew, similarExisting] = [
+      getSimilarityImageUrl(standardizedNew),
+      getSimilarityImageUrl(standardizedExisting),
+    ]
+
   const json = await callVisionJSON<{
     layout_similarity: number
     content_similarity: number
@@ -26,10 +31,10 @@ export async function analyzeVisualSimilarity(
         content: [
           {
             type: 'text',
-            text: `Compare these two Buddhist book covers and respond with ONLY JSON strictly matching the schema (0-1 scores).`,
+            text: `Compare these two product images (book cover or item). Focus on the printed cover/artwork area and primary layout; ignore background, lighting, or angle differences. Respond with ONLY JSON strictly matching the schema (0-1 scores).`,
           },
-          { type: 'image_url', image_url: { url: standardizedNew } },
-          { type: 'image_url', image_url: { url: standardizedExisting } },
+          { type: 'image_url', image_url: { url: similarNew } },
+          { type: 'image_url', image_url: { url: similarExisting } },
         ],
       },
     ])

@@ -110,6 +110,31 @@ export async function standardizeImageUrl(url: string): Promise<string> {
 }
 
 /**
+ * Returns a Cloudinary derivative URL optimized for similarity comparisons
+ * - 512x512, crop:fill, gravity:auto, q_auto, f_auto
+ * - If not a Cloudinary URL, returns the standardized URL as-is
+ */
+export function getSimilarityImageUrl(standardizedUrl: string): string {
+  try {
+    if (!standardizedUrl || typeof standardizedUrl !== 'string') return standardizedUrl
+    if (!standardizedUrl.includes('res.cloudinary.com')) return standardizedUrl
+    // Cloudinary delivery URLs look like: https://res.cloudinary.com/<cloud>/image/upload/<optional-transforms>/<publicId>.<ext>
+    // We inject our transforms right after '/upload/' and before any existing transforms/publicId
+    const marker = '/upload/'
+    const idx = standardizedUrl.indexOf(marker)
+    if (idx === -1) return standardizedUrl
+    const prefix = standardizedUrl.slice(0, idx + marker.length)
+    const rest = standardizedUrl.slice(idx + marker.length)
+    const transform = 'c_fill,g_auto,w_512,h_512,q_auto,f_auto/'
+    // Avoid double-injecting if already present
+    if (rest.startsWith(transform)) return standardizedUrl
+    return `${prefix}${transform}${rest}`
+  } catch {
+    return standardizedUrl
+  }
+}
+
+/**
  * Validates file before upload
  */
 export function validateImageFile(file: File): void {

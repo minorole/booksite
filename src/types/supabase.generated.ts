@@ -59,6 +59,29 @@ export type Database = {
         }
         Relationships: []
       }
+      book_image_embeddings_clip: {
+        Row: {
+          book_id: string
+          embedding: string
+        }
+        Insert: {
+          book_id: string
+          embedding: string
+        }
+        Update: {
+          book_id?: string
+          embedding?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "book_image_embeddings_clip_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: true
+            referencedRelation: "books"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       book_tags: {
         Row: {
           book_id: string
@@ -89,6 +112,29 @@ export type Database = {
           },
         ]
       }
+      book_text_embeddings: {
+        Row: {
+          book_id: string
+          embedding: string
+        }
+        Insert: {
+          book_id: string
+          embedding: string
+        }
+        Update: {
+          book_id?: string
+          embedding?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "book_text_embeddings_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: true
+            referencedRelation: "books"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       books: {
         Row: {
           author_en: string | null
@@ -112,7 +158,7 @@ export type Database = {
           publisher_en: string | null
           publisher_zh: string | null
           quantity: number
-          search_tsv_en: unknown | null
+          search_tsv_en: unknown
           title_en: string | null
           title_zh: string
           updated_at: string
@@ -140,7 +186,7 @@ export type Database = {
           publisher_en?: string | null
           publisher_zh?: string | null
           quantity?: number
-          search_tsv_en?: unknown | null
+          search_tsv_en?: unknown
           title_en?: string | null
           title_zh: string
           updated_at?: string
@@ -168,7 +214,7 @@ export type Database = {
           publisher_en?: string | null
           publisher_zh?: string | null
           quantity?: number
-          search_tsv_en?: unknown | null
+          search_tsv_en?: unknown
           title_en?: string | null
           title_zh?: string
           updated_at?: string
@@ -581,92 +627,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      binary_quantize: {
-        Args: { "": string } | { "": unknown }
-        Returns: unknown
-      }
       can_place_order: {
         Args: { items_count: number; user_id: string }
         Returns: boolean
       }
-      gtrgm_compress: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      gtrgm_decompress: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      gtrgm_in: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      gtrgm_options: {
-        Args: { "": unknown }
-        Returns: undefined
-      }
-      gtrgm_out: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      halfvec_avg: {
-        Args: { "": number[] }
-        Returns: unknown
-      }
-      halfvec_out: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      halfvec_send: {
-        Args: { "": unknown }
-        Returns: string
-      }
-      halfvec_typmod_in: {
-        Args: { "": unknown[] }
-        Returns: number
-      }
-      hnsw_bit_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      hnsw_halfvec_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      hnsw_sparsevec_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      hnswhandler: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      is_admin: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      ivfflat_bit_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      ivfflat_halfvec_support: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      ivfflathandler: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      l2_norm: {
-        Args: { "": unknown } | { "": unknown }
-        Returns: number
-      }
-      l2_normalize: {
-        Args: { "": string } | { "": unknown } | { "": unknown }
-        Returns: unknown
-      }
+      is_admin: { Args: never; Returns: boolean }
       list_users: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           created_at: string
           email: string
@@ -721,37 +688,35 @@ export type Database = {
           publisher_en: string | null
           publisher_zh: string | null
           quantity: number
-          search_tsv_en: unknown | null
+          search_tsv_en: unknown
           title_en: string | null
           title_zh: string
           updated_at: string
           views: number
         }[]
+        SetofOptions: {
+          from: "*"
+          to: "books"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
-      set_limit: {
-        Args: { "": number }
-        Returns: number
+      search_books_by_image_embedding_clip: {
+        Args: { match_limit?: number; p_category_type?: string; q: string }
+        Returns: {
+          book_id: string
+          distance: number
+        }[]
       }
-      show_limit: {
-        Args: Record<PropertyKey, never>
-        Returns: number
+      search_books_by_text_embedding: {
+        Args: { match_limit?: number; p_category_type?: string; q: string }
+        Returns: {
+          book_id: string
+          distance: number
+        }[]
       }
-      show_trgm: {
-        Args: { "": string }
-        Returns: string[]
-      }
-      sparsevec_out: {
-        Args: { "": unknown }
-        Returns: unknown
-      }
-      sparsevec_send: {
-        Args: { "": unknown }
-        Returns: string
-      }
-      sparsevec_typmod_in: {
-        Args: { "": unknown[] }
-        Returns: number
-      }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
       update_user_role: {
         Args: { new_role: string; uid: string }
         Returns: undefined
@@ -759,30 +724,6 @@ export type Database = {
       update_user_role_secure: {
         Args: { new_role: string; uid: string }
         Returns: undefined
-      }
-      vector_avg: {
-        Args: { "": number[] }
-        Returns: string
-      }
-      vector_dims: {
-        Args: { "": string } | { "": unknown }
-        Returns: number
-      }
-      vector_norm: {
-        Args: { "": string }
-        Returns: number
-      }
-      vector_out: {
-        Args: { "": string }
-        Returns: unknown
-      }
-      vector_send: {
-        Args: { "": string }
-        Returns: string
-      }
-      vector_typmod_in: {
-        Args: { "": unknown[] }
-        Returns: number
       }
     }
     Enums: {
