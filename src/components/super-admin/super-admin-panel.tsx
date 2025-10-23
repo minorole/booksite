@@ -37,6 +37,8 @@ type User = {
 export function SuperAdminPanel() {
   const { user, isSuperAdmin, loading } = useAuth()
   const [users, setUsers] = useState<User[]>([])
+  const [clip, setClip] = useState<{ ok: boolean; latency_ms?: number; model?: string; url?: string; error?: string } | null>(null)
+  const [clipLoading, setClipLoading] = useState(false)
   const { toast } = useToast()
   const [updating, setUpdating] = useState<string | null>(null)
   const router = useRouter()
@@ -76,6 +78,23 @@ export function SuperAdminPanel() {
     }
     if (!loading && isSuperAdmin) {
       fetchUsers()
+      // Fetch CLIP health status
+      ;(async () => {
+        try {
+          setClipLoading(true)
+          const rsp = await fetch('/api/super-admin/clip/health', { cache: 'no-store' })
+          const json = await rsp.json()
+          if (!rsp.ok || !json.ok) {
+            setClip({ ok: false, error: json?.error || `HTTP ${rsp.status}` })
+          } else {
+            setClip({ ok: true, latency_ms: json.latency_ms, model: json.details?.model, url: json.url })
+          }
+        } catch (e) {
+          setClip({ ok: false, error: (e as Error)?.message || 'error' })
+        } finally {
+          setClipLoading(false)
+        }
+      })()
     }
   }, [loading, isSuperAdmin, router, fetchUsers])
 
@@ -132,6 +151,49 @@ export function SuperAdminPanel() {
       <h1 className="text-2xl font-bold mb-6">
         <Bilingual cnText="用户管理" enText="User Management" />
       </h1>
+      {/* CLIP health card */}
+      <div className="mb-6 rounded-xl border p-4 bg-background">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-base font-semibold"><Bilingual cnText="CLIP 向量服务健康" enText="CLIP Embeddings Health" /></h2>
+            <p className="text-sm text-muted-foreground">
+              <Bilingual cnText="Cloud Run（CPU 按需）" enText="Cloud Run (CPU on request)" />
+            </p>
+          </div>
+          <Button size="sm" variant="outline" onClick={async () => {
+            try {
+              setClipLoading(true)
+              const rsp = await fetch('/api/super-admin/clip/health', { cache: 'no-store' })
+              const json = await rsp.json()
+              if (!rsp.ok || !json.ok) setClip({ ok: false, error: json?.error || `HTTP ${rsp.status}` })
+              else setClip({ ok: true, latency_ms: json.latency_ms, model: json.details?.model, url: json.url })
+            } catch (e) { setClip({ ok: false, error: (e as Error)?.message || 'error' }) }
+            finally { setClipLoading(false) }
+          }}>
+            {clipLoading ? <Bilingual cnText="正在刷新" enText="Refreshing" /> : <Bilingual cnText="刷新" enText="Refresh" />}
+          </Button>
+        </div>
+        <div className="mt-3 text-sm">
+          {clip ? (
+            clip.ok ? (
+              <div className="flex items-center gap-3">
+                <span className="inline-flex items-center gap-1 text-green-600"><span className="h-2 w-2 rounded-full bg-green-600" /> <Bilingual cnText="在线" enText="Online" /></span>
+                {typeof clip.latency_ms === 'number' && <span>{clip.latency_ms} ms</span>}
+                {clip.model && <span>{clip.model}</span>}
+                {clip.url && <a className="underline" href={clip.url} target="_blank" rel="noreferrer">{clip.url}</a>}
+              </div>
+            ) : (
+              <div className="inline-flex items-center gap-2 text-red-600">
+                <span className="h-2 w-2 rounded-full bg-red-600" />
+                <span><Bilingual cnText="不可用" enText="Unavailable" /></span>
+                {clip.error && <span className="text-muted-foreground">({clip.error})</span>}
+              </div>
+            )
+          ) : (
+            <span className="text-muted-foreground"><Bilingual cnText="正在检测…" enText="Checking…" /></span>
+          )}
+        </div>
+      </div>
       <div className="mb-4 flex items-center gap-2">
         <Input
           placeholder={locale === 'zh' ? '按邮箱或姓名搜索' : 'Search by email or name'}

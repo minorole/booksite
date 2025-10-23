@@ -1,0 +1,8 @@
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+pillow==10.4.0
+requests==2.32.3
+open-clip-torch==2.24.0
+# CPU-only wheels via extra-index-url when installing
+torch==2.3.1+cpu
+torchvision==0.18.1+cpu
