@@ -63,6 +63,8 @@
 /* Catppuccin scope for Admin AI */
 @layer base {
   .theme-catppuccin {
+    /* Shared chat column width for Admin AI */
+    --chat-col-width: 65ch;
     /* Accent (Lavender, Latte, softened to a light tint) */
     --accent: 230.9 97.2% 92%;
     --accent-foreground: 233.8 16.0% 35.5%;

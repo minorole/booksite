@@ -52,7 +52,8 @@ export function MessageList({
   onScroll?: React.UIEventHandler<HTMLDivElement>
 }) {
   return (
-    <div ref={containerRef} onScroll={onScroll} className="flex-1 p-4 overflow-y-auto space-y-6 scroll-smooth">
+    <div ref={containerRef} onScroll={onScroll} className="flex-1 p-4 overflow-y-auto scroll-smooth">
+      <div className="mx-auto w-full max-w-[var(--chat-col-width)] space-y-6">
       {messages.map((message, i) => {
         const role = (['user', 'assistant', 'system', 'tool'] as const).includes(message.role as any)
           ? (message.role as keyof typeof MESSAGE_STYLES)
@@ -60,7 +61,7 @@ export function MessageList({
         const style = MESSAGE_STYLES[role]
         const textClass = role === 'assistant' || role === 'user' ? 'text-foreground' : ''
         return (
-          <div key={i} className={cn("flex gap-3 p-4 rounded-2xl shadow-sm", style.container, style.row, style.align, "max-w-[65ch]") }>
+          <div key={i} className={cn("flex gap-3 p-4 rounded-2xl shadow-sm", style.container, style.row, style.align) }>
             <div className={cn("w-8 h-8 rounded-full flex items-center justify-center shrink-0", style.icon)}>
               {style.component}
             </div>
@@ -75,6 +76,7 @@ export function MessageList({
         )
       })}
       <div ref={endRef} />
+      </div>
     </div>
   )
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ImagePlus, Loader2, Send } from "lucide-react";
@@ -24,6 +24,7 @@ export function ChatInput({
   onError?: (message: string) => void
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const textRef = useRef<HTMLTextAreaElement>(null)
   const { locale } = useLocale()
 
   function validateAndSelect(file: File) {
@@ -38,9 +39,17 @@ export function ChatInput({
     }
     onSelectFile(file)
   }
+  
+  // Auto-resize the textarea height based on content, within CSS max-height
+  useEffect(() => {
+    const el = textRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = el.scrollHeight + 'px'
+  }, [input])
   return (
-    <div className="p-4 bg-background/80 backdrop-blur-sm sticky bottom-0 z-10">
-      <div className="max-w-2xl mx-auto">
+    <div className="p-4 bg-background/80 backdrop-blur-sm sticky bottom-0 z-10 mb-[env(safe-area-inset-bottom)]">
+      <div className="max-w-[var(--chat-col-width)] mx-auto">
         <div
           className="relative isolate border-0 focus-within:outline-none focus-within:ring-0 focus-within:ring-offset-0 focus-within:border-0"
           onDragOver={(e) => {
@@ -55,10 +64,12 @@ export function ChatInput({
           }}
         >
           <Textarea
+            ref={textRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={UI_STRINGS[locale === 'zh' ? 'zh' : 'en'].input_placeholder}
-            className="min-h-[3rem] max-h-[20rem] pr-24 resize-none bg-background w-full rounded-lg border-0 shadow-inner focus-visible:ring-0 focus:ring-0 focus-visible:ring-offset-0 focus:ring-offset-0 focus-visible:border-transparent focus:border-transparent"
+            rows={3}
+            className="min-h-[5rem] max-h-[20rem] pr-24 resize-none overflow-y-auto bg-background w-full rounded-lg border-0 shadow-inner focus-visible:ring-0 focus:ring-0 focus-visible:ring-offset-0 focus:ring-offset-0 focus-visible:border-transparent focus:border-transparent"
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 if (e.metaKey || e.ctrlKey) {

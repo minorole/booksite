@@ -47,6 +47,12 @@ All notable changes to this project will be documented in this file.
   - Files: `src/app/[locale]/admin/users/page.tsx`, `src/components/super-admin/super-admin-panel.tsx`
 - [Admin • Book Management] Localized list and editor dialog; added loading spinner for list; added a11y labels for icon-only buttons.
   - Files: `src/components/admin/manual/book-list.tsx`, `src/components/admin/manual/book-dialog.tsx`
+- [Admin AI Chat] Align composer and messages to a shared column width.
+  - Introduced a single CSS variable `--chat-col-width` and centered wrappers so both areas use the exact same measure; removed per‑bubble `max-w` caps to prevent drift; aligned the "Jump to latest" affordance; kept mobile full‑width behavior.
+  - Files: `src/app/globals.css`, `src/components/admin/ai-chat/MessageList.tsx`, `src/components/admin/ai-chat/ChatInput.tsx`, `src/components/admin/ai-chat/chat-interface.tsx`.
+- [Admin AI Chat] Improve composer ergonomics: auto‑resize up to a sane cap with a taller default and safe‑area space on iOS.
+  - Textarea now grows with content up to `max-h-[20rem]`, then scrolls; default height ~3–4 lines; added `mb:[env(safe-area-inset-bottom)]` on the sticky bar.
+  - File: `src/components/admin/ai-chat/ChatInput.tsx`.
 - [Admin AI Chat] Unified spacing to rely on layout; removed inner horizontal padding from chat container.
   - File: `src/components/admin/ai-chat/chat-interface.tsx`
 

@@ -122,12 +122,14 @@ import { UI_STRINGS } from '@/lib/admin/i18n'
 
             {!atBottom && (
               <div className="px-4 -mt-2 mb-2">
-                <Button size="sm" variant="secondary" onClick={() => {
-                  messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-                  setAtBottom(true)
-                }}>
-                  <Bilingual cnText="跳至最新" enText="Jump to latest" />
-                </Button>
+                <div className="max-w-[var(--chat-col-width)] mx-auto">
+                  <Button size="sm" variant="secondary" onClick={() => {
+                    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+                    setAtBottom(true)
+                  }}>
+                    <Bilingual cnText="跳至最新" enText="Jump to latest" />
+                  </Button>
+                </div>
               </div>
             )}
 
