@@ -5,19 +5,8 @@ All notable changes to this project will be documented in this file.
 ## Unreleased
 
 ### Added
-- [Tests] Shared utilities for predictable server/UI testing:
-  - `test/utils/supabase.ts` (mock `createRouteSupabaseClient` with `setResponse`)
-  - `test/utils/next.ts` (stubs for `next/headers` and `next/navigation`)
-  - `test/utils/fetch.ts` (stub `fetch` for image HEAD checks)
-  - `test/utils/openai.ts` (opt-in OpenAI wrapper mock)
-  - Global setup: `test/setup.ts`
-- [Tests • UI] Adopted Testing Library for component tests to simplify rendering and interactions.
-  - Dev deps: `@testing-library/react`, `@testing-library/dom`
-  - Updated tests: `test/unit/language-switch.test.tsx`, `test/unit/navbar.locale.test.tsx`, `test/unit/locale-context.test.tsx`, `test/unit/bilingual.test.tsx`, `test/unit/auth.verify.locale-link.test.tsx`
 - [UI] Reusable, accessible image preview dialog component that guarantees a hidden `DialogTitle` and `DialogDescription` while preserving visuals.
   - File: `src/components/ui/image-preview-dialog.tsx`
-- [Lint/CI] Local ESLint rule to enforce dialog accessibility: every `DialogContent` must have an accessible name (title or aria-*) and description (description or aria-*). Enabled in CI.
-  - Files: `tools/eslint-rules/dialog-a11y.mjs`, `eslint.config.mjs`
 - [Admin • Navigation] Language switch (zh/en) with active highlight and account `UserMenu` in Admin navbar. Super Admin tab appears only for superadmins.
   - File: `src/components/admin/admin-navbar.tsx`
 - [Admin • Users API] Admin-only endpoint to view a specific user’s order history (includes per-order address snapshot).
@@ -29,8 +18,6 @@ All notable changes to this project will be documented in this file.
 - [Super Admin • User Management] Added “View Orders” action per user with the same dialog.
   - File: `src/components/super-admin/super-admin-panel.tsx`.
 
- - [Docs • Admin AI] Added duplicate detection plan to align with ADR 0004 (OpenAI‑only), with optional pHash/dHash prefilter, provider‑agnostic embeddings details, and a concrete evaluation plan.
-  - File: `doc/admin-ai/duplicate-detection-plan.md`
 - [Admin AI • Tools] Unified `check_duplicates` tool to accept item inputs (name/type/tags/category) in addition to book fields.
   - File: `src/lib/admin/agents/tools.ts`
 - [Vision] Neutralized visual similarity prompt and switched comparisons to normalized Cloudinary derivatives (512×512, crop:fill, gravity:auto).
@@ -38,14 +25,12 @@ All notable changes to this project will be documented in this file.
 - [DB • Embeddings] Text embeddings: table + HNSW index + KNN RPC.
   - Migration: `supabase/migrations/0019_text_embeddings.sql`
   - Helpers: `src/lib/openai/embeddings.ts`, `src/lib/db/admin/embeddings.ts`
-  - Backfill API: `POST /api/admin/embeddings/backfill` (`src/app/api/admin/embeddings/backfill/route.ts`)
+  - Backfill API: `POST /api/admin/embeddings/backfill`.
 - [DB • Embeddings] Image embeddings (self‑hosted CLIP, 512‑dim): table + HNSW index + KNN RPC.
   - Migration: `supabase/migrations/0020_image_embeddings_clip.sql`
   - Provider client: `src/lib/admin/services/image-embeddings/openclip.ts`
   - Helpers: `src/lib/db/admin/image-embeddings.ts`, service: `src/lib/admin/services/image-embeddings.ts`
-  - Backfill API: `POST /api/admin/image-embeddings/backfill` (`src/app/api/admin/image-embeddings/backfill/route.ts`)
-- [Docs • Infra] Deploy CPU‑only CLIP embeddings to Cloud Run (CPU on request, min_instances=1). Includes containerized service under `infra/clip-embed-service` and step‑by‑step guide.
-  - Files: `infra/clip-embed-service/*`, `doc/admin-ai/clip-deploy-cloudrun.md`
+  - Backfill API: `POST /api/admin/image-embeddings/backfill`.
 - [Super Admin] CLIP health monitor card with secure server-side health proxy (superadmin only).
   - UI: `src/components/super-admin/super-admin-panel.tsx`
   - API: `GET /api/super-admin/clip/health` (`src/app/api/super-admin/clip/health/route.ts`)
@@ -53,11 +38,6 @@ All notable changes to this project will be documented in this file.
   - Keys: `IMAGE_EMBEDDINGS_PROVIDER`, `CLIP_EMBEDDINGS_URL`, `CLIP_EMBEDDINGS_API_KEY`
   - Files: `.env.example`, `src/lib/config/env.ts`
   
-### Changed
-- [Tests] Unified Vitest configuration; removed `vite.config.ts`. Tests now use `vitest.config.ts` with `environmentMatchGlobs` (node for server/unit, jsdom for UI) and a shared setup file.
-  - Files: removed `vite.config.ts`; updated `vitest.config.ts`, added `test/setup.ts`
-- [Tests] Refactored server tests to use shared Supabase mock and stable alias imports.
-  - Files: `test/api/users.role.test.ts`, `test/unit/db.orders.test.ts`
 - [Vision] Standardized internal imports in similarity service to `@/…` for reliable mocking; updated similarity test to use deterministic JSON path.
   - Files: `src/lib/admin/services/vision/similarity.ts`, `test/admin-ai/vision.similarity.test.ts`
 - [DB] `getUserOrders` now accepts an optional `db` client parameter for easier unit testing; default behavior unchanged.
@@ -212,12 +192,10 @@ All notable changes to this project will be documented in this file.
 - Clarify low-stock warnings as planned (`doc/admin-ai/features.md`).
 - [Admin UI] Roadmap updated to single-stream chat; removed panel references and updated anchors to inline cards (`doc/admin-ai/admin-ai-ui-roadmap.md`).
 - [Admin UI] E2E manual test updated to reference inline cards and MessageContent mapping (`doc/admin-ai/e2e-manual-test.md`).
-- [ADR] Updated ADR-0002 to note single-stream inline cards replacing the right-pane (`doc/adr/0002-server-orchestrated-ai-chat-ui-refactor-streaming-and-gpt5-mini.md`).
+ 
 ### Removed
 - [Cleanup] Removed locale-less admin wrappers in favor of middleware + localized routes. References: `src/app/admin/page.tsx`, `src/app/admin/ai-chat/page.tsx`, `src/app/admin/manual/page.tsx`, `src/app/super-admin/page.tsx`.
-- [Infra] Pruned unused env getters for direct Postgres URLs (`DATABASE_URL`, `DIRECT_URL`) to reduce drift; retained `OPENAI_API_KEY_USER` and Upstash getters. Reference: `src/lib/config/env.ts`.
-- [Cleanup] Removed unused enum arrays (`ORDER_STATUSES`, `ADMIN_ACTIONS`); union types remain the single source of truth. Reference: `src/lib/db/enums.ts`.
-- [Admin UI] Moved result card components from `src/components/admin/ai-chat/results/cards/*` to `src/components/admin/ai-chat/cards/*` and updated imports; removed remaining panel/store code and mentions.
+ 
 
 ## 2025-10-18
 ### Added
@@ -228,28 +206,19 @@ All notable changes to this project will be documented in this file.
 - [Admin] Auto-language reply behavior: agent mirrors the user's last message language; falls back to UI language when unclear (no language limits). Reference: `src/lib/admin/chat/orchestrator-agentkit.ts`.
 - [Admin] Tracing IDs: rely on Agents SDK-generated `trace_…` ids and attach server `request_id` via `traceMetadata` to avoid exporter 400s. Reference: `src/lib/admin/chat/orchestrator-agentkit.ts`.
 - [Admin] Refactored `useChatSession` to delegate SSE parsing and buffering to the new helpers; preserved public API. Reference: `src/components/admin/ai-chat/hooks/useChatSession.ts`.
-### Fixed
-- [Admin] Intermittent empty assistant message bubble due to streaming race; added robust buffering and finalization to guarantee rendering on `assistant_done`. Reference: `src/components/admin/ai-chat/hooks/useChatSession.ts`.
-### Removed
-- [Cleanup] Removed unused `StrictLanguagePreference` and internalized `analyzeResults` in duplicates service; retained a minimal `getToolsForAgent` shim for test compatibility. References: `src/lib/admin/types/context.ts`, `src/lib/admin/services/duplicates.ts`, `src/lib/admin/agents/tools.ts`.
-- [Cleanup] Removed unused `Image` import in `DuplicateMatchesCard`. Reference: `src/components/admin/ai-chat/results/cards/DuplicateMatchesCard.tsx`.
-### Changed
 - [Admin] Router agent config deduplicated and instantiated once via `Agent.create` using shared config to avoid drift. References: `src/lib/admin/agents/router.ts`, `src/lib/admin/agents/index.ts`.
 - [Admin] Agents SDK wired to project OpenAI client and API mode; default to Responses API (`OPENAI_USE_RESPONSES=0` to use Chat Completions). Reference: `src/lib/admin/chat/orchestrator-agentkit.ts`.
 - [Admin] Inventory enabled hosted `web_search` tool for narrow disambiguation (publisher/edition). Reference: `src/lib/admin/agents/inventory.ts`.
 - [Admin] Chat transcript now reuses results cards (duplicates/search/book/order) for a single source of truth. Reference: `src/components/admin/ai-chat/MessageContent.tsx`.
 - [Admin] Duplicate transform unified via `toDuplicateMatch` helper. Reference: `src/lib/admin/services/duplicates.ts`.
-- [OpenAI] Responses API typing simplified; direct `client.responses.create` with synthetic ChatCompletion; removed brittle usage mapping. Reference: `src/lib/openai/responses.ts`.
 - [OpenAI] Separate vision default model fallback (`VISION_DEFAULT`). References: `src/lib/openai.ts`, `src/lib/openai/models.ts`.
-- [Docs] Clarified legacy Assistants-era API directory is intentionally unused with README. Reference: `src/app/api/admin/function-call/README.md`.
-
+### Fixed
+- [Admin] Intermittent empty assistant message bubble due to streaming race; added robust buffering and finalization to guarantee rendering on `assistant_done`. Reference: `src/components/admin/ai-chat/hooks/useChatSession.ts`.
 ## 2025-10-17
-### Changed
-- [Admin] Enforced server-side confirmation for inventory and order mutations invoked by Admin AI tools to block unconfirmed writes. Reference: `src/lib/admin/agents/tools.ts`.
 ### Added
 - [Admin] Localized agent results and exposed request identifiers for observability in the Admin AI chat interface. References: `src/components/admin/ai-chat/results/ResultsPanel.tsx`, `src/components/admin/ai-chat/chat-interface.tsx`.
 - [Admin] Linked duplicate detection cards directly to the manual editor for rapid follow-up. Reference: `src/components/admin/ai-chat/results/cards/DuplicateMatchesCard.tsx`.
+### Changed
+- [Admin] Enforced server-side confirmation for inventory and order mutations invoked by Admin AI tools to block unconfirmed writes. Reference: `src/lib/admin/agents/tools.ts`.
 
-## 2025-10-16
-### Added
-- [Docs] Documented the Admin AI UI roadmap to coordinate panel and observability workstreams (`doc/admin-ai/admin-ai-ui-roadmap.md`).
+ 
