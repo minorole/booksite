@@ -49,6 +49,8 @@ All notable changes to this project will be documented in this file.
 - [Admin • Users/Manual] Added hidden descriptions to existing dialogs to satisfy a11y requirements.
   - Files: `src/components/admin/users/UserOrdersDialog.tsx`, `src/components/admin/manual/book-dialog.tsx`
 
+ - [Dev • Local] In-memory KV backend for rate limiting via `KV_USE_MEMORY=1` (dev-only). Documented in `.env.example` and `AGENTS.md`; blocked in production builds.
+
 ### Fixed
 - [A11y] Resolved Radix warnings: “DialogContent requires a DialogTitle” and “Missing Description/aria-describedby” across image preview dialogs and user/book dialogs.
 - [Admin • Navigation] Centralized a single Admin navbar across Admin and Super Admin via layouts; removed page-level container wrappers; preserved Back-to-Site.
