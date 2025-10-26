@@ -26,7 +26,7 @@ export function useMobileMenuAnimation(opts?: { ease?: string }) {
     const panel = panelRef.current
     const preContainer = preLayersRef.current
     const textInner = textInnerRef.current
-    if (!panel || !textInner) return
+    if (!panel) return
 
     let preLayers: HTMLDivElement[] = []
     if (preContainer) {
@@ -35,7 +35,7 @@ export function useMobileMenuAnimation(opts?: { ease?: string }) {
     preLayerElsRef.current = preLayers
 
     gsap.set([panel, ...preLayers], { xPercent: 100 })
-    gsap.set(textInner, { yPercent: 0 })
+    if (textInner) gsap.set(textInner, { yPercent: 0 })
   }, [isOpen])
 
   const buildOpenTimeline = useCallback(() => {
@@ -151,4 +151,3 @@ export function useMobileMenuAnimation(opts?: { ease?: string }) {
     refs: { toggleBtnRef, overlayRef, panelRef, preLayersRef, textInnerRef },
   }
 }
-

@@ -1,37 +1,35 @@
 "use client"
 
 import * as React from 'react'
+import { Button } from '@/components/ui/button'
+import { Menu, X } from 'lucide-react'
 
 export type MobileMenuToggleProps = {
   isOpen: boolean
   onClick: () => void
   menuId: string
-  toggleLabel?: React.ReactNode
-  toggleOpenLabel?: React.ReactNode
-  textInnerRef: React.RefObject<HTMLSpanElement>
+  ariaLabelClosed: string
+  ariaLabelOpen: string
 }
 
 export const MobileMenuToggle = React.forwardRef<HTMLButtonElement, MobileMenuToggleProps>(
-  function MobileMenuToggle({ isOpen, onClick, menuId, toggleLabel, toggleOpenLabel, textInnerRef }, ref) {
+  function MobileMenuToggle({ isOpen, onClick, menuId, ariaLabelClosed, ariaLabelOpen }, ref) {
+    const ariaLabel = isOpen ? ariaLabelOpen : ariaLabelClosed
     return (
-      <button
+      <Button
         ref={ref}
+        type="button"
+        size="icon"
+        variant="outline"
+        className="md:hidden rounded-full w-9 h-9 ml-1"
         onClick={onClick}
-        aria-label="Toggle menu"
+        aria-label={ariaLabel}
         aria-expanded={isOpen}
         aria-controls={menuId}
         aria-haspopup="dialog"
-        className="md:hidden rounded-full border-0 inline-flex items-center justify-center cursor-pointer relative ml-2 px-3 font-semibold text-[14px] gap-2"
-        style={{ height: "var(--nav-h)", background: "var(--base, #000)", color: "var(--pill-bg, #fff)" }}
       >
-        <span className="relative inline-block h-[1em] overflow-hidden" style={{ width: 'auto', minWidth: 'auto' }}>
-          <span ref={textInnerRef} className="flex flex-col leading-none">
-            <span className="leading-none">{toggleLabel ?? 'Menu'}</span>
-            <span className="leading-none">{toggleOpenLabel ?? 'Close'}</span>
-          </span>
-        </span>
-      </button>
+        {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+      </Button>
     )
   }
 )
-

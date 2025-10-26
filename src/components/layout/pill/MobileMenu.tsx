@@ -21,14 +21,17 @@ type Props = {
 
 // Link helpers moved to ./mobile/utils
 
-export function MobileMenu({ items, activeHref, ease = "power3.easeOut", onToggle, menuId: providedMenuId, toggleLabel, toggleOpenLabel }: Props) {
+export function MobileMenu({ items, activeHref, ease = "power3.easeOut", onToggle, menuId: providedMenuId }: Props) {
   const router = useRouter()
   const supabase = createClient()
   const { locale } = useLocale()
   const menuId = providedMenuId || 'mobile-menu-root'
 
   const { isOpen, requestClose, handleOpenChange, toggle, refs } = useMobileMenuAnimation({ ease })
-  const { toggleBtnRef, overlayRef, panelRef, preLayersRef, textInnerRef } = refs
+  const { toggleBtnRef, overlayRef, panelRef, preLayersRef } = refs
+
+  const ariaClosed = locale === 'zh' ? '打开菜单' : 'Open menu'
+  const ariaOpen = locale === 'zh' ? '关闭菜单' : 'Close menu'
 
   // Partition items for mobile: languages row at top; main items; account group at bottom.
   const isLanguageItem = (it: PillNavItem) => typeof it.label === 'string' && (it.label === '中文' || it.label === 'English' || it.label === 'ENGLISH')
@@ -61,9 +64,8 @@ export function MobileMenu({ items, activeHref, ease = "power3.easeOut", onToggl
         isOpen={isOpen}
         onClick={() => { toggle(); onToggle?.() }}
         menuId={menuId}
-        toggleLabel={toggleLabel}
-        toggleOpenLabel={toggleOpenLabel}
-        textInnerRef={textInnerRef}
+        ariaLabelClosed={ariaClosed}
+        ariaLabelOpen={ariaOpen}
       />
 
       <DialogPrimitive.Root open={isOpen} onOpenChange={handleOpenChange}>
