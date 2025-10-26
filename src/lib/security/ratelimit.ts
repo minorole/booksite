@@ -1,4 +1,4 @@
-import { kv } from '@vercel/kv'
+import { kv as vercelKv } from '@vercel/kv'
 import { getPolicy } from '@/lib/security/limits'
 
 export type RateLimitCheckOptions = {
@@ -16,7 +16,79 @@ export type RateLimitResult = {
   enabled: boolean
 }
 
+type KVClient = {
+  incr(key: string): Promise<number>
+  decr(key: string): Promise<number>
+  expire(key: string, seconds: number): Promise<number>
+  ttl(key: string): Promise<number>
+  del(key: string): Promise<number>
+}
+
+function getKV(): KVClient {
+  const useMemory = (process.env.KV_USE_MEMORY || '').toLowerCase()
+  if (useMemory === '1' || useMemory === 'true') {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('KV_USE_MEMORY is not allowed in production')
+    }
+    const store = new Map<string, { value: number; expiresAt?: number }>()
+    const now = () => Date.now()
+    const isExpired = (key: string) => {
+      const rec = store.get(key)
+      if (!rec) return false
+      if (rec.expiresAt && rec.expiresAt <= now()) {
+        store.delete(key)
+        return true
+      }
+      return false
+    }
+    const mem: KVClient = {
+      incr(key) {
+        isExpired(key)
+        const rec = store.get(key)
+        if (!rec) {
+          const next = { value: 1 }
+          store.set(key, next)
+          return Promise.resolve(next.value)
+        }
+        rec.value += 1
+        return Promise.resolve(rec.value)
+      },
+      decr(key) {
+        isExpired(key)
+        const rec = store.get(key)
+        if (!rec) {
+          const next = { value: -1 }
+          store.set(key, next)
+          return Promise.resolve(next.value)
+        }
+        rec.value -= 1
+        return Promise.resolve(rec.value)
+      },
+      expire(key, seconds) {
+        const rec = store.get(key) || { value: 0 }
+        rec.expiresAt = now() + seconds * 1000
+        store.set(key, rec)
+        return Promise.resolve(1)
+      },
+      ttl(key) {
+        isExpired(key)
+        const rec = store.get(key)
+        if (!rec?.expiresAt) return Promise.resolve(-1)
+        const ms = rec.expiresAt - now()
+        return Promise.resolve(ms > 0 ? Math.ceil(ms / 1000) : -2)
+      },
+      del(key) {
+        store.delete(key)
+        return Promise.resolve(1)
+      },
+    }
+    return mem
+  }
+  return vercelKv as KVClient
+}
+
 export async function checkRateLimit(opts: RateLimitCheckOptions): Promise<RateLimitResult> {
+  const kv = getKV()
   const policy = getPolicy(opts.route)
   const weight = Math.max(1, opts.weight ?? policy.weight)
   const owner = opts.userId || opts.ip || 'anon'
@@ -68,6 +140,7 @@ function semKey(route: string, owner: string) {
 }
 
 export async function acquireConcurrency(opts: ConcurrencyOpts): Promise<{ acquired: boolean, enabled: boolean, current: number, limit: number }> {
+  const kv = getKV()
   const owner = opts.userId || opts.ip || 'anon'
   const policy = getPolicy(opts.route)
   const key = semKey(opts.route, owner)
@@ -84,6 +157,7 @@ export async function acquireConcurrency(opts: ConcurrencyOpts): Promise<{ acqui
 }
 
 export async function releaseConcurrency(opts: ConcurrencyOpts): Promise<void> {
+  const kv = getKV()
   const owner = opts.userId || opts.ip || 'anon'
   const key = semKey(opts.route, owner)
   try {
