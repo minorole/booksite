@@ -48,3 +48,8 @@ export const LOTUS_TILT_POS_MAX = 0.025
 // - Spring tuning for rotation and position
 export const LOTUS_TILT_SPRING_STIFFNESS = 110
 export const LOTUS_TILT_SPRING_DAMPING = 16
+
+// Drag-to-spin (horizontal yaw) constants
+export const LOTUS_DRAG_YAW_SENSITIVITY = 4 // radians per normalized width delta
+export const LOTUS_DRAG_YAW_FRICTION = 6 // per-second velocity damping
+export const LOTUS_DRAG_START_PX = 6 // threshold to enter dragging
