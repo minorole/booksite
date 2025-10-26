@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import { type OrderStatus } from '@/lib/db/enums'
+import { fetchUserOrdersApi } from '@/lib/admin/client/users'
 import { Bilingual } from '@/components/common/bilingual'
 
 type Order = {
@@ -40,10 +41,8 @@ export function UserOrdersDialog({
       setLoading(true)
       setError(null)
       try {
-        const res = await fetch(`/api/users/${user.id}/orders`)
-        if (!res.ok) throw new Error('Failed to fetch orders')
-        const data = await res.json()
-        if (!cancelled) setOrders(data.orders as Order[])
+        const data = await fetchUserOrdersApi(user.id)
+        if (!cancelled) setOrders(data as Order[])
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to fetch orders')
       } finally {

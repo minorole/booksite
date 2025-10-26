@@ -21,6 +21,7 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { Edit2, Trash2 } from "lucide-react"
 import { BookDialog } from "./book-dialog"
+import { listBooksApi, deleteBookApi, type Book as BookType } from '@/lib/admin/client/books'
 // Define the shape returned by the Supabase-based API
 type Category = {
   id: string
@@ -49,7 +50,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { Bilingual } from "@/components/common/bilingual"
 import { useLocale } from "@/contexts/LocaleContext"
 
-type BookWithCategory = Book
+type BookWithCategory = BookType
 
 // Category labels centralized in '@/lib/admin/constants'
 
@@ -66,10 +67,8 @@ export function BookList() {
 
   const fetchBooks = useCallback(async () => {
     try {
-      const response = await fetch('/api/admin/manual/books')
-      const data = await response.json()
-      if (data.error) throw new Error(data.error)
-      setBooks(data.books)
+      const data = await listBooksApi()
+      setBooks(data)
     } catch (error) {
       toast({
         variant: "destructive",
@@ -100,11 +99,7 @@ export function BookList() {
     if (!confirm(locale === 'zh' ? '确定要删除此书吗？' : 'Are you sure you want to delete this book?')) return
 
     try {
-      const response = await fetch(`/api/admin/manual/books/${bookId}`, {
-        method: 'DELETE'
-      })
-      const data = await response.json()
-      if (data.error) throw new Error(data.error)
+      await deleteBookApi(bookId)
       
       toast({
         title: <Bilingual cnText="成功" enText="Success" />,

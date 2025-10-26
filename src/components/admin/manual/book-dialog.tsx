@@ -32,6 +32,7 @@ import { useToast } from "@/hooks/use-toast"
 import { CategoryType, CATEGORY_TYPES } from '@/lib/db/enums'
 import { CATEGORY_LABELS } from '@/lib/admin/constants'
 import { Bilingual } from "@/components/common/bilingual"
+import { updateBookApi } from '@/lib/admin/client/books'
 import { useLocale } from "@/contexts/LocaleContext"
 // Align dialog props with Supabase-based API shapes
 type Category = {
@@ -124,16 +125,7 @@ export function BookDialog({
         return
       }
 
-      const response = await fetch(`/api/admin/manual/books/${book.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(changedFields),
-      })
-
-      const data = await response.json()
-      if (data.error) throw new Error(data.error)
+      await updateBookApi(book.id, changedFields)
 
       toast({
         title: <Bilingual cnText="成功" enText="Success" />,
