@@ -2,9 +2,10 @@
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber"
 import { useGLTF, useAnimations, AdaptiveDpr } from "@react-three/drei"
-import { Suspense, useEffect, useMemo, useRef, forwardRef, useImperativeHandle, useState } from "react"
+import { Suspense, useEffect, useMemo, useRef, useState } from "react"
 import { MeshStandardMaterial, LoopPingPong, Group } from 'three'
-import { LOTUS_TILT_MAX_RAD, LOTUS_AUTO_ROTATE_PERIOD_S, LOTUS_TILT_POS_MAX, LOTUS_TILT_SPRING_STIFFNESS, LOTUS_TILT_SPRING_DAMPING, LOTUS_DRAG_YAW_SENSITIVITY, LOTUS_DRAG_YAW_FRICTION_DRAG, LOTUS_DRAG_YAW_FRICTION_COAST, LOTUS_DRAG_YAW_VEL_MAX, LOTUS_DRAG_START_PX } from "@/lib/ui"
+import { LOTUS_AUTO_ROTATE_PERIOD_S, LOTUS_DRAG_YAW_SENSITIVITY, LOTUS_DRAG_YAW_FRICTION_DRAG, LOTUS_DRAG_YAW_FRICTION_COAST, LOTUS_DRAG_YAW_VEL_MAX, LOTUS_DRAG_START_PX, LOTUS_BASE_TILT_RAD } from "@/lib/ui"
+import { useReducedMotionRef } from "@/lib/ui/useReducedMotion"
 
 // CSS Lotus as fallback
 function CssLotus() {
@@ -28,10 +29,12 @@ function CssLotus() {
 }
 
 function Lotus(props: Record<string, unknown>) {
+  const { gl } = useThree()
   const { scene, animations } = useGLTF('/models/lotus_compressed.glb', '/draco/', false)
   const { actions } = useAnimations(animations, scene)
-  const reducedMotionRef = useRef(false)
+  const reducedMotionRef = useReducedMotionRef()
   const hiddenRef = useRef(false)
+  const inViewRef = useRef(true)
 
   // Single matte-gold material shared by all meshes
   const goldMaterial = useMemo(() => new MeshStandardMaterial({
@@ -62,6 +65,8 @@ function Lotus(props: Record<string, unknown>) {
       if (c.isMesh) {
         // Assign shared material when available
         ;(c as unknown as { material: MeshStandardMaterial }).material = goldMaterial
+        // Ensure animated petals are not culled at frustum edges
+        ;(c as unknown as { frustumCulled?: boolean }).frustumCulled = false
       }
     })
   }, [scene, goldMaterial])
@@ -73,162 +78,62 @@ function Lotus(props: Record<string, unknown>) {
     }
   }, [goldMaterial])
 
-  // Track reduced-motion and page visibility to gate rotation
+  // Track page visibility to gate rotation
   useEffect(() => {
     if (typeof window === 'undefined') return
-    const mReduced = window.matchMedia?.('(prefers-reduced-motion: reduce)')
-    const onReducedChange = () => { reducedMotionRef.current = !!mReduced?.matches }
-    onReducedChange()
-    mReduced?.addEventListener('change', onReducedChange)
-
     const onVisibility = () => { hiddenRef.current = !!document.hidden }
     onVisibility()
     document.addEventListener('visibilitychange', onVisibility)
-
     return () => {
-      mReduced?.removeEventListener('change', onReducedChange)
       document.removeEventListener('visibilitychange', onVisibility)
     }
   }, [])
 
+  // Pause rotation when Canvas is out of view
+  useEffect(() => {
+    const el: HTMLElement | undefined = (gl as any)?.domElement
+    if (!el || typeof IntersectionObserver === 'undefined') return
+    const obs = new IntersectionObserver((entries) => {
+      const e = entries[0]
+      if (e) inViewRef.current = !!e.isIntersecting
+    }, { threshold: 0.1 })
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [gl])
+
   // Lightweight auto-rotation (matches OrbitControls autoRotateSpeed=2 ≈ 30s/rev)
   useFrame((_, delta) => {
-    if (hiddenRef.current || reducedMotionRef.current) return
+    if (hiddenRef.current || reducedMotionRef.current || !inViewRef.current) return
     const perSecond = (Math.PI * 2) / LOTUS_AUTO_ROTATE_PERIOD_S
     scene.rotation.y += perSecond * delta
   })
 
   return <primitive object={scene} {...props} />
 }
-
-const TiltGroup = forwardRef<{ reset: () => void }, { children: React.ReactNode }>(
-  ({ children }, ref) => {
-    const groupRef = useRef<Group>(null)
-    // Targets for rotation (x,z) and parallax position (x,y)
-    const targetRot = useRef({ x: 0, z: 0 })
-    const targetPos = useRef({ x: 0, y: 0 })
-    // Current values
-    const currentRot = useRef({ x: 0, z: 0 })
-    const currentPos = useRef({ x: 0, y: 0 })
-    // Velocities for spring integration
-    const velRot = useRef({ x: 0, z: 0 })
-    const velPos = useRef({ x: 0, y: 0 })
-    const enabledRef = useRef(true)
-    const { pointer } = useThree()
-
-    useImperativeHandle(ref, () => ({
-      reset: () => {
-        // Set targets to neutral; springs ease naturally back
-        targetRot.current.x = 0
-        targetRot.current.z = 0
-        targetPos.current.x = 0
-        targetPos.current.y = 0
-      },
-    }), [])
-
-    // Respect prefers-reduced-motion and pointer capability
-    useEffect(() => {
-      if (typeof window === 'undefined') return
-      const mReduced = window.matchMedia?.('(prefers-reduced-motion: reduce)')
-      const mFine = window.matchMedia?.('(pointer: fine)')
-      const update = () => {
-        enabledRef.current = (!!mFine?.matches) && !mReduced?.matches
-      }
-      update()
-      mReduced?.addEventListener('change', update)
-      mFine?.addEventListener('change', update)
-      return () => {
-        mReduced?.removeEventListener('change', update)
-        mFine?.removeEventListener('change', update)
-      }
-    }, [])
-
-    // Smoothly spring towards the target tilt/parallax derived from R3F pointer
-    useFrame((_, delta) => {
-      const maxRot = LOTUS_TILT_MAX_RAD
-      const maxPos = LOTUS_TILT_POS_MAX
-      if (enabledRef.current) {
-        // R3F pointer: [-1,1] in both axes relative to the canvas
-        targetRot.current.x = -pointer.y * maxRot
-        targetRot.current.z = pointer.x * maxRot
-        // Subtle parallax position; smaller vertical shift for natural feel
-        targetPos.current.x = pointer.x * maxPos
-        targetPos.current.y = -pointer.y * (maxPos * 0.6)
-      } else {
-        targetRot.current.x = 0
-        targetRot.current.z = 0
-        targetPos.current.x = 0
-        targetPos.current.y = 0
-      }
-
-      // Critically-damped-ish spring integration for smooth, natural motion
-      const k = LOTUS_TILT_SPRING_STIFFNESS
-      const c = LOTUS_TILT_SPRING_DAMPING
-
-      // Rotation X
-      const ax = (targetRot.current.x - currentRot.current.x) * k - velRot.current.x * c
-      velRot.current.x += ax * delta
-      currentRot.current.x += velRot.current.x * delta
-      // Rotation Z
-      const az = (targetRot.current.z - currentRot.current.z) * k - velRot.current.z * c
-      velRot.current.z += az * delta
-      currentRot.current.z += velRot.current.z * delta
-
-      // Position X
-      const apx = (targetPos.current.x - currentPos.current.x) * k - velPos.current.x * c
-      velPos.current.x += apx * delta
-      currentPos.current.x += velPos.current.x * delta
-      // Position Y
-      const apy = (targetPos.current.y - currentPos.current.y) * k - velPos.current.y * c
-      velPos.current.y += apy * delta
-      currentPos.current.y += velPos.current.y * delta
-
-      const g = groupRef.current
-      if (g) {
-        g.rotation.x = currentRot.current.x
-        g.rotation.z = currentRot.current.z
-        // Base position offset is applied in the group wrapper below
-        g.position.x = currentPos.current.x
-        g.position.y = -0.55 + currentPos.current.y
-      }
-    })
-
-    return (
-      <group ref={groupRef} position={[0, -0.55, 0]}>
-        {children}
-      </group>
-    )
-  }
-)
-TiltGroup.displayName = 'TiltGroup'
+// Tilt was removed; spin-only interaction remains
 function YawGroup({ children }: { children: React.ReactNode }) {
   const groupRef = useRef<Group>(null)
   const dragging = useRef(false)
+  const pointerActive = useRef(false)
   const start = useRef({ x: 0, y: 0 })
   const lastX = useRef(0)
   const yaw = useRef(0)
   const yawVel = useRef(0)
-  const reducedMotionRef = useRef(false)
+  const reducedMotionRef = useReducedMotionRef()
   const { size } = useThree()
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    const mReduced = window.matchMedia?.('(prefers-reduced-motion: reduce)')
-    const onReducedChange = () => { reducedMotionRef.current = !!mReduced?.matches }
-    onReducedChange()
-    mReduced?.addEventListener('change', onReducedChange)
-    return () => mReduced?.removeEventListener('change', onReducedChange)
-  }, [])
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (reducedMotionRef.current) return
+    pointerActive.current = true
     start.current.x = e.clientX
     start.current.y = e.clientY
     lastX.current = e.clientX
     dragging.current = false
+    try { (e.currentTarget as any).setPointerCapture?.(e.pointerId) } catch {}
   }
   const onPointerMove = (e: React.PointerEvent) => {
     if (reducedMotionRef.current) return
+    if (!pointerActive.current) return
     const dx = e.clientX - start.current.x
     const dy = e.clientY - start.current.y
     if (!dragging.current) {
@@ -249,10 +154,9 @@ function YawGroup({ children }: { children: React.ReactNode }) {
     else if (yawVel.current < -vmax) yawVel.current = -vmax
   }
   const release = (e: React.PointerEvent) => {
-    if (dragging.current) {
-      try { (e.currentTarget as any).releasePointerCapture?.((e as any).pointerId) } catch {}
-    }
+    try { (e.currentTarget as any).releasePointerCapture?.((e as any).pointerId) } catch {}
     dragging.current = false
+    pointerActive.current = false
   }
 
   useFrame((_, delta) => {
@@ -273,6 +177,7 @@ function YawGroup({ children }: { children: React.ReactNode }) {
   return (
     <group
       ref={groupRef}
+      rotation={[-LOTUS_BASE_TILT_RAD, 0, 0]}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={release}
@@ -284,7 +189,6 @@ function YawGroup({ children }: { children: React.ReactNode }) {
   )
 }
 export function LotusModel() {
-  const tiltRef = useRef<{ reset: () => void }>(null)
   const [maxDpr, setMaxDpr] = useState<number>(1.25)
 
   // Optionally cap DPR when on battery to reduce GPU load
@@ -320,18 +224,18 @@ export function LotusModel() {
           shadows={false}
           dpr={[1, maxDpr]} 
           camera={{ 
-            fov: 45, 
+            fov: 52, 
             position: [0, 0, 2],
-            near: 0.1,
-            far: 1000
+            near: 0.01,
+            far: 50
           }}
           gl={{ 
             alpha: true,
             antialias: true,
-            powerPreference: 'high-performance'
+            powerPreference: 'high-performance',
+            stencil: false
           }}
           onCreated={({ gl }) => gl.setClearColor(0x000000, 0)}
-          onPointerLeave={() => tiltRef.current?.reset()}
         >
           <AdaptiveDpr />
           <ambientLight intensity={0.7} />
@@ -343,13 +247,13 @@ export function LotusModel() {
             position={[-5, 5, -5]}
             intensity={2}
           />
-          <TiltGroup ref={tiltRef}>
+          <group position={[0, -0.55, 0]}>
             <YawGroup>
               <Lotus 
                 scale={0.4}
               />
             </YawGroup>
-          </TiltGroup>
+          </group>
         </Canvas>
       </Suspense>
     </div>

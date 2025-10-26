@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+### Home • Lotus 3D
+- Added spinner-style drag-to-spin with inertia; works with mouse and touch, scroll-safe (`touchAction: 'pan-y'`). Reduced motion disables drag.
+  - Files: `src/components/3d/lotus-model.tsx`, constants in `src/lib/ui.ts`.
+- Added an always-on base tilt toward the viewer (~5°) for depth; independent of cursor.
+  - Files: `src/components/3d/lotus-model.tsx`, constant `LOTUS_BASE_TILT_RAD` in `src/lib/ui.ts`.
+- Performance: pause auto-rotation when the Canvas is off-screen (IntersectionObserver), when tab is hidden, or when reduced motion is on.
+  - File: `src/components/3d/lotus-model.tsx`; hook: `src/lib/ui/useReducedMotion.ts`.
+- Performance: tuned GL (`stencil: false`) and cap DPR on battery; fixed `getBattery` listener cleanup.
+  - File: `src/components/3d/lotus-model.tsx`.
+- A11y: mark the lotus Canvas as decorative (`aria-hidden`).
+  - File: `src/components/3d/lotus-model.tsx`.
+- Fixed petal-tip clipping at full bloom by widening FOV, reducing near plane, and disabling mesh frustum culling.
+  - File: `src/components/3d/lotus-model.tsx`.
+
 ### Added
 - [UI] Reusable, accessible image preview dialog component that guarantees a hidden `DialogTitle` and `DialogDescription` while preserving visuals.
   - File: `src/components/ui/image-preview-dialog.tsx`

@@ -33,18 +33,8 @@ export const TOAST_LIMIT = 1
 export const TOAST_REMOVE_DELAY = 1000000
 
 // Home • Lotus 3D model motion constants
-// - Max tilt in radians when following the cursor
 // - Auto-rotation period for a full revolution (seconds)
-// 5% reduction from 0.15 for slightly less sensitivity
-export const LOTUS_TILT_MAX_RAD = 0.1425
 export const LOTUS_AUTO_ROTATE_PERIOD_S = 30
-
-// Parallax + spring constants for lotus tilt (natural motion)
-// - Max parallax position offset (scene units)
-export const LOTUS_TILT_POS_MAX = 0.025
-// - Spring tuning for rotation and position
-export const LOTUS_TILT_SPRING_STIFFNESS = 110
-export const LOTUS_TILT_SPRING_DAMPING = 16
 
 // Drag-to-spin (horizontal yaw) constants
 // Increase sensitivity for a spinner-like burst, and use lower friction when coasting
@@ -53,3 +43,7 @@ export const LOTUS_DRAG_YAW_FRICTION_DRAG = 8 // damping while dragging
 export const LOTUS_DRAG_YAW_FRICTION_COAST = 1.2 // damping when coasting
 export const LOTUS_DRAG_YAW_VEL_MAX = 20 // cap angular velocity magnitude
 export const LOTUS_DRAG_START_PX = 6 // threshold to enter dragging
+
+// Base, constant tilt towards the viewer (radians)
+// 5 degrees ≈ Math.PI / 36
+export const LOTUS_BASE_TILT_RAD = Math.PI / 36
