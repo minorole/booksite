@@ -64,7 +64,7 @@ export function Navbar() {
               logoHref={`/${locale}`}
               items={items}
               activeHref={pathname}
-              baseColor="#000000"
+              baseColor="transparent"
               pillColor="#ffffff"
               hoveredPillTextColor="#ffffff"
               pillTextColor="#000000"

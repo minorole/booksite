@@ -31,3 +31,13 @@ export const HOME_INPUT_MIN_CHARS_ZH = 12
 // Toast configuration (single source of truth)
 export const TOAST_LIMIT = 1
 export const TOAST_REMOVE_DELAY = 1000000
+
+// Home • Lotus 3D model motion constants
+// - Max tilt in radians when following the cursor
+// - Auto-rotation period for a full revolution (seconds)
+// 5% reduction from 0.15 for slightly less sensitivity
+export const LOTUS_TILT_MAX_RAD = 0.1425
+export const LOTUS_AUTO_ROTATE_PERIOD_S = 30
+// Easing base for tilt interpolation; effective ease per frame is
+// computed as: ease = 1 - Math.pow(LOTUS_TILT_EASING_BASE, delta)
+export const LOTUS_TILT_EASING_BASE = 0.001

@@ -263,10 +263,14 @@ export function MobileMenu({ items, activeHref, ease = "power3.easeOut", onToggl
           <DialogPrimitive.Content
             ref={panelRef}
             id={menuId}
-            aria-label="Mobile navigation"
             className="md:hidden fixed inset-y-0 right-0 z-[999] overflow-y-auto overscroll-contain"
             style={{ width: 'min(50vw, 420px)' }}
           >
+            {/* A11y: Hidden dialog title/description for screen readers */}
+            <DialogPrimitive.Title className="sr-only">Mobile navigation</DialogPrimitive.Title>
+            <DialogPrimitive.Description className="sr-only">
+              Primary site navigation. Use the links below to navigate.
+            </DialogPrimitive.Description>
             <div className="relative h-full w-full bg-white/95 backdrop-blur-md px-5 py-6 flex flex-col gap-4">
               {/* In-panel close button */}
               <button
