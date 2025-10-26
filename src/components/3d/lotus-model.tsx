@@ -4,7 +4,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber"
 import { useGLTF, useAnimations, AdaptiveDpr } from "@react-three/drei"
 import { Suspense, useEffect, useMemo, useRef, forwardRef, useImperativeHandle, useState } from "react"
 import { MeshStandardMaterial, LoopPingPong, Group } from 'three'
-import { LOTUS_TILT_MAX_RAD, LOTUS_AUTO_ROTATE_PERIOD_S, LOTUS_TILT_POS_MAX, LOTUS_TILT_SPRING_STIFFNESS, LOTUS_TILT_SPRING_DAMPING, LOTUS_DRAG_YAW_SENSITIVITY, LOTUS_DRAG_YAW_FRICTION, LOTUS_DRAG_START_PX } from "@/lib/ui"
+import { LOTUS_TILT_MAX_RAD, LOTUS_AUTO_ROTATE_PERIOD_S, LOTUS_TILT_POS_MAX, LOTUS_TILT_SPRING_STIFFNESS, LOTUS_TILT_SPRING_DAMPING, LOTUS_DRAG_YAW_SENSITIVITY, LOTUS_DRAG_YAW_FRICTION_DRAG, LOTUS_DRAG_YAW_FRICTION_COAST, LOTUS_DRAG_YAW_VEL_MAX, LOTUS_DRAG_START_PX } from "@/lib/ui"
 
 // CSS Lotus as fallback
 function CssLotus() {
@@ -243,6 +243,10 @@ function YawGroup({ children }: { children: React.ReactNode }) {
     lastX.current = e.clientX
     const norm = size.width > 0 ? deltaX / size.width : 0
     yawVel.current += norm * LOTUS_DRAG_YAW_SENSITIVITY
+    // Clamp velocity to avoid runaway speeds
+    const vmax = LOTUS_DRAG_YAW_VEL_MAX
+    if (yawVel.current > vmax) yawVel.current = vmax
+    else if (yawVel.current < -vmax) yawVel.current = -vmax
   }
   const release = (e: React.PointerEvent) => {
     if (dragging.current) {
@@ -252,9 +256,15 @@ function YawGroup({ children }: { children: React.ReactNode }) {
   }
 
   useFrame((_, delta) => {
-    // Friction and integrate yaw
-    const f = Math.exp(-LOTUS_DRAG_YAW_FRICTION * delta)
+    // Apply different damping while dragging vs coasting
+    const friction = dragging.current ? LOTUS_DRAG_YAW_FRICTION_DRAG : LOTUS_DRAG_YAW_FRICTION_COAST
+    const f = Math.exp(-friction * delta)
     yawVel.current *= f
+    // Clamp again for safety
+    const vmax = LOTUS_DRAG_YAW_VEL_MAX
+    if (yawVel.current > vmax) yawVel.current = vmax
+    else if (yawVel.current < -vmax) yawVel.current = -vmax
+    // Integrate
     yaw.current += yawVel.current * delta
     const g = groupRef.current
     if (g) g.rotation.y = yaw.current
@@ -281,21 +291,24 @@ export function LotusModel() {
   useEffect(() => {
     if (typeof window === 'undefined') return
     const nav: any = navigator as any
+    let disposed = false
+    let cleanup: (() => void) | undefined
     if (nav && typeof nav.getBattery === 'function') {
-      let disposed = false
-      nav.getBattery().then((battery: any) => {
-        if (disposed) return
-        if (battery && battery.charging === false) setMaxDpr(1.1)
-        const onChargingChange = () => {
-          setMaxDpr(battery.charging ? 1.25 : 1.1)
-        }
-        battery.addEventListener?.('chargingchange', onChargingChange)
-        // Cleanup listener when unmounting
-        return () => {
-          disposed = true
-          battery.removeEventListener?.('chargingchange', onChargingChange)
-        }
-      }).catch(() => {/* ignore */})
+      nav.getBattery()
+        .then((battery: any) => {
+          if (disposed) return
+          if (battery && battery.charging === false) setMaxDpr(1.1)
+          const onChargingChange = () => {
+            setMaxDpr(battery.charging ? 1.25 : 1.1)
+          }
+          battery.addEventListener?.('chargingchange', onChargingChange)
+          cleanup = () => battery.removeEventListener?.('chargingchange', onChargingChange)
+        })
+        .catch(() => { /* ignore */ })
+    }
+    return () => {
+      disposed = true
+      cleanup?.()
     }
   }, [])
   return (
@@ -330,13 +343,13 @@ export function LotusModel() {
             position={[-5, 5, -5]}
             intensity={2}
           />
-          <YawGroup>
-            <TiltGroup ref={tiltRef}>
+          <TiltGroup ref={tiltRef}>
+            <YawGroup>
               <Lotus 
                 scale={0.4}
               />
-            </TiltGroup>
-          </YawGroup>
+            </YawGroup>
+          </TiltGroup>
         </Canvas>
       </Suspense>
     </div>

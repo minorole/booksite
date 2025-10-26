@@ -38,9 +38,6 @@ export const TOAST_REMOVE_DELAY = 1000000
 // 5% reduction from 0.15 for slightly less sensitivity
 export const LOTUS_TILT_MAX_RAD = 0.1425
 export const LOTUS_AUTO_ROTATE_PERIOD_S = 30
-// Easing base for tilt interpolation; effective ease per frame is
-// computed as: ease = 1 - Math.pow(LOTUS_TILT_EASING_BASE, delta)
-export const LOTUS_TILT_EASING_BASE = 0.001
 
 // Parallax + spring constants for lotus tilt (natural motion)
 // - Max parallax position offset (scene units)
@@ -50,6 +47,9 @@ export const LOTUS_TILT_SPRING_STIFFNESS = 110
 export const LOTUS_TILT_SPRING_DAMPING = 16
 
 // Drag-to-spin (horizontal yaw) constants
-export const LOTUS_DRAG_YAW_SENSITIVITY = 4 // radians per normalized width delta
-export const LOTUS_DRAG_YAW_FRICTION = 6 // per-second velocity damping
+// Increase sensitivity for a spinner-like burst, and use lower friction when coasting
+export const LOTUS_DRAG_YAW_SENSITIVITY = 10 // radians per normalized width delta
+export const LOTUS_DRAG_YAW_FRICTION_DRAG = 8 // damping while dragging
+export const LOTUS_DRAG_YAW_FRICTION_COAST = 1.2 // damping when coasting
+export const LOTUS_DRAG_YAW_VEL_MAX = 20 // cap angular velocity magnitude
 export const LOTUS_DRAG_START_PX = 6 // threshold to enter dragging
