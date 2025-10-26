@@ -41,3 +41,10 @@ export const LOTUS_AUTO_ROTATE_PERIOD_S = 30
 // Easing base for tilt interpolation; effective ease per frame is
 // computed as: ease = 1 - Math.pow(LOTUS_TILT_EASING_BASE, delta)
 export const LOTUS_TILT_EASING_BASE = 0.001
+
+// Parallax + spring constants for lotus tilt (natural motion)
+// - Max parallax position offset (scene units)
+export const LOTUS_TILT_POS_MAX = 0.025
+// - Spring tuning for rotation and position
+export const LOTUS_TILT_SPRING_STIFFNESS = 110
+export const LOTUS_TILT_SPRING_DAMPING = 16

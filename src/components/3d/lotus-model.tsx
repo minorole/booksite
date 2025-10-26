@@ -4,7 +4,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber"
 import { useGLTF, useAnimations, AdaptiveDpr } from "@react-three/drei"
 import { Suspense, useEffect, useMemo, useRef, forwardRef, useImperativeHandle, useState } from "react"
 import { MeshStandardMaterial, LoopPingPong, Group } from 'three'
-import { LOTUS_TILT_MAX_RAD, LOTUS_AUTO_ROTATE_PERIOD_S, LOTUS_TILT_EASING_BASE } from "@/lib/ui"
+import { LOTUS_TILT_MAX_RAD, LOTUS_AUTO_ROTATE_PERIOD_S, LOTUS_TILT_POS_MAX, LOTUS_TILT_SPRING_STIFFNESS, LOTUS_TILT_SPRING_DAMPING } from "@/lib/ui"
 
 // CSS Lotus as fallback
 function CssLotus() {
@@ -104,16 +104,25 @@ function Lotus(props: Record<string, unknown>) {
 const TiltGroup = forwardRef<{ reset: () => void }, { children: React.ReactNode }>(
   ({ children }, ref) => {
     const groupRef = useRef<Group>(null)
-    const target = useRef({ x: 0, z: 0 })
-    const current = useRef({ x: 0, z: 0 })
+    // Targets for rotation (x,z) and parallax position (x,y)
+    const targetRot = useRef({ x: 0, z: 0 })
+    const targetPos = useRef({ x: 0, y: 0 })
+    // Current values
+    const currentRot = useRef({ x: 0, z: 0 })
+    const currentPos = useRef({ x: 0, y: 0 })
+    // Velocities for spring integration
+    const velRot = useRef({ x: 0, z: 0 })
+    const velPos = useRef({ x: 0, y: 0 })
     const enabledRef = useRef(true)
     const { pointer } = useThree()
 
     useImperativeHandle(ref, () => ({
       reset: () => {
-        // Set target to neutral; useFrame smoothing makes the motion natural
-        target.current.x = 0
-        target.current.z = 0
+        // Set targets to neutral; springs ease naturally back
+        targetRot.current.x = 0
+        targetRot.current.z = 0
+        targetPos.current.x = 0
+        targetPos.current.y = 0
       },
     }), [])
 
@@ -134,27 +143,53 @@ const TiltGroup = forwardRef<{ reset: () => void }, { children: React.ReactNode 
       }
     }, [])
 
-    // Smoothly ease towards the target tilt derived from R3F pointer
+    // Smoothly spring towards the target tilt/parallax derived from R3F pointer
     useFrame((_, delta) => {
-      const max = LOTUS_TILT_MAX_RAD
+      const maxRot = LOTUS_TILT_MAX_RAD
+      const maxPos = LOTUS_TILT_POS_MAX
       if (enabledRef.current) {
         // R3F pointer: [-1,1] in both axes relative to the canvas
-        target.current.x = -pointer.y * max
-        target.current.z = pointer.x * max
+        targetRot.current.x = -pointer.y * maxRot
+        targetRot.current.z = pointer.x * maxRot
+        // Subtle parallax position; smaller vertical shift for natural feel
+        targetPos.current.x = pointer.x * maxPos
+        targetPos.current.y = -pointer.y * (maxPos * 0.6)
       } else {
-        target.current.x = 0
-        target.current.z = 0
+        targetRot.current.x = 0
+        targetRot.current.z = 0
+        targetPos.current.x = 0
+        targetPos.current.y = 0
       }
 
-      // Exponential smoothing; stable across frame rates
-      const ease = 1 - Math.pow(LOTUS_TILT_EASING_BASE, delta)
-      current.current.x += (target.current.x - current.current.x) * ease
-      current.current.z += (target.current.z - current.current.z) * ease
+      // Critically-damped-ish spring integration for smooth, natural motion
+      const k = LOTUS_TILT_SPRING_STIFFNESS
+      const c = LOTUS_TILT_SPRING_DAMPING
+
+      // Rotation X
+      const ax = (targetRot.current.x - currentRot.current.x) * k - velRot.current.x * c
+      velRot.current.x += ax * delta
+      currentRot.current.x += velRot.current.x * delta
+      // Rotation Z
+      const az = (targetRot.current.z - currentRot.current.z) * k - velRot.current.z * c
+      velRot.current.z += az * delta
+      currentRot.current.z += velRot.current.z * delta
+
+      // Position X
+      const apx = (targetPos.current.x - currentPos.current.x) * k - velPos.current.x * c
+      velPos.current.x += apx * delta
+      currentPos.current.x += velPos.current.x * delta
+      // Position Y
+      const apy = (targetPos.current.y - currentPos.current.y) * k - velPos.current.y * c
+      velPos.current.y += apy * delta
+      currentPos.current.y += velPos.current.y * delta
 
       const g = groupRef.current
       if (g) {
-        g.rotation.x = current.current.x
-        g.rotation.z = current.current.z
+        g.rotation.x = currentRot.current.x
+        g.rotation.z = currentRot.current.z
+        // Base position offset is applied in the group wrapper below
+        g.position.x = currentPos.current.x
+        g.position.y = -0.55 + currentPos.current.y
       }
     })
 
