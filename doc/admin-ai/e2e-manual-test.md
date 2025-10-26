@@ -25,7 +25,7 @@ References to code include exact file paths and important line anchors to help v
 
 - Node 20.18+ (Next.js 15). Start dev with `npm run dev`.
 - Required envs (see src/lib/config/env.ts:1): `OPENAI_API_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPER_ADMIN_EMAIL`, `CLOUDINARY_URL`.
-- Optional envs for limits: `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` (enables RL/CC in dev), toggle logs with `ADMIN_AI_TRACE_DISABLED`, `ADMIN_AI_TRACE_SENSITIVE` (src/lib/observability/toggle.ts:1).
+- Optional envs for limits (local dev): `KV_REST_API_URL`, `KV_REST_API_TOKEN` (Vercel injects these in production). Toggle logs with `ADMIN_AI_TRACE_DISABLED`, `ADMIN_AI_TRACE_SENSITIVE` (src/lib/observability/toggle.ts:1).
 - Visit the chat UI as an admin: `http://localhost:3000/zh/admin/ai-chat` (page: src/app/[locale]/admin/ai-chat/page.tsx:1).
 - Upload API for images: `POST /api/upload` (route: src/app/api/upload/route.ts:6) validates MIME/size against FILE_CONFIG (src/lib/admin/constants.ts:4).
 - SSE streaming entry: `POST /api/admin/ai-chat/stream/orchestrated` (route: src/app/api/admin/ai-chat/stream/orchestrated/route.ts:8) → orchestrator (src/lib/admin/chat/orchestrator-agentkit.ts:85).

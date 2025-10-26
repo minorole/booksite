@@ -5,7 +5,7 @@ _Last reviewed: 2025-02-14_
 ## Dead / Unused Artifacts
 
 - `src/lib/i18n/config.ts:6` exports `normalizeLocale`, but no runtime module imports it (`rg normalizeLocale` only returns the definition and docs).
-- `src/lib/config/env.ts:50`-`54` provide optional env getters (`databaseUrl`, `directUrl`, `openaiApiKeyUser`, `upstashUrl`, `upstashToken`) that have zero call sites in the codebase.
+- `src/lib/config/env.ts` previously exposed optional Upstash getters that are now removed. Re-check optional envs periodically to ensure they have call sites.
 - `src/lib/db/enums.ts:24` (`ORDER_STATUSES`) and `src/lib/db/enums.ts:61` (`ADMIN_ACTIONS`) are unused constants; services access literal status/action strings directly.
 - `src/lib/admin/types/books.ts:17` and `src/lib/admin/types/books.ts:39`-`40` expose legacy fields (`similarity_group`, `similarity_threshold`, `language_preference`) that never surface in services or UI.
 - `src/lib/admin/types/orders.ts:9`-`15` defines `language_preference` and `processing_priority`, but no consumer reads or writes them.

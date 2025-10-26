@@ -30,9 +30,7 @@ export async function PUT(request: Request) {
     if (rl.enabled && !rl.allowed) {
       return NextResponse.json({ error: 'Too Many Requests' }, { status: 429, headers: rateLimitHeaders(rl) })
     }
-    if (!rl.enabled && process.env.NODE_ENV === 'production') {
-      return NextResponse.json({ error: 'Rate limiting unavailable' }, { status: 503 })
-    }
+    
 
     const db = await createRouteSupabaseClient()
     // Fetch target's current role for audit logging

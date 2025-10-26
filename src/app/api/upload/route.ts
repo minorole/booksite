@@ -26,12 +26,7 @@ export async function POST(request: Request) {
         { status: 429, headers: rateLimitHeaders(rl) }
       )
     }
-    if (!rl.enabled && process.env.NODE_ENV === 'production') {
-      return NextResponse.json(
-        { error: 'Rate limiting unavailable' },
-        { status: 503 }
-      )
-    }
+    
 
     // Concurrency control for uploads
     const sem = await acquireConcurrency({ route: '/api/upload', userId: user.id, ttlSeconds: 60 })

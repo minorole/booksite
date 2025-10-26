@@ -1,44 +1,5 @@
-import { Redis } from '@upstash/redis'
-import { Ratelimit } from '@upstash/ratelimit'
-import { env } from '@/lib/config/env'
-import { getPolicy, type RateLimitPolicy } from '@/lib/security/limits'
-
-let redis: Redis | null = null
-const limiters: Map<string, Ratelimit> = new Map()
-
-function ensureRedis(): Redis | null {
-  try {
-    const url = env.upstashUrl()
-    const token = env.upstashToken()
-    if (!url || !token) {
-      if (process.env.NODE_ENV === 'production') {
-        throw new Error('Missing UPSTASH_REDIS_REST_URL or UPSTASH_REDIS_REST_TOKEN in production')
-      }
-      return null
-    }
-    if (!redis) redis = new Redis({ url, token })
-    return redis
-  } catch (e) {
-    if (process.env.NODE_ENV === 'production') throw e as Error
-    return null
-  }
-}
-
-function ensureLimiter(policy: RateLimitPolicy, route: string): Ratelimit | null {
-  const client = ensureRedis()
-  if (!client) return null
-  const key = `${route}:${policy.window}:${policy.limit}:${policy.weight}`
-  let limiter = limiters.get(key)
-  if (!limiter) {
-    limiter = new Ratelimit({
-      redis: client,
-      limiter: Ratelimit.slidingWindow(policy.limit, `${policy.window} s`),
-      analytics: false,
-    })
-    limiters.set(key, limiter)
-  }
-  return limiter
-}
+import { kv } from '@vercel/kv'
+import { getPolicy } from '@/lib/security/limits'
 
 export type RateLimitCheckOptions = {
   route: string
@@ -57,38 +18,34 @@ export type RateLimitResult = {
 
 export async function checkRateLimit(opts: RateLimitCheckOptions): Promise<RateLimitResult> {
   const policy = getPolicy(opts.route)
-  const limiter = ensureLimiter(policy, opts.route)
   const weight = Math.max(1, opts.weight ?? policy.weight)
-  const keyOwner = opts.userId || opts.ip || 'anon'
-  const key = `${keyOwner}:${opts.route}`
+  const owner = opts.userId || opts.ip || 'anon'
 
-  const now = Date.now()
-  const resetMs = now + policy.window * 1000
+  const windowSec = policy.window
+  const bucket = Math.floor(Date.now() / 1000 / windowSec)
+  const key = `rl:${opts.route}:${owner}:${bucket}`
 
-  if (!limiter) {
-    return { allowed: true, remaining: policy.limit, limit: policy.limit, reset: resetMs, enabled: false }
-  }
-
-  // Consume tokens; some versions of @upstash/ratelimit do not support 'cost'
-  type LimitResponse = { success: boolean; remaining: number; limit: number; reset: number }
-  let last: LimitResponse | null = null
-  let allowed = true
+  // Increment counter by weight. Loop to avoid relying on incrby support.
+  let count = 0
   for (let i = 0; i < weight; i++) {
-    const r = (await (limiter as unknown as { limit(k: string): Promise<LimitResponse> }).limit(key))
-    last = r
-    if (!r.success) {
-      allowed = false
-      break
-    }
+    count = await kv.incr(key)
+  }
+  // Set TTL on first use of this window
+  if (count === weight) {
+    await kv.expire(key, windowSec + 1)
   }
 
-  return {
-    allowed,
-    remaining: last ? last.remaining : 0,
-    limit: last ? last.limit : policy.limit,
-    reset: ((last ? last.reset : Math.ceil(resetMs / 1000)) as number) * 1000,
-    enabled: true,
+  const allowed = count <= policy.limit
+  const remaining = Math.max(0, policy.limit - count)
+  let resetMs: number
+  try {
+    const ttl = await kv.ttl(key)
+    resetMs = ttl > 0 ? Date.now() + ttl * 1000 : (bucket + 1) * windowSec * 1000
+  } catch {
+    resetMs = (bucket + 1) * windowSec * 1000
   }
+
+  return { allowed, remaining, limit: policy.limit, reset: resetMs, enabled: true }
 }
 
 export function rateLimitHeaders(result: RateLimitResult): Record<string, string> {
@@ -111,33 +68,28 @@ function semKey(route: string, owner: string) {
 }
 
 export async function acquireConcurrency(opts: ConcurrencyOpts): Promise<{ acquired: boolean, enabled: boolean, current: number, limit: number }> {
-  const client = ensureRedis()
   const owner = opts.userId || opts.ip || 'anon'
   const policy = getPolicy(opts.route)
-  if (!client) return { acquired: true, enabled: false, current: 0, limit: policy.concurrency }
-
   const key = semKey(opts.route, owner)
-  const current = await client.incr(key)
+
+  const current = await kv.incr(key)
   if (current === 1) {
-    await client.expire(key, opts.ttlSeconds)
+    await kv.expire(key, opts.ttlSeconds)
   }
   if (current > policy.concurrency) {
-    // Roll back and deny
-    await client.decr(key)
+    await kv.decr(key)
     return { acquired: false, enabled: true, current: current - 1, limit: policy.concurrency }
   }
   return { acquired: true, enabled: true, current, limit: policy.concurrency }
 }
 
 export async function releaseConcurrency(opts: ConcurrencyOpts): Promise<void> {
-  const client = ensureRedis()
   const owner = opts.userId || opts.ip || 'anon'
-  if (!client) return
   const key = semKey(opts.route, owner)
   try {
-    const left = await client.decr(key)
+    const left = await kv.decr(key)
     if (left <= 0) {
-      await client.del(key)
+      await kv.del(key)
     }
   } catch {
     // no-op

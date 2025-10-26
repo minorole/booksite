@@ -43,9 +43,7 @@ export async function POST(request: Request) {
     if (rl.enabled && !rl.allowed) {
       return new NextResponse('Rate limit exceeded', { status: 429, headers: rateLimitHeaders(rl) })
     }
-    if (!rl.enabled && process.env.NODE_ENV === 'production') {
-      return new NextResponse('Rate limiting unavailable', { status: 503 })
-    }
+    
     if (adminAiLogsEnabled()) {
       try { console.log('[AdminAI route] ratelimit', { requestId, enabled: rl.enabled, allowed: rl.allowed, remaining: rl.remaining }) } catch {}
     }

@@ -222,3 +222,14 @@ All notable changes to this project will be documented in this file.
 - [Admin] Enforced server-side confirmation for inventory and order mutations invoked by Admin AI tools to block unconfirmed writes. Reference: `src/lib/admin/agents/tools.ts`.
 
  
+### Changed
+- [Security • Rate Limiting] Centralized rate limiting and per-user concurrency now backed by Vercel KV (native on Vercel Pro). Preserves existing APIs and headers; no route changes required.
+  - Files: `src/lib/security/ratelimit.ts`, `src/lib/security/limits.ts` (unchanged; still the policy source)
+  - Infra: attach a KV store in Vercel → Storage → KV; env injected automatically in production.
+
+### Removed
+- [Deps/Env] Removed Upstash dependencies and env keys; replaced with Vercel KV.
+  - Deps: removed `@upstash/ratelimit`, `@upstash/redis`; added `@vercel/kv` (package.json:37)
+  - Env: removed `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` (src/lib/config/env.ts); `.env.example` now documents `KV_REST_API_URL`, `KV_REST_API_TOKEN` for local dev.
+  - Cleanup: removed legacy 503 branches when RL was disabled (now always enabled via KV).
+    - Files: `src/app/api/admin/ai-chat/stream/orchestrated/route.ts`, `src/app/api/upload/route.ts`, `src/app/api/users/role/route.ts`
