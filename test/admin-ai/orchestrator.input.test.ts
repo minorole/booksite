@@ -17,6 +17,8 @@ vi.mock('@openai/agents-core', () => {
     user: (x: any) => ({ role: 'user', content: x }),
     assistant: (x: any) => ({ role: 'assistant', content: x }),
     system: (x: any) => ({ role: 'system', content: x }),
+    // Minimal stub to satisfy agents/tools module import during registry creation
+    tool: (def: any) => ({ __mock: true, ...def }),
     Runner: RunnerMock,
     __getLast: () => ({ input: lastInput, options: lastOptions }),
   }

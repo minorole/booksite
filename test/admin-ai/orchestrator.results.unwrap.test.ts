@@ -31,6 +31,8 @@ vi.mock('@openai/agents-core', () => {
     user: (x: any) => x,
     assistant: (x: any) => x,
     system: (x: any) => x,
+    // Minimal stub for tool factory used by agents/tools
+    tool: (def: any) => ({ __mock: true, ...def }),
     Runner: RunnerMock,
   }
 })
@@ -63,4 +65,3 @@ describe('orchestrator tool_result unwrapping', () => {
     expect(appended).toEqual({ success: true, message: 'Found 0 book(s)', data: { search: { found: false, books: [] } } })
   })
 })
-

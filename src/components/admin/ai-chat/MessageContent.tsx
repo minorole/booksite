@@ -1,6 +1,6 @@
 "use client";
 
-import { Expand } from "lucide-react";
+import { Expand, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { Message, MessageContent as MsgContent } from '@/lib/admin/types'
@@ -15,16 +15,39 @@ import { OrderUpdateCard } from '@/components/admin/ai-chat/cards/OrderUpdateCar
 import { Bilingual } from '@/components/common/bilingual'
 import { ADMIN_AI_RICH_ASSISTANT_TEXT } from '@/lib/admin/constants'
 import { RichTextAuto } from './RichTextAuto'
+import { useLocale } from '@/contexts/LocaleContext'
+import { UI_STRINGS } from '@/lib/admin/i18n'
 
 export function MessageContent({
   message,
   loading,
+  thinkingAgent,
   onSelectImage,
 }: {
   message: Message
   loading: boolean
+  thinkingAgent?: string | null
   onSelectImage: (url: string) => void
 }) {
+  const { locale } = useLocale()
+
+  // Inline thinking indicator for assistant placeholder
+  if (
+    message.role === 'assistant' &&
+    typeof message.content === 'string' &&
+    message.content.length === 0 &&
+    loading
+  ) {
+    const lang = locale === 'zh' ? 'zh' : 'en'
+    const label = thinkingAgent ? `${UI_STRINGS[lang].thinking} (${thinkingAgent})` : UI_STRINGS[lang].thinking
+    return (
+      <div className="flex items-center gap-2 text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        <span>{label}</span>
+      </div>
+    )
+  }
+
   // Array content (image + text)
   if (Array.isArray(message.content)) {
     return (

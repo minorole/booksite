@@ -43,6 +43,7 @@ export function MessageList({
   endRef,
   containerRef,
   onScroll,
+  thinkingAgent,
 }: {
   messages: Message[]
   loading: boolean
@@ -50,6 +51,7 @@ export function MessageList({
   endRef: React.RefObject<HTMLDivElement>
   containerRef?: React.RefObject<HTMLDivElement>
   onScroll?: React.UIEventHandler<HTMLDivElement>
+  thinkingAgent?: string | null
 }) {
   return (
     <div ref={containerRef} onScroll={onScroll} className="flex-1 p-4 overflow-y-auto scroll-smooth">
@@ -69,6 +71,7 @@ export function MessageList({
               <MessageContent
                 message={message}
                 loading={loading}
+                thinkingAgent={thinkingAgent || null}
                 onSelectImage={onSelectImage}
               />
             </div>

@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+### Admin AI Chat
+- Inline thinking indicator inside the assistant bubble and synced agent handoffs; removed the bottom “Processing…” during streaming to avoid duplicate state.
+  - Files: `src/components/admin/ai-chat/hooks/useChatSession.ts`, `src/components/admin/ai-chat/MessageContent.tsx`, `src/components/admin/ai-chat/MessageList.tsx`, `src/components/admin/ai-chat/chat-interface.tsx`, `src/lib/admin/i18n.ts`.
+- Tests: fixed orchestrator test mocks by stubbing the `tool` export from `@openai/agents-core`; added suppression for footer spinner only during `processing` streaming phase. All tests pass locally.
+  - Files: `test/admin-ai/orchestrator.input.test.ts`, `test/admin-ai/orchestrator.events.test.ts`, `test/admin-ai/orchestrator.results.unwrap.test.ts`.
+
 ### Admin AI
 - Orchestrator: Deduplicate agent handoffs so only a single `handoff` SSE event is emitted per router→specialist transition. File: `src/lib/admin/chat/orchestrator-agentkit.ts`.
 - Stream normalizer: Filter out SDK‑internal `tool_called` / `tool_output` events; only first‑party tools are surfaced to the UI (`tool_start`, `tool_result`, `tool_append`). Files: `src/lib/admin/chat/normalize-agent-events.ts`, `src/lib/admin/agents/tools.ts`.

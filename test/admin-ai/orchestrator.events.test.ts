@@ -38,6 +38,8 @@ vi.mock('@openai/agents-core', () => {
     user: (x: any) => x,
     assistant: (x: any) => x,
     system: (x: any) => x,
+    // Minimal stub for tool factory used by agents/tools
+    tool: (def: any) => ({ __mock: true, ...def }),
     Runner: RunnerMock,
   }
 })
@@ -69,4 +71,3 @@ describe('orchestrator event mapping', () => {
     expect(parsed).toEqual({ vision_analysis: { structured_data: { ok: true } } })
   })
 })
-

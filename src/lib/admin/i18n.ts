@@ -85,11 +85,13 @@ export const UI_STRINGS = {
     copy_request_id: 'Copy request id',
     confirm_new_conversation: 'Discard unsent input and start a new conversation?',
     jump_to_latest: 'Jump to latest',
+    thinking: 'Thinking...'
   },
   zh: {
     input_placeholder: '输入你的消息…',
     copy_request_id: '复制请求编号',
     confirm_new_conversation: '放弃未发送内容并开始新会话？',
     jump_to_latest: '跳至最新',
+    thinking: '思考中...'
   }
 } as const

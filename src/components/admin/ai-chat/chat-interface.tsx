@@ -31,11 +31,13 @@ import { UI_STRINGS } from '@/lib/admin/i18n'
     error,
     setError,
     loadingLabel,
+    loadingKeyRaw,
     steps,
     sendText,
     attachImage,
     reset,
     inputPlaceholder,
+    thinkingAgent,
   } = useChatSession(locale, {
     onRequestId: (id) => setRequestId(id),
   })
@@ -119,6 +121,7 @@ import { UI_STRINGS } from '@/lib/admin/i18n'
               onSelectImage={(url) => setSelectedImage(url)}
               endRef={messagesEndRef}
               containerRef={listRef}
+              thinkingAgent={thinkingAgent}
             />
 
             {!atBottom && (
@@ -160,7 +163,11 @@ import { UI_STRINGS } from '@/lib/admin/i18n'
 
       {/* Single-stream mode: no separate results drawer */}
 
-      <LoadingIndicator label={loadingLabel} />
+      {(() => {
+        // Suppress footer during streaming phase; keep for uploads, etc.
+        if (loadingKeyRaw === 'processing') return <LoadingIndicator label={null} />
+        return <LoadingIndicator label={loadingLabel} />
+      })()}
 
       {/* Removed edit/confirm dialog per preference */}
     </>
