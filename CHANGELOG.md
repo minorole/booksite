@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 ## Unreleased
 
 ### Added
+ - Uploads: Direct-to-Cloudinary signed uploads for admin chat with server fallback (`src/app/api/upload/sign/route.ts`, `src/components/admin/ai-chat/hooks/useImageUpload.ts`).
+ - Cloudinary: Tag-based purge with folder fallback, dry-run, retries, chunked deletes (`scripts/cloudinary-purge-temp.mjs`).
+ - Config: Optional envs `CLOUDINARY_TEMP_PREFIX` and `CLOUDINARY_TEMP_RETENTION_DAYS` to centralize temp uploads.
+ - Promotion: Server-side promotion of temp assets to permanent on book creation (`src/lib/admin/cloudinary.ts`, used in `src/app/api/admin/manual/books/route.ts`).
+ - API: Reference-aware purge endpoint for platform cron (`POST /api/admin/cloudinary/purge`).
 - [Admin • Shared UI] Centralized user management UI and logic:
   - Components: `UsersTable`, `RoleSelect`, `PaginationControls`.
   - Hooks: `useUsers` (debounce, pagination, enabled flag), `useUserRoleUpdate`.
@@ -12,6 +17,9 @@ All notable changes to this project will be documented in this file.
 - [Super Admin] Extracted `ClipHealthCard` and refactored super-admin panel to use shared users UI.
 
 ### Changed
+ - Security: Added rate limit to `/api/upload/sign` (`src/lib/security/limits.ts`, `src/app/api/upload/sign/route.ts`).
+ - CSP: Allow `https://api.cloudinary.com` for direct uploads (`next.config.js`).
+ - Direct upload signing includes deterministic public_id (sha1), unique_filename=false, overwrite=false for dedupe.
 - [Admin • Users page] Switched to shared `UsersTable` and `useUsers` hook (read‑only roles for admins).
 - [Admin • Manual] Switched book list/dialog to use typed clients (no behavioral change).
 - [Navigation • Mobile] Navbar now uses the animated `MobileMenu` on small screens; inline links are desktop‑only. The user icon sits next to the menu toggle on mobile. Removed the “Admin Panel” label entirely.
@@ -24,6 +32,13 @@ All notable changes to this project will be documented in this file.
 - [Navbar] Memoized `navItems` and `mobileItems` to reduce re-creation.
 
 ### Removed
+ - CI: Removed GitHub Action purge workflow; prefer platform cron calling the new API (`.github/workflows/purge-cloudinary-temp.yml`).
+ - API: Removed old duplicate admin purge route (`src/app/api/admin/cloudinary/purge-temp/route.ts`).
+
+### Ops
+- Use platform cron (e.g., Vercel Cron) to call `POST /api/admin/cloudinary/purge?days=7&dry=0&token=$ADMIN_TASK_TOKEN` per environment.
+- Set envs: `ADMIN_TASK_TOKEN` (required for cron), and optionally `CLOUDINARY_TEMP_PREFIX` (default `temp-uploads/`), `CLOUDINARY_TEMP_RETENTION_DAYS` (default `7`).
+- `.env.example` and README updated to reflect direct uploads, promotion flow, and reference‑aware purge.
 - [Mobile Menu] Dead code: text-cycling animation and old `toggleLabel`/`toggleOpenLabel` props.
 
 ### Home • Lotus 3D

@@ -18,6 +18,9 @@ const OptionalKeys = [
   'IMAGE_EMBEDDINGS_STRICT',
   // Admin task token for cron-authenticated maintenance endpoints
   'ADMIN_TASK_TOKEN',
+  // Cloudinary temp uploads configuration (optional)
+  'CLOUDINARY_TEMP_PREFIX',
+  'CLOUDINARY_TEMP_RETENTION_DAYS',
 ] as const
 
 export type RequiredEnvKey = typeof RequiredKeys[number]
@@ -56,4 +59,7 @@ export const env = {
   clipToken: () => getOptionalEnv('CLIP_EMBEDDINGS_API_KEY'),
   imageEmbStrict: () => getOptionalEnv('IMAGE_EMBEDDINGS_STRICT'),
   adminTaskToken: () => getOptionalEnv('ADMIN_TASK_TOKEN'),
+  // Cloudinary temp uploads (optional)
+  cloudinaryTempPrefix: () => getOptionalEnv('CLOUDINARY_TEMP_PREFIX'),
+  cloudinaryTempRetentionDays: () => getOptionalEnv('CLOUDINARY_TEMP_RETENTION_DAYS'),
 }

@@ -29,6 +29,12 @@ const ROUTE_POLICIES: Record<string, Partial<RateLimitPolicy>> = {
     weight: 3,
     concurrency: 1,
   },
+  '/api/upload/sign': {
+    window: 60,
+    limit: 20,
+    weight: 1,
+    concurrency: 2,
+  },
   '/api/users/role': {
     window: 60,
     limit: 20,

@@ -4,6 +4,7 @@ import { listBooks } from '@/lib/db/books'
 import { CATEGORY_TYPES, type CategoryType } from '@/lib/db/enums'
 import { createBookDb, logAdminAction } from '@/lib/db/admin'
 import { z } from 'zod'
+import { promoteTempAsset } from '@/lib/admin/cloudinary'
 
 export async function GET() {
   try {
@@ -71,6 +72,17 @@ export async function POST(request: Request) {
           ? parsed.data.tags.split(',').map((t: string) => t.trim()).filter(Boolean)
           : [])
 
+    // Promote temp cover image to permanent location if provided
+    let coverUrl: string | null = parsed.data.cover_image ?? null
+    if (coverUrl && coverUrl.includes('res.cloudinary.com')) {
+      try {
+        const promoted = await promoteTempAsset(coverUrl)
+        coverUrl = promoted.url
+      } catch (e) {
+        console.warn('cover promotion skipped:', (e as any)?.message || e)
+      }
+    }
+
     // Delegate to db helper to insert and normalize tags
     const created = await createBookDb({
       title_zh: parsed.data.title_zh,
@@ -79,7 +91,7 @@ export async function POST(request: Request) {
       description_en: parsed.data.description_en ?? null,
       category_type: parsed.data.category_type as CategoryType,
       quantity: parsed.data.quantity,
-      cover_image: parsed.data.cover_image ?? null,
+      cover_image: coverUrl,
       tags: tagsArray,
     })
 

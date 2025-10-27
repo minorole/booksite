@@ -3,6 +3,7 @@ import { assertAdmin, UnauthorizedError } from '@/lib/security/guards'
 import { getBook } from '@/lib/db/books'
 import { CATEGORY_TYPES, type CategoryType } from '@/lib/db/enums'
 import { updateBookDb, logAdminAction } from '@/lib/db/admin'
+import { promoteTempAsset } from '@/lib/admin/cloudinary'
 
 export async function PUT(
   request: Request,
@@ -29,6 +30,16 @@ export async function PUT(
       const ct = data.category_type as CategoryType
       if (!CATEGORY_TYPES.includes(ct)) {
         return NextResponse.json({ error: 'Invalid category_type' }, { status: 400 })
+      }
+    }
+
+    // If cover_image provided and points to Cloudinary temp, promote to permanent first
+    if (typeof data.cover_image === 'string' && data.cover_image.includes('res.cloudinary.com')) {
+      try {
+        const promoted = await promoteTempAsset(data.cover_image)
+        data.cover_image = promoted.url
+      } catch (e) {
+        console.warn('cover promotion (update) skipped:', (e as any)?.message || e)
       }
     }
 

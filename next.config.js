@@ -25,7 +25,7 @@ const nextConfig = {
       // Next dev and some third-party widgets may need inline styles/scripts; keep tight but practical
       scriptSrc,
       // Browser needs to talk to our origin and Supabase; HMR WS in dev
-      `connect-src 'self' ${supabaseUrl}${isProd ? '' : ' ws: wss:'} blob:`,
+      `connect-src 'self' ${supabaseUrl}${isProd ? '' : ' ws: wss:'} https://api.cloudinary.com blob:`,
       "img-src 'self' data: https: blob:",
       "style-src 'self' 'unsafe-inline'",
       "font-src 'self' data:",

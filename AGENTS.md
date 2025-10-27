@@ -63,7 +63,9 @@
 
 ## Maintenance Protocol
 - New API routes belong under `src/app/api/**/route.ts`; keep logic server-side and authenticated.
-- Add limits/settings in `src/lib/**` (e.g., `openai.ts`, `admin/constants.ts`) and import where used.
+- Add limits/settings in `src/lib/**` (e.g., `openai.ts`, `admin/constants.ts`) and import where used. Cloudinary temp uploads are tagged `temp` and use `CLOUDINARY_TEMP_PREFIX` for folder segregation.
+- Promote images on create: temp Cloudinary assets are promoted to permanent (tags updated, optional rename) before persisting (`src/lib/admin/cloudinary.ts`, used in `src/app/api/admin/manual/books/route.ts`).
+- Schedule cleanup via platform cron (e.g., Vercel Cron) calling `POST /api/admin/cloudinary/purge?token=$ADMIN_TASK_TOKEN&dry=0&days=7`; this purge is reference-aware (checks DB before delete).
 - Supabase-first: update SQL/RPCs in Supabase; regenerate types with `npm run db:types`.
 - OpenAI changes: update `OPENAI_CONFIG`; override with `OPENAI_TEXT_MODEL` / `OPENAI_VISION_MODEL` as needed.
 
@@ -92,7 +94,7 @@
 
 ## Security & Configuration Tips
 - Required envs: `OPENAI_API_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPER_ADMIN_EMAIL`, `CLOUDINARY_URL`.
-- Optional envs: `OPENAI_API_KEY_USER`, `DATABASE_URL`, `DIRECT_URL` (not required for Supabase). For local rate limiting:
+- Optional envs: `OPENAI_API_KEY_USER`, `DATABASE_URL`, `DIRECT_URL` (not required for Supabase), `CLOUDINARY_TEMP_PREFIX` (default `temp-uploads/`), `CLOUDINARY_TEMP_RETENTION_DAYS` (default `7`). For local rate limiting:
   - Vercel KV local dev: set `KV_REST_API_URL`, `KV_REST_API_TOKEN`.
   - Fully local (no Vercel project): set `KV_USE_MEMORY=1` to use an in‑memory backend (blocked in production).
 - Use `.env.local`; never commit secrets. Client envs must start with `NEXT_PUBLIC_`.

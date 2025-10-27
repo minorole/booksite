@@ -46,36 +46,25 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 ## Media Uploads (Cloudinary)
 
 - Required env: `CLOUDINARY_URL` (see `.env.example`).
-- Idempotent uploads:
-  - Avatars use a deterministic `public_id` `avatars/<user.id>` and reuse/overwrite instead of creating duplicates.
-  - Admin uploads (book covers/items) dedupe by content: files are hashed and stored under `book-covers/<sha1>`; identical files reuse the same asset.
+- Direct uploads (admin):
+  - Admin chat uploads go directly to Cloudinary via a signed request (`GET /api/upload/sign`), with a server fallback.
+  - Client computes SHA‑1 and uses it as `public_id` (`unique_filename=false`, `overwrite=false`) for dedupe.
+- Avatars: deterministic `public_id` `avatars/<user.id>`; reuse/overwrite to avoid duplicates.
 - Temporary uploads:
-  - Chat attachments upload to `temp-uploads/` via `POST /api/upload?temp=1`.
-  - Use a periodic purge to delete old temp assets (default 7 days).
+  - Temp attachments are tagged `temp` and use `CLOUDINARY_TEMP_PREFIX` (default `temp-uploads/`).
+  - When an image is saved to a record, it is “promoted” (moved/retagged) to a permanent folder and the DB is updated.
 
-### Purging temporary uploads
+### Purging temporary uploads (reference‑aware)
 
-- Run locally or in a cron with `CLOUDINARY_URL` set:
+- Recommended: schedule a platform cron (e.g., Vercel Cron) to call:
 
 ```
-npm run cloudinary:purge-temp -- 7
+POST /api/admin/cloudinary/purge?days=7&dry=0&token=$ADMIN_TASK_TOKEN
 ```
 
-- Omit the argument to default to 7 days. Only assets under `temp-uploads/` older than the threshold are deleted.
+- The purge endpoint only deletes temp assets older than the threshold that are not referenced in the DB.
+- Env to set: `ADMIN_TASK_TOKEN`, optionally `CLOUDINARY_TEMP_PREFIX`, `CLOUDINARY_TEMP_RETENTION_DAYS`.
 
-### Automated cleanup (recommended)
+### Promotion
 
-- GitHub Actions (built-in):
-  - A workflow is included at `.github/workflows/purge-cloudinary-temp.yml` that runs daily at 03:00 UTC.
-  - Set the repo secret `CLOUDINARY_URL` in GitHub → Settings → Secrets and variables → Actions.
-  - Triggers: nightly cron and manual “Run workflow”.
-
-- Vercel Cron (alternative):
-  - Set an `ADMIN_TASK_TOKEN` in your project environment.
-  - Add a cron job in Vercel to POST:
-    `/api/admin/cloudinary/purge-temp?days=7&token=YOUR_ADMIN_TASK_TOKEN`
-  - The endpoint also accepts a header `X-Admin-Task-Token: YOUR_ADMIN_TASK_TOKEN`.
-
-### Promotion (optional)
-
-- If a temp image becomes part of a saved record, prefer “promoting” it (rename/move to `book-covers/<sha1>` and update the DB reference) instead of reuploading, to keep a single canonical asset.
+- Temp images used in saved records are promoted server‑side (retagged and optionally moved) before persistence, keeping a single canonical asset.

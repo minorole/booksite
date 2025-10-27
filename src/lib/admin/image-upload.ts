@@ -140,30 +140,7 @@ export function getSimilarityImageUrl(standardizedUrl: string): string {
  * - Parses the public_id from the URL and calls uploader.destroy.
  * - No-op if the URL is not a Cloudinary delivery URL.
  */
-export async function deleteCloudinaryByUrl(url: string): Promise<void> {
-  try {
-    if (!url || typeof url !== 'string') return
-    if (!url.includes('res.cloudinary.com') || !url.includes('/upload/')) return
-    const cloudinary = await getCloudinary()
-    const marker = '/upload/'
-    const idx = url.indexOf(marker)
-    if (idx === -1) return
-    const rest = url.slice(idx + marker.length)
-    // Strip any transforms and extension to get public_id
-    const parts = rest.split('/')
-    // If first part contains commas, it's a transform block; drop it
-    if (parts.length > 0 && parts[0].includes(',')) {
-      parts.shift()
-    }
-    const fileWithExt = parts.join('/')
-    const dot = fileWithExt.lastIndexOf('.')
-    const publicId = dot > -1 ? fileWithExt.slice(0, dot) : fileWithExt
-    if (!publicId) return
-    await cloudinary.uploader.destroy(publicId, { invalidate: true })
-  } catch (error) {
-    console.error('Cloudinary delete failed:', error)
-  }
-}
+// Note: URL-based deletes helper removed to reduce unused/dead code.
 
 /**
  * Validates file before upload
@@ -199,7 +176,7 @@ export function validateImageFile(file: File): void {
  */
 export async function handleImageUpload(
   file: File,
-  opts?: { maxRetries?: number; folder?: string }
+  opts?: { maxRetries?: number; folder?: string; tags?: string[] }
 ): Promise<string> {
   console.log('📤 Starting image upload process...')
   
@@ -242,7 +219,8 @@ export async function handleImageUpload(
         unique_filename: false,
         overwrite: false,
         resource_type: 'auto',
-        transformation: CLOUDINARY_CONFIG.TRANSFORMATION
+        transformation: CLOUDINARY_CONFIG.TRANSFORMATION,
+        ...(Array.isArray(opts?.tags) && opts!.tags.length > 0 ? { tags: opts!.tags } : {}),
       })
 
       const timeoutPromise = new Promise((_resolve, reject) => {
