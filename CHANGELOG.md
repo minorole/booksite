@@ -27,6 +27,12 @@ All notable changes to this project will be documented in this file.
 - [Admin • UsersTable] Show inline loading row while fetching.
 - [Admin • Navbar] Replace “Back to Site” text with the front-page `LogoButton` that links to the localized home.
 
+### Changed
+- [Navigation • Logo] Removed dark halo/padding from the nav logo button and sized the image via CSS vars to match other circular buttons.
+  - Logo image now uses `--logo` (fallback `--nav-h`) for width/height.
+  - Admin navbar sets `--logo: 32px` to match the `h-8 w-8` avatar.
+  - Files: `src/components/layout/pill/LogoButton.tsx`, `src/components/admin/admin-navbar.tsx`.
+
 ### Performance
 - [Users] Abort in‑flight fetches on search/page/limit changes to avoid race conditions and wasted work; hook cleans up on unmount.
 - [Navbar] Memoized `navItems` and `mobileItems` to reduce re-creation.

@@ -50,7 +50,7 @@ export function AdminNavbar() {
     <nav className="border-b bg-muted/40">
       <div className="container mx-auto">
         <div className="flex h-14 items-center space-x-4 px-4">
-          <span style={{ ['--nav-h' as any]: '36px', ['--base' as any]: '#000' }}>
+          <span style={{ ['--nav-h' as any]: '36px', ['--logo' as any]: '32px', ['--base' as any]: '#000' }}>
             <LogoButton logoSrc="/logo.png" logoAlt="Home" logoHref={`/${locale}`} ease="power3.easeOut" />
           </span>
           
