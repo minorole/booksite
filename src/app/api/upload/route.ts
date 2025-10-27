@@ -46,8 +46,9 @@ export async function POST(request: Request) {
     const formData = await request.formData()
     const file = formData.get('file') as File
     
-    // Use centralized image upload handler with retries
-    const secureUrl = await handleImageUpload(file)
+    // Choose folder: allow temporary uploads via query ?temp=1
+    const isTemp = new URL(request.url).searchParams.get('temp') === '1'
+    const secureUrl = await handleImageUpload(file, { folder: isTemp ? 'temp-uploads' : undefined })
     console.log('📤 Upload complete:', secureUrl)
 
     return NextResponse.json(

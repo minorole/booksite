@@ -1,9 +1,7 @@
 "use client"
 
-import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { ChevronLeft } from "lucide-react"
 import { useLocale } from "@/contexts/LocaleContext"
 import { Bilingual } from "@/components/common/bilingual"
 import { useAuth } from "@/contexts/AuthContext"
@@ -12,6 +10,8 @@ import { replaceLeadingLocale } from "@/lib/i18n/paths"
 import { MobileMenu } from "@/components/layout/pill/MobileMenu"
 import { useMemo } from "react"
 import type { PillNavItem } from "@/components/layout/pill/types"
+import { LogoButton } from "@/components/layout/pill/LogoButton"
+import Link from "next/link"
 
 export function AdminNavbar() {
   const pathname = usePathname()
@@ -50,13 +50,9 @@ export function AdminNavbar() {
     <nav className="border-b bg-muted/40">
       <div className="container mx-auto">
         <div className="flex h-14 items-center space-x-4 px-4">
-          <Link 
-            href={`/${locale}`}
-            className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors mr-4"
-          >
-            <ChevronLeft className="h-4 w-4" />
-            <Bilingual cnText="返回首页" enText="Back to Site" />
-          </Link>
+          <span style={{ ['--nav-h' as any]: '36px', ['--base' as any]: '#000' }}>
+            <LogoButton logoSrc="/logo.png" logoAlt="Home" logoHref={`/${locale}`} ease="power3.easeOut" />
+          </span>
           
           <div className="h-4 w-[1px] bg-border hidden md:block" />
 

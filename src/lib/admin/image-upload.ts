@@ -1,5 +1,6 @@
 import { FILE_CONFIG, CLOUDINARY_CONFIG } from './constants'
 import { type AllowedMimeType, type ImageUploadResult } from './types'
+import { createHash } from 'node:crypto'
 
 // Lazy-load Cloudinary only when needed to avoid build-time env validation
 async function getCloudinary() {
@@ -135,6 +136,36 @@ export function getSimilarityImageUrl(standardizedUrl: string): string {
 }
 
 /**
+ * Deletes a Cloudinary asset by its delivery URL.
+ * - Parses the public_id from the URL and calls uploader.destroy.
+ * - No-op if the URL is not a Cloudinary delivery URL.
+ */
+export async function deleteCloudinaryByUrl(url: string): Promise<void> {
+  try {
+    if (!url || typeof url !== 'string') return
+    if (!url.includes('res.cloudinary.com') || !url.includes('/upload/')) return
+    const cloudinary = await getCloudinary()
+    const marker = '/upload/'
+    const idx = url.indexOf(marker)
+    if (idx === -1) return
+    const rest = url.slice(idx + marker.length)
+    // Strip any transforms and extension to get public_id
+    const parts = rest.split('/')
+    // If first part contains commas, it's a transform block; drop it
+    if (parts.length > 0 && parts[0].includes(',')) {
+      parts.shift()
+    }
+    const fileWithExt = parts.join('/')
+    const dot = fileWithExt.lastIndexOf('.')
+    const publicId = dot > -1 ? fileWithExt.slice(0, dot) : fileWithExt
+    if (!publicId) return
+    await cloudinary.uploader.destroy(publicId, { invalidate: true })
+  } catch (error) {
+    console.error('Cloudinary delete failed:', error)
+  }
+}
+
+/**
  * Validates file before upload
  */
 export function validateImageFile(file: File): void {
@@ -166,11 +197,16 @@ export function validateImageFile(file: File): void {
 /**
  * Handles complete image upload process with retries
  */
-export async function handleImageUpload(file: File, maxRetries = 2): Promise<string> {
+export async function handleImageUpload(
+  file: File,
+  opts?: { maxRetries?: number; folder?: string }
+): Promise<string> {
   console.log('📤 Starting image upload process...')
   
   let lastError: Error | null = null
-  
+  const maxRetries = typeof opts?.maxRetries === 'number' ? opts.maxRetries : 2
+  const folder = typeof opts?.folder === 'string' && opts.folder.trim() ? opts.folder.trim() : CLOUDINARY_CONFIG.FOLDER
+
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       if (attempt > 0) {
@@ -186,10 +222,27 @@ export async function handleImageUpload(file: File, maxRetries = 2): Promise<str
       const base64File = buffer.toString('base64')
       const dataURI = `data:${file.type};base64,${base64File}`
       
-      // 3. Upload to Cloudinary with timeout
+      // 2b. Compute content hash to dedupe assets by content
+      const hash = createHash('sha1').update(buffer).digest('hex')
+      const publicId = `${folder}/${hash}`
+      
+      // 3. Check for existing resource to avoid reuploading identical content
       const cloudinary = await getCloudinary()
+      try {
+        const existing = await cloudinary.api.resource(publicId).catch(() => null as any)
+        if (existing && typeof existing.secure_url === 'string') {
+          console.log('♻️  Reusing existing Cloudinary asset by hash:', { publicId })
+          const standardizedUrl = await standardizeImageUrl(existing.secure_url)
+          return standardizedUrl
+        }
+      } catch {}
+
+      // 4. Upload to Cloudinary with timeout using deterministic public_id
       const uploadPromise = cloudinary.uploader.upload(dataURI, {
-        folder: CLOUDINARY_CONFIG.FOLDER,
+        folder,
+        public_id: hash,
+        unique_filename: false,
+        overwrite: false,
         resource_type: 'auto',
         transformation: CLOUDINARY_CONFIG.TRANSFORMATION
       })
@@ -198,7 +251,21 @@ export async function handleImageUpload(file: File, maxRetries = 2): Promise<str
         setTimeout(() => reject(new Error('Upload timeout')), 10000)
       })
 
-      const result = await Promise.race([uploadPromise, timeoutPromise]) as ImageUploadResult
+      let result: ImageUploadResult
+      try {
+        result = await Promise.race([uploadPromise, timeoutPromise]) as ImageUploadResult
+      } catch (e) {
+        // Handle rare race: another request uploaded the same public_id between check and upload
+        try {
+          const fallback = await cloudinary.api.resource(publicId)
+          if (fallback && typeof fallback.secure_url === 'string') {
+            console.log('⚖️  Detected concurrent upload; reusing existing asset:', { publicId })
+            const standardizedUrl = await standardizeImageUrl(fallback.secure_url)
+            return standardizedUrl
+          }
+        } catch {}
+        throw e
+      }
 
       console.log('✅ Upload successful:', {
         publicId: result.public_id,
@@ -207,7 +274,7 @@ export async function handleImageUpload(file: File, maxRetries = 2): Promise<str
         url: result.secure_url
       })
 
-      // 4. Validate and standardize Cloudinary URL
+      // 5. Validate and standardize Cloudinary URL
       const standardizedUrl = await standardizeImageUrl(result.secure_url)
       return standardizedUrl
 

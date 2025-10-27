@@ -13,7 +13,8 @@ export function useImageUpload(language: UILanguage = 'en') {
     try {
       const formData = new FormData()
       formData.append('file', file)
-      const res = await fetch('/api/upload', { method: 'POST', body: formData })
+      // Route chat attachments to temporary storage for later purge
+      const res = await fetch('/api/upload?temp=1', { method: 'POST', body: formData })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
         throw new Error(data.error || ERROR_MESSAGES[language].upload_failed)

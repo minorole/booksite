@@ -52,6 +52,7 @@ export async function finalizePostLogin(
   }
 
   // Opportunistically ensure a Cloudinary-hosted avatar for Google users.
+  // Idempotent: use deterministic public_id per user to avoid duplicates.
   // Never block login if this fails.
   try {
     const provider = (user.app_metadata as Record<string, unknown> | null | undefined)?.provider as string | undefined
@@ -69,24 +70,60 @@ export async function finalizePostLogin(
       } catch { return false }
     })()
 
-    if (provider === 'google' && candidate && isHttpsCandidate && !candidate.includes('res.cloudinary.com')) {
+    if (provider === 'google' && candidate && isHttpsCandidate) {
       // Ensure Cloudinary env exists; SDK reads CLOUDINARY_URL
       env.cloudinaryUrl()
       const cloudinary = (await import('cloudinary')).v2
-      const uploaded = await cloudinary.uploader.upload(candidate, {
-        folder: 'avatars',
-        resource_type: 'image',
-        transformation: [
-          { width: 256, height: 256, crop: 'thumb', gravity: 'face', quality: 'auto:good', fetch_format: 'auto' },
-        ],
-      })
-      await supabase.auth.updateUser({
-        data: {
-          avatar_url: uploaded.secure_url,
-          avatar_provider: 'google',
-          avatar_uploaded_at: new Date().toISOString(),
-        },
-      })
+
+      // Deterministic public id to avoid duplicates across logins
+      const publicId = `avatars/${user.id}`
+
+      // If we already have a Cloudinary avatar pointing to this publicId, skip work
+      const existingMetaUrl = typeof umeta.avatar_url === 'string' ? (umeta.avatar_url as string) : undefined
+      const alreadyCloudinaryForThisUser = typeof existingMetaUrl === 'string' && existingMetaUrl.includes('res.cloudinary.com') && existingMetaUrl.includes('/upload/') && existingMetaUrl.includes(`/avatars/${user.id}`)
+      let finalUrl: string | null = null
+
+      try {
+        if (!alreadyCloudinaryForThisUser) {
+          // Check if resource exists; if yes, generate transformed delivery URL and reuse
+          const res = await cloudinary.api.resource(publicId).catch(() => null as any)
+          if (res && typeof res.secure_url === 'string') {
+            finalUrl = cloudinary.url(publicId, {
+              secure: true,
+              transformation: [
+                { width: 256, height: 256, crop: 'thumb', gravity: 'face', quality: 'auto:good', fetch_format: 'auto' },
+              ],
+            })
+          }
+        } else {
+          finalUrl = existingMetaUrl
+        }
+      } catch {}
+
+      if (!finalUrl) {
+        // Upload once with stable public_id; overwrite to refresh while avoiding new duplicates
+        const uploaded = await cloudinary.uploader.upload(candidate, {
+          folder: 'avatars',
+          public_id: user.id,
+          unique_filename: false,
+          overwrite: true,
+          resource_type: 'image',
+          transformation: [
+            { width: 256, height: 256, crop: 'thumb', gravity: 'face', quality: 'auto:good', fetch_format: 'auto' },
+          ],
+        })
+        finalUrl = uploaded.secure_url
+      }
+
+      if (finalUrl) {
+        await supabase.auth.updateUser({
+          data: {
+            avatar_url: finalUrl,
+            avatar_provider: 'google',
+            avatar_uploaded_at: new Date().toISOString(),
+          },
+        })
+      }
     }
   } catch (e) {
     console.error('Avatar ensure failed:', e)

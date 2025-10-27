@@ -4,6 +4,39 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+### Added
+- [Admin • Shared UI] Centralized user management UI and logic:
+  - Components: `UsersTable`, `RoleSelect`, `PaginationControls`.
+    - Files: `src/components/admin/users/UsersTable.tsx`, `src/components/admin/users/RoleSelect.tsx`, `src/components/common/PaginationControls.tsx`.
+  - Hooks: `useUsers` (debounce, pagination, enabled flag), `useUserRoleUpdate`.
+    - Files: `src/lib/admin/hooks/use-users.ts`, `src/lib/admin/hooks/use-update-user-role.ts`.
+  - Typed clients: users (list, role update, orders) and books (list/update/delete).
+    - Files: `src/lib/admin/client/users.ts`, `src/lib/admin/client/books.ts`.
+- [Super Admin] Extracted `ClipHealthCard` and refactored super-admin panel to use shared users UI.
+  - Files: `src/components/super-admin/ClipHealthCard.tsx`, `src/components/super-admin/super-admin-panel.tsx`.
+
+### Changed
+- [Admin • Users page] Switched to shared `UsersTable` and `useUsers` hook (read‑only roles for admins).
+  - File: `src/app/[locale]/admin/users/page.tsx`.
+- [Admin • Manual] Switched book list/dialog to use typed clients (no behavioral change).
+  - Files: `src/components/admin/manual/book-list.tsx`, `src/components/admin/manual/book-dialog.tsx`.
+- [Navigation • Mobile] Navbar now uses the animated `MobileMenu` on small screens; inline links are desktop‑only. The user icon sits next to the menu toggle on mobile. Removed the “Admin Panel” label entirely.
+  - File: `src/components/admin/admin-navbar.tsx`.
+- [Mobile Menu] Replaced text-based toggle with an icon-only shadcn `Button` (Menu/X) and localized aria-labels. Extracted GSAP logic into `useMobileMenuAnimation` and toggle button into `MobileMenuToggle`.
+  - Files: `src/components/layout/pill/mobile/useMobileMenuAnimation.ts`, `src/components/layout/pill/mobile/MobileMenuToggle.tsx`, `src/components/layout/pill/MobileMenu.tsx`, `src/components/layout/pill-nav.tsx`.
+- [Admin • UsersTable] Show inline loading row while fetching.
+  - File: `src/components/admin/users/UsersTable.tsx`.
+
+### Performance
+- [Users] Abort in‑flight fetches on search/page/limit changes to avoid race conditions and wasted work; hook cleans up on unmount.
+  - Files: `src/lib/admin/hooks/use-users.ts`, `src/lib/admin/client/users.ts` (added `signal`).
+- [Navbar] Memoized `navItems` and `mobileItems` to reduce re-creation.
+  - File: `src/components/admin/admin-navbar.tsx`.
+
+### Removed
+- [Mobile Menu] Dead code: text-cycling animation and old `toggleLabel`/`toggleOpenLabel` props.
+  - Files: `src/components/layout/pill/mobile/useMobileMenuAnimation.ts`, `src/components/layout/pill/MobileMenu.tsx`, `src/components/layout/pill-nav.tsx`.
+
 ### Home • Lotus 3D
 - Added spinner-style drag-to-spin with inertia; works with mouse and touch, scroll-safe (`touchAction: 'pan-y'`). Reduced motion disables drag.
   - Files: `src/components/3d/lotus-model.tsx`, constants in `src/lib/ui.ts`.
