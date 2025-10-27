@@ -52,10 +52,7 @@ export async function POST(request: Request) {
     console.log('📤 Upload complete:', secureUrl)
 
     return NextResponse.json(
-      {
-        url: secureUrl,
-        publicId: secureUrl.split('/').pop()?.split('.')[0]
-      },
+      { url: secureUrl },
       { headers: rl.enabled ? rateLimitHeaders(rl) : undefined }
     )
 

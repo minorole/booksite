@@ -216,13 +216,9 @@ export async function handleImageUpload(
       // 1. Validate file
       validateImageFile(file)
       
-      // 2. Convert to base64
+      // 2. Read bytes and compute content hash to dedupe assets by content
       const bytes = await file.arrayBuffer()
       const buffer = Buffer.from(bytes)
-      const base64File = buffer.toString('base64')
-      const dataURI = `data:${file.type};base64,${base64File}`
-      
-      // 2b. Compute content hash to dedupe assets by content
       const hash = createHash('sha1').update(buffer).digest('hex')
       const publicId = `${folder}/${hash}`
       
@@ -237,7 +233,9 @@ export async function handleImageUpload(
         }
       } catch {}
 
-      // 4. Upload to Cloudinary with timeout using deterministic public_id
+      // 4. Convert to base64 and upload to Cloudinary with timeout using deterministic public_id
+      const base64File = buffer.toString('base64')
+      const dataURI = `data:${file.type};base64,${base64File}`
       const uploadPromise = cloudinary.uploader.upload(dataURI, {
         folder,
         public_id: hash,

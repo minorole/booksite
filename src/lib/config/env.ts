@@ -16,6 +16,8 @@ const OptionalKeys = [
   'CLIP_EMBEDDINGS_URL',
   'CLIP_EMBEDDINGS_API_KEY',
   'IMAGE_EMBEDDINGS_STRICT',
+  // Admin task token for cron-authenticated maintenance endpoints
+  'ADMIN_TASK_TOKEN',
 ] as const
 
 export type RequiredEnvKey = typeof RequiredKeys[number]
@@ -53,4 +55,5 @@ export const env = {
   clipUrl: () => getOptionalEnv('CLIP_EMBEDDINGS_URL'),
   clipToken: () => getOptionalEnv('CLIP_EMBEDDINGS_API_KEY'),
   imageEmbStrict: () => getOptionalEnv('IMAGE_EMBEDDINGS_STRICT'),
+  adminTaskToken: () => getOptionalEnv('ADMIN_TASK_TOKEN'),
 }

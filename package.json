@@ -14,7 +14,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "db:types": "supabase gen types typescript --linked --schema public > src/types/supabase.generated.ts",
-    "check:ci": "npm run lint:ci && npm run typecheck && npm run test && npm run build"
+    "check:ci": "npm run lint:ci && npm run typecheck && npm run test && npm run build",
+    "cloudinary:purge-temp": "node scripts/cloudinary-purge-temp.mjs"
   },
   "engines": {
     "node": ">=20.18.0"

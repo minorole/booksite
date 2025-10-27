@@ -78,25 +78,18 @@ export async function finalizePostLogin(
       // Deterministic public id to avoid duplicates across logins
       const publicId = `avatars/${user.id}`
 
-      // If we already have a Cloudinary avatar pointing to this publicId, skip work
-      const existingMetaUrl = typeof umeta.avatar_url === 'string' ? (umeta.avatar_url as string) : undefined
-      const alreadyCloudinaryForThisUser = typeof existingMetaUrl === 'string' && existingMetaUrl.includes('res.cloudinary.com') && existingMetaUrl.includes('/upload/') && existingMetaUrl.includes(`/avatars/${user.id}`)
+      // Always verify existence of the canonical avatar resource.
+      // This recovers gracefully if the Cloudinary asset was deleted manually.
       let finalUrl: string | null = null
-
       try {
-        if (!alreadyCloudinaryForThisUser) {
-          // Check if resource exists; if yes, generate transformed delivery URL and reuse
-          const res = await cloudinary.api.resource(publicId).catch(() => null as any)
-          if (res && typeof res.secure_url === 'string') {
-            finalUrl = cloudinary.url(publicId, {
-              secure: true,
-              transformation: [
-                { width: 256, height: 256, crop: 'thumb', gravity: 'face', quality: 'auto:good', fetch_format: 'auto' },
-              ],
-            })
-          }
-        } else {
-          finalUrl = existingMetaUrl
+        const res = await cloudinary.api.resource(publicId).catch(() => null as any)
+        if (res && typeof res.secure_url === 'string') {
+          finalUrl = cloudinary.url(publicId, {
+            secure: true,
+            transformation: [
+              { width: 256, height: 256, crop: 'thumb', gravity: 'face', quality: 'auto:good', fetch_format: 'auto' },
+            ],
+          })
         }
       } catch {}
 
