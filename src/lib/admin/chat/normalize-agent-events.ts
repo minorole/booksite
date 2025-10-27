@@ -9,6 +9,10 @@ export type NormalizedEvent =
   | { type: 'tool_result'; id: string; name: string; success: boolean; result: unknown; finishedAt: string }
   | { type: 'tool_append'; message: { role: 'tool'; name?: string; tool_call_id?: string; content: string } }
 
+// Only surface results for our first-party domain tools. Ignore internal routing
+// or SDK-internal function calls to prevent noisy transcript messages.
+import { getDomainToolNames } from '@/lib/admin/agents/tools'
+
 function isObject(x: unknown): x is Record<string, unknown> {
   return typeof x === 'object' && x !== null
 }
@@ -74,6 +78,8 @@ export function normalizeRunItemToSSEEvents(input: { name?: string; raw?: unknow
   if (name === 'tool_called') {
     const call = (raw as any) as { type?: string; callId?: string; id?: string; name?: string; arguments?: unknown }
     if (call && call.type === 'function_call') {
+      // Filter: only emit tool_start for known domain tools
+      if (!call.name || !getDomainToolNames().has(call.name)) return []
       return [
         {
           type: 'tool_start',
@@ -89,6 +95,8 @@ export function normalizeRunItemToSSEEvents(input: { name?: string; raw?: unknow
   if (name === 'tool_output') {
     const out = (raw as any) as { type?: string; output?: unknown; callId?: string; name?: string }
     if (out?.type === 'function_call_result') {
+      // Filter: only emit results for known domain tools
+      if (!out.name || !getDomainToolNames().has(out.name)) return []
       let payload: unknown = null
       const output = out.output as { type?: string; text?: string; json?: unknown } | unknown
       if (typeof output === 'object' && output && 'type' in (output as any)) {

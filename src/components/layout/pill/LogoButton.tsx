@@ -22,8 +22,8 @@ export function LogoButton({ logoSrc, logoAlt = "Logo", logoHref = "/", ease = "
     gsap.to(img, { rotate: 360, duration: 0.2, ease, overwrite: "auto" })
   }
 
-  // eslint-disable-next-line @next/next/no-img-element
   const Img = (
+    // eslint-disable-next-line @next/next/no-img-element
     <img
       src={logoSrc}
       alt={logoAlt}

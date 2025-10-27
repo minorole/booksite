@@ -132,6 +132,9 @@ export async function runChatWithAgentsStream(params: {
   })
 
   try {
+    // Local state to suppress duplicate handoff events if the Agents SDK
+    // emits multiple agent_updated events for the same target agent.
+    let lastHandoffTo: string | undefined
     for await (const evt of stream as AsyncIterable<unknown>) {
       // Agent change
       const e = evt as { type?: string; agent?: { name?: string } }
@@ -139,6 +142,14 @@ export async function runChatWithAgentsStream(params: {
         if (adminAiLogsEnabled()) {
           try { console.log('[AdminAI orchestrator] agent_updated', { to: e.agent?.name, req: params.requestId?.slice(0, 8) }) } catch {}
         }
+        const current = e.agent?.name
+        // Deduplicate: skip emitting a handoff if the target agent did not change
+        if (current && current === lastHandoffTo) {
+          continue
+        }
+        // Ignore handoff events without a concrete target name
+        if (!current) continue
+        lastHandoffTo = current
         const events = normalizeAgentUpdatedToSSEEvents({ agent: e.agent })
         for (const ne of events) write(ne as Record<string, unknown>)
         continue

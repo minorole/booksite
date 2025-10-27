@@ -35,6 +35,7 @@ import { UI_STRINGS } from '@/lib/admin/i18n'
     sendText,
     attachImage,
     reset,
+    inputPlaceholder,
   } = useChatSession(locale, {
     onRequestId: (id) => setRequestId(id),
   })
@@ -140,6 +141,7 @@ import { UI_STRINGS } from '@/lib/admin/i18n'
               onSelectFile={attachImage}
               loading={loading}
               onError={(m) => setError(m)}
+              placeholderOverride={inputPlaceholder || undefined}
             />
         </div>
       </div>

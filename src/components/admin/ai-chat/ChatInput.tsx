@@ -15,6 +15,7 @@ export function ChatInput({
   onSelectFile,
   loading,
   onError,
+  placeholderOverride,
 }: {
   input: string
   setInput: (v: string) => void
@@ -22,6 +23,7 @@ export function ChatInput({
   onSelectFile: (file: File) => void
   loading: boolean
   onError?: (message: string) => void
+  placeholderOverride?: string | null
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const textRef = useRef<HTMLTextAreaElement>(null)
@@ -67,7 +69,7 @@ export function ChatInput({
             ref={textRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={UI_STRINGS[locale === 'zh' ? 'zh' : 'en'].input_placeholder}
+            placeholder={placeholderOverride || UI_STRINGS[locale === 'zh' ? 'zh' : 'en'].input_placeholder}
             rows={3}
             className="min-h-[5rem] max-h-[20rem] pr-24 resize-none overflow-y-auto bg-background w-full rounded-lg border-0 shadow-inner focus-visible:ring-0 focus:ring-0 focus-visible:ring-offset-0 focus:ring-offset-0 focus-visible:border-transparent focus:border-transparent"
             onKeyDown={(e) => {

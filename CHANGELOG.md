@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+### Admin AI
+- Orchestrator: Deduplicate agent handoffs so only a single `handoff` SSE event is emitted per router→specialist transition. File: `src/lib/admin/chat/orchestrator-agentkit.ts`.
+- Stream normalizer: Filter out SDK‑internal `tool_called` / `tool_output` events; only first‑party tools are surfaced to the UI (`tool_start`, `tool_result`, `tool_append`). Files: `src/lib/admin/chat/normalize-agent-events.ts`, `src/lib/admin/agents/tools.ts`.
+- Agents: Router routes silently (no narration). Vision follows a tool‑first flow for images: `analyze_book_cover` (initial → structured) then `check_duplicates`. Files: `src/lib/admin/agents/router.ts`, `src/lib/admin/agents/vision.ts`.
+- Chat input UX: After image attach, show a placeholder hint instead of inserting text into the input. Files: `src/components/admin/ai-chat/hooks/useChatSession.ts`, `src/components/admin/ai-chat/ChatInput.tsx`, `src/components/admin/ai-chat/chat-interface.tsx`.
+- Tool discovery: Domain tool names are now auto‑derived from tool factories with memoization. Files: `src/lib/admin/agents/tools.ts`, `src/lib/admin/chat/normalize-agent-events.ts`.
+- Lint: Resolved an ESLint directive placement issue for the nav logo `<img>`. File: `src/components/layout/pill/LogoButton.tsx`.
+
 ### Added
  - Uploads: Direct-to-Cloudinary signed uploads for admin chat with server fallback (`src/app/api/upload/sign/route.ts`, `src/components/admin/ai-chat/hooks/useImageUpload.ts`).
  - Cloudinary: Tag-based purge with folder fallback, dry-run, retries, chunked deletes (`scripts/cloudinary-purge-temp.mjs`).

@@ -30,6 +30,7 @@ export function useChatSession(
   const [error, setError] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
   const [steps, setSteps] = useState<Array<{ id: string; name: string; status: 'running' | 'done' | 'error'; summary?: string }>>([])
+  const [inputPlaceholder, setInputPlaceholder] = useState<string | null>(null)
   const { upload, loading: uploadLoading, error: uploadError, setError: setUploadError } = useImageUpload(language)
 
   useEffect(() => {
@@ -201,11 +202,18 @@ export function useChatSession(
 
       // Never auto-send; give a helpful hint in the input
       setLoadingKey(null)
-      // Only replace input if it is empty to avoid overwriting user's draft
-      setInput((prev) => (prev && prev.trim().length > 0 ? prev : ADMIN_AI_IMAGE_HINT[language]))
+      // If input is empty, show a non-intrusive placeholder hint instead of pre-filling text
+      if (!input || input.trim().length === 0) {
+        setInputPlaceholder(ADMIN_AI_IMAGE_HINT[language])
+      }
     },
-    [upload, messages, language]
+    [upload, messages, language, input]
   )
+
+  // Clear placeholder once the user starts typing
+  useEffect(() => {
+    if (input && input.trim().length > 0) setInputPlaceholder(null)
+  }, [input])
 
   const reset = useCallback(() => {
     abortRef.current?.abort()
@@ -214,6 +222,7 @@ export function useChatSession(
     setError(null)
     setUploadError(null)
     setSteps([])
+    setInputPlaceholder(null)
     try {
       localStorage.removeItem(`admin-ai-input-draft:${language}`)
     } catch {}
@@ -232,5 +241,6 @@ export function useChatSession(
     sendText,
     attachImage,
     reset,
+    inputPlaceholder,
   }
 }
