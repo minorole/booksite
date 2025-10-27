@@ -74,9 +74,10 @@ export function AdminNavbar() {
             ))}
           </div>
 
-          {/* Mobile pill menu */}
-          <div className="md:hidden ml-1">
+          {/* Mobile: menu + user icon together on the left */}
+          <div className="md:hidden ml-1 flex items-center gap-2">
             <MobileMenu items={mobileItems} activeHref={pathname || undefined} />
+            <UserMenu />
           </div>
 
           {/* Right-side cluster: language switch + user menu */}
@@ -100,7 +101,7 @@ export function AdminNavbar() {
                 aria-current={locale === 'en' ? 'page' : undefined}
               >English</Link>
             </div>
-            <UserMenu />
+            <div className="hidden md:block"><UserMenu /></div>
           </div>
         </div>
       </div>
