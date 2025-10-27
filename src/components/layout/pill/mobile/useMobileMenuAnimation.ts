@@ -14,18 +14,14 @@ export function useMobileMenuAnimation(opts?: { ease?: string }) {
   const preLayersRef = useRef<HTMLDivElement | null>(null)
   const preLayerElsRef = useRef<HTMLDivElement[]>([])
   const previousFocusRef = useRef<HTMLElement | null>(null)
-  const textInnerRef = useRef<HTMLSpanElement | null>(null)
-
   const openTlRef = useRef<gsap.core.Timeline | null>(null)
   const closeTweenRef = useRef<gsap.core.Timeline | gsap.core.Tween | null>(null)
-  const textTweenRef = useRef<gsap.core.Tween | null>(null)
 
   // Setup for prelayers and text when mounting open state
   useLayoutEffect(() => {
     if (!isOpen) return
     const panel = panelRef.current
     const preContainer = preLayersRef.current
-    const textInner = textInnerRef.current
     if (!panel) return
 
     let preLayers: HTMLDivElement[] = []
@@ -35,7 +31,7 @@ export function useMobileMenuAnimation(opts?: { ease?: string }) {
     preLayerElsRef.current = preLayers
 
     gsap.set([panel, ...preLayers], { xPercent: 100 })
-    if (textInner) gsap.set(textInner, { yPercent: 0 })
+    // no-op: text animation removed
   }, [isOpen])
 
   const buildOpenTimeline = useCallback(() => {
@@ -46,7 +42,6 @@ export function useMobileMenuAnimation(opts?: { ease?: string }) {
 
     openTlRef.current?.kill()
     closeTweenRef.current?.kill()
-    textTweenRef.current?.kill()
 
     const itemEls = Array.from(panel.querySelectorAll<HTMLElement>('.sm-item'))
     const layerStates = layers.map(el => ({ el, start: Number(gsap.getProperty(el, 'xPercent')) }))
@@ -80,14 +75,8 @@ export function useMobileMenuAnimation(opts?: { ease?: string }) {
     return tl
   }, [ease])
 
-  const animateText = useCallback((opening: boolean) => {
-    const inner = textInnerRef.current
-    if (!inner) return
-    textTweenRef.current?.kill()
-    const reduce = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    if (reduce) return
-    const target = opening ? -50 : 0
-    textTweenRef.current = gsap.to(inner, { yPercent: target, duration: 0.45, ease: 'power3.out' })
+  const animateText = useCallback((_opening: boolean) => {
+    // text animation removed for icon-only toggle
   }, [])
 
   // Drive open/close
@@ -148,6 +137,6 @@ export function useMobileMenuAnimation(opts?: { ease?: string }) {
     requestClose,
     handleOpenChange,
     toggle,
-    refs: { toggleBtnRef, overlayRef, panelRef, preLayersRef, textInnerRef },
+    refs: { toggleBtnRef, overlayRef, panelRef, preLayersRef },
   }
 }

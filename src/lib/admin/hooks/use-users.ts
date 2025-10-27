@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Role } from '@/lib/db/enums'
 import { fetchUsersApi, type AdminUser } from '@/lib/admin/client/users'
 
@@ -21,6 +21,7 @@ export function useUsers(opts: UseUsersOptions = {}) {
   const [users, setUsers] = useState<AdminUser[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const abortRef = useRef<AbortController | null>(null)
 
   // Debounce search input
   useEffect(() => {
@@ -37,13 +38,18 @@ export function useUsers(opts: UseUsersOptions = {}) {
     setLoading(true)
     setError(null)
     try {
-      const { users, total } = await fetchUsersApi({ q: debouncedQuery, limit, offset, hideSuperAdmin: !!opts.hideSuperAdmin })
+      abortRef.current?.abort()
+      const ac = new AbortController()
+      abortRef.current = ac
+      const { users, total } = await fetchUsersApi({ q: debouncedQuery, limit, offset, hideSuperAdmin: !!opts.hideSuperAdmin, signal: ac.signal })
       setUsers(users)
       setTotal(typeof total === 'number' ? total : undefined)
     } catch (e) {
-      setUsers([])
-      setTotal(0)
-      setError((e as Error)?.message || 'Failed to fetch users')
+      if ((e as any)?.name !== 'AbortError') {
+        setUsers([])
+        setTotal(0)
+        setError((e as Error)?.message || 'Failed to fetch users')
+      }
     } finally {
       setLoading(false)
     }
@@ -54,6 +60,12 @@ export function useUsers(opts: UseUsersOptions = {}) {
     if (!enabled) return
     void refresh()
   }, [refresh, enabled])
+
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort()
+    }
+  }, [])
 
   return {
     users,

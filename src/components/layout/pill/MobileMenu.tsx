@@ -15,8 +15,6 @@ type Props = {
   ease?: string
   onToggle?: () => void
   menuId?: string
-  toggleLabel?: React.ReactNode
-  toggleOpenLabel?: React.ReactNode
 }
 
 // Link helpers moved to ./mobile/utils

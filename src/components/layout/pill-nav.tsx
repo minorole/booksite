@@ -116,8 +116,6 @@ export function PillNav({
           ease={ease}
           onToggle={onMobileMenuClick}
           menuId={menuId}
-          toggleLabel={mobileToggleLabel}
-          toggleOpenLabel={mobileToggleOpenLabel}
         />
       </nav>
     </div>
