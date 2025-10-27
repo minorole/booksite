@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/AuthContext"
 import { UserMenu } from "@/components/auth/user-menu"
 import { replaceLeadingLocale } from "@/lib/i18n/paths"
 import { MobileMenu } from "@/components/layout/pill/MobileMenu"
+import { useMemo } from "react"
 import type { PillNavItem } from "@/components/layout/pill/types"
 
 export function AdminNavbar() {
@@ -17,7 +18,7 @@ export function AdminNavbar() {
   const { locale } = useLocale()
   const { isSuperAdmin } = useAuth()
 
-  const navItems = [
+  const navItems = useMemo(() => ([
     {
       href: `/${locale}/admin/ai-chat`,
       label: <Bilingual cnText="AI 助手" enText="AI Assistant" />,
@@ -31,17 +32,19 @@ export function AdminNavbar() {
       label: <Bilingual cnText="用户管理" enText="User Management" />,
     },
     ...(isSuperAdmin ? [{ href: `/${locale}/super-admin`, label: <Bilingual cnText="超级管理员" enText="Super Admin" /> }] as const : []),
-  ]
+  ]), [locale, isSuperAdmin])
 
   // Build MobileMenu items: admin links + language switch entries
   const current = pathname || `/${locale}`
   const zhHref = replaceLeadingLocale(current, 'zh')
   const enHref = replaceLeadingLocale(current, 'en')
-  const mobileItems: PillNavItem[] = [
-    ...navItems.map((n) => ({ label: n.label, href: n.href })),
-    { label: '中文', href: zhHref },
-    { label: 'English', href: enHref },
-  ]
+  const mobileItems: PillNavItem[] = useMemo(() => (
+    [
+      ...navItems.map((n) => ({ label: n.label, href: n.href })),
+      { label: '中文', href: zhHref },
+      { label: 'English', href: enHref },
+    ]
+  ), [navItems, zhHref, enHref])
 
   return (
     <nav className="border-b bg-muted/40">

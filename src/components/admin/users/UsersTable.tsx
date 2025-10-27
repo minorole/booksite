@@ -6,6 +6,7 @@ import { Bilingual } from '@/components/common/bilingual'
 import type { Role } from '@/lib/db/enums'
 import type { AdminUser } from '@/lib/admin/client/users'
 import { RoleSelect } from './RoleSelect'
+import { LoadingSpinner } from '@/components/ui/loading-spinner'
 
 export function UsersTable({
   users,
@@ -14,6 +15,7 @@ export function UsersTable({
   updatingId,
   onChangeRole,
   onViewOrders,
+  loading,
 }: {
   users: AdminUser[]
   showRoleSelect?: boolean
@@ -21,6 +23,7 @@ export function UsersTable({
   updatingId?: string | null
   onChangeRole?: (userId: string, role: Role) => void
   onViewOrders?: (user: { id: string; email: string }) => void
+  loading?: boolean
 }) {
   return (
     <Table>
@@ -34,7 +37,16 @@ export function UsersTable({
         </TableRow>
       </TableHeader>
       <TableBody>
-        {users.length === 0 ? (
+        {loading && users.length === 0 ? (
+          <TableRow>
+            <TableCell colSpan={5} className="py-8">
+              <div className="flex items-center justify-center gap-3 text-sm text-muted-foreground">
+                <LoadingSpinner />
+                <Bilingual cnText="正在加载…" enText="Loading..." />
+              </div>
+            </TableCell>
+          </TableRow>
+        ) : users.length === 0 ? (
           <TableRow>
             <TableCell colSpan={5} className="text-center text-sm text-muted-foreground py-8">
               <Bilingual cnText="暂无用户" enText="No users found." />
@@ -69,4 +81,3 @@ export function UsersTable({
     </Table>
   )
 }
-

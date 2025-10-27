@@ -25,6 +25,7 @@ export function SuperAdminPanel() {
   const {
     users,
     total,
+    loading: loadingUsers,
     query,
     setQuery,
     page,
@@ -109,6 +110,7 @@ export function SuperAdminPanel() {
         updatingId={updating}
         onChangeRole={handleRoleChange}
         onViewOrders={({ id, email }) => { setOrdersFor({ id, email }); setOrdersOpen(true) }}
+        loading={loadingUsers}
       />
 
       <PaginationControls

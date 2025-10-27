@@ -19,7 +19,7 @@ export default function AdminUsersPage() {
   const [ordersOpen, setOrdersOpen] = useState(false)
   const [ordersFor, setOrdersFor] = useState<{ id: string; email: string } | null>(null)
 
-  const { users, total, query, setQuery, page, setPage, limit, setLimit } = useUsers({ initialLimit: 50, hideSuperAdmin: !isSuperAdmin, enabled: isAdmin })
+  const { users, total, loading: usersLoading, query, setQuery, page, setPage, limit, setLimit } = useUsers({ initialLimit: 50, hideSuperAdmin: !isSuperAdmin, enabled: isAdmin })
 
   useEffect(() => {
     if (!loading && !user) {
@@ -71,6 +71,7 @@ export default function AdminUsersPage() {
         users={users}
         showRoleSelect={false}
         onViewOrders={({ id, email }) => { setOrdersFor({ id, email }); setOrdersOpen(true) }}
+        loading={usersLoading}
       />
 
       <PaginationControls

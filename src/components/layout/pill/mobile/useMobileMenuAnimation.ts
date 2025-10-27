@@ -75,10 +75,6 @@ export function useMobileMenuAnimation(opts?: { ease?: string }) {
     return tl
   }, [ease])
 
-  const animateText = useCallback((_opening: boolean) => {
-    // text animation removed for icon-only toggle
-  }, [])
-
   // Drive open/close
   useEffect(() => {
     if (!isOpen) return
@@ -87,12 +83,11 @@ export function useMobileMenuAnimation(opts?: { ease?: string }) {
 
     const tl = buildOpenTimeline()
     tl?.play(0)
-    animateText(true)
 
     return () => {
       document.body.classList.remove('overflow-hidden')
     }
-  }, [isOpen, buildOpenTimeline, animateText])
+  }, [isOpen, buildOpenTimeline])
 
   // Close on >= md
   useEffect(() => {
@@ -113,7 +108,6 @@ export function useMobileMenuAnimation(opts?: { ease?: string }) {
     const all = [...layers, panel]
     const reduce = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
     openTlRef.current?.kill()
-    animateText(false)
     closeTweenRef.current?.kill()
     closeTweenRef.current = gsap.timeline({
       onComplete: () => {
