@@ -31,7 +31,7 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 
 ## Admin AI
 
-- Start here: `doc/admin-ai/README.md` — overview, setup, architecture, and troubleshooting
+- Start here: `src/lib/admin/README.md` — overview, setup, architecture, diagrams, and troubleshooting
 - E2E manual validation: `doc/admin-ai/e2e-manual-test.md`
 - Client helpers: `src/lib/admin/chat/client/README.md`
 
