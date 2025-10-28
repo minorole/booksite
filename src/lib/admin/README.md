@@ -13,8 +13,8 @@ This is the single entry point for the Admin AI chat: what it is, how it works, 
   - Drag a cover photo into the input, then ask e.g. “Analyze this book and prepare to add it.”
   - The system streams: `handoff` → assistant text → tool events (analyze → structured → duplicate check) → `assistant_done`.
 - Helpful toggles
-  - Client SSE logs: `NEXT_PUBLIC_ADMIN_AI_TRACE_DISABLED=1` (off by default)
-  - Server logs: `ADMIN_AI_TRACE_DISABLED=1` (off by default)
+  - Client SSE logs: disable with `NEXT_PUBLIC_ADMIN_AI_TRACE_DISABLED=1` (default: ON)
+  - Server logs: disable with `ADMIN_AI_TRACE_DISABLED=1` (default: ON)
   - Deep diagnostics: `DEBUG_LOGS=1` (prints compact shapes for unexpected stream events)
 
 ## Architecture (at a glance)
@@ -87,8 +87,9 @@ sequenceDiagram
   participant TO as Tools/Services
 
   UI->>API: POST /api/admin/ai-chat/stream/orchestrated (messages)
-  API-->>UI: sse: handoff (to=Vision)
   API->>ORC: run stream (messages)
+  ORC->>API: agent_updated (to=Vision)
+  API-->>UI: sse: handoff (to=Vision)
   ORC->>AG: route to Vision
   AG->>TO: analyze_book_cover (initial)
   TO-->>ORC: tool_result (initial)
@@ -158,4 +159,3 @@ sequenceDiagram
 - Features: `doc/admin-ai/features.md`
 - UI roadmap: `doc/admin-ai/admin-ai-ui-roadmap.md`
 - Client helpers README: `src/lib/admin/chat/client/README.md`
-
