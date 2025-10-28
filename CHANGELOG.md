@@ -79,6 +79,8 @@ All notable changes to this project will be documented in this file.
     - Files: `src/lib/openai/vision.ts`, `src/lib/admin/services/vision/helpers.ts`.
   - Simplified `ChatOptions`: removed tool-related fields.
     - Files: `src/lib/openai/types.ts`, `src/lib/openai/chat.ts`.
+  - Admin chat UX: fold analysis/duplicate/search tool cards into the inline Thinking bubble as collapsible "Details"; keep write actions in transcript.
+    - Files: `src/components/admin/ai-chat/hooks/useChatSession.ts`, `src/components/admin/ai-chat/chat-interface.tsx`, `src/components/admin/ai-chat/MessageList.tsx`, `src/components/admin/ai-chat/MessageContent.tsx`, `src/lib/admin/i18n.ts`.
 - Removed
   - `OPENAI_USE_RESPONSES` toggle and helper; deprecated Chat Completions streaming iterator; unused `toResponsesPayload`; unused `DOMAIN_TOOL_NAMES` export.
     - Files: `src/lib/openai/responses.ts`, `src/lib/openai/stream.ts`, `src/lib/admin/agents/tools.ts`.
