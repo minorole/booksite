@@ -19,15 +19,6 @@ export const FILE_CONFIG: ImageConfig = {
   ACCEPT_STRING: "image/jpeg,image/jpg,image/pjpeg,image/png,image/x-png,image/webp,image/heic,image/heif,image/heic-sequence,image/heif-sequence"
 } as const
 
-// Analysis progress messages
-export const ANALYSIS_MESSAGES = [
-  "Your assistant is examining the book cover details...",
-  "Identifying text and visual elements...",
-  "Cross-referencing with known categories...",
-  "Generating comprehensive analysis...",
-  "Almost done with the analysis..."
-] as const
-
 // Cloudinary config
 export const CLOUDINARY_CONFIG: CloudinaryConfig = {
   FOLDER: 'book-covers',

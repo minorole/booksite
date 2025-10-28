@@ -9,3 +9,11 @@ export function adminAiSensitiveEnabled(): boolean {
   return v === '1' || v === 'true'
 }
 
+// Fallback behavior: if an image is present and no domain tools ran in the
+// first pass, allow the orchestrator to re-run once with a stricter prelude
+// instructing tool-first execution. Enabled by default in dev.
+export function adminAiVisionToolFallbackEnabled(): boolean {
+  const v = process.env.ADMIN_AI_VISION_TOOL_FALLBACK?.toLowerCase()
+  if (v === '0' || v === 'false') return false
+  return true
+}

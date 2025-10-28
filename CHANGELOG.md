@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+### Admin AI • Orchestrator/Vision
+- Enforce tool-first behavior for Vision agent: require `analyze_book_cover` (initial → structured) then `check_duplicates` before any assistant reply; keep non-book flow via `analyze_item_photo`.
+  - Files: `src/lib/admin/agents/vision.ts`.
+- Orchestrator fallback: when an image is present but no domain tools are called in the first pass, re-run once with a strict tool-first prelude. Emits `assistant_done` only once.
+  - Files: `src/lib/admin/chat/orchestrator-agentkit.ts`, `src/lib/observability/toggle.ts` (env `ADMIN_AI_VISION_TOOL_FALLBACK`).
+
+### Cleanup
+- Remove unused analysis progress messages.
+  - Files: `src/lib/admin/constants.ts` (deleted `ANALYSIS_MESSAGES`).
+- Remove unused Responses wrapper.
+  - Files: `src/lib/openai/responses.ts` (deleted `createViaResponses`).
+- Delete unused vision validation helper and re-export.
+  - Files: `src/lib/admin/services/vision/validation.ts` (deleted), `src/lib/admin/services/vision/index.ts` (removed re-export).
+
 ### Admin AI Chat
 - Inline thinking indicator inside the assistant bubble and synced agent handoffs; removed the bottom “Processing…” during streaming to avoid duplicate state.
   - Files: `src/components/admin/ai-chat/hooks/useChatSession.ts`, `src/components/admin/ai-chat/MessageContent.tsx`, `src/components/admin/ai-chat/MessageList.tsx`, `src/components/admin/ai-chat/chat-interface.tsx`, `src/lib/admin/i18n.ts`.

@@ -6,45 +6,6 @@ import { responsesEventsToTextStream } from './stream'
 
 // (Removed unused toResponsesPayload helper)
 
-export async function createViaResponses(
-  client: OpenAI,
-  model: string,
-  payload: { instructions?: string; input: string },
-  temperature: number,
-  max_tokens: number
-): Promise<ChatCompletion> {
-  const rsp = await client.responses.create({
-    model,
-    instructions: payload.instructions,
-    input: payload.input,
-    max_output_tokens: max_tokens,
-    temperature,
-  })
-
-  if (!rsp.id) {
-    throw new OpenAIError('Responses API returned no id', 'api_error')
-  }
-  if (!rsp.output_text || !rsp.output_text.trim()) {
-    throw new OpenAIError('Responses API returned empty output', 'api_error')
-  }
-
-  const synthetic: ChatCompletion = {
-    id: rsp.id,
-    object: 'chat.completion',
-    created: Math.floor(Date.now() / 1000),
-    model,
-    choices: [
-      {
-        index: 0,
-        finish_reason: 'stop',
-        logprobs: null,
-        message: { role: 'assistant', content: rsp.output_text } as ChatCompletion['choices'][number]['message'],
-      },
-    ],
-  }
-  return synthetic
-}
-
 // Convert Chat Completions style messages into Responses API input array
 export function messagesToResponsesInput(messages: ChatCompletionMessage[]) {
   // Responses API expects an array of items; we’ll collapse to a single user message

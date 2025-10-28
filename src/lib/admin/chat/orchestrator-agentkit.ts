@@ -10,7 +10,7 @@ import { ADMIN_AGENT_MAX_TURNS_DEFAULT } from '@/lib/admin/constants'
 import { getModel } from '@/lib/openai/models'
 import { logAdminAction } from '@/lib/db/admin'
 import type { UILanguage } from '@/lib/admin/i18n'
-import { adminAiLogsEnabled, adminAiSensitiveEnabled } from '@/lib/observability/toggle'
+import { adminAiLogsEnabled, adminAiSensitiveEnabled, adminAiVisionToolFallbackEnabled } from '@/lib/observability/toggle'
 import { getAdminClient } from '@/lib/openai/client'
 
 // Configure Agents SDK to use our OpenAI client and Responses API mode
@@ -22,11 +22,19 @@ try {
 
 type SSEWriter = (event: Record<string, unknown>) => void
 
-function toAgentInput(messages: Message[], uiLanguage: UILanguage | undefined): AgentInputItem[] {
+function toAgentInput(
+  messages: Message[],
+  uiLanguage: UILanguage | undefined,
+  extraSystemPrelude?: string
+): AgentInputItem[] {
   const items: AgentInputItem[] = []
   // System prelude: mirror user's last-message language when possible; fall back to UI language
   // We don't limit languages; the model can respond in any language.
   const fallbackName = uiLanguage === 'zh' ? 'Chinese' : 'English'
+  // Optional stricter prelude goes first to take precedence when present
+  if (extraSystemPrelude && extraSystemPrelude.trim().length > 0) {
+    items.push(msgSystem(extraSystemPrelude))
+  }
   items.push(
     msgSystem(
       `When replying, mirror the language of the user's most recent message. If the language is unclear or there is no prior user text, default to ${fallbackName}. Preserve user-provided language/script when quoting content; do not translate quoted user text.`
@@ -107,7 +115,10 @@ export async function runChatWithAgentsStream(params: {
   const startAgent = registry.router
 
   const context: AgentContext = { userEmail, uiLanguage: params.uiLanguage }
-  const input = toAgentInput(messages, params.uiLanguage)
+
+  // Detect if the user provided any image input in this conversation turn
+  const hasImage = Array.isArray(messages)
+    && messages.some((m) => Array.isArray(m.content) && (m.content as any[]).some((c) => c && typeof c === 'object' && (c as any).type === 'image_url' && (c as any).image_url?.url))
 
   const model = getModel('text')
   const traceMeta: Record<string, string> = {
@@ -116,24 +127,27 @@ export async function runChatWithAgentsStream(params: {
     uiLanguage: params.uiLanguage || 'en',
   }
   if (params.requestId) traceMeta.request_id = params.requestId
-  const runner = new Runner({
-    modelProvider: provider,
-    model,
-    workflowName: 'Admin AI Chat',
-    traceMetadata: traceMeta,
-    // Default to redacting sensitive data unless explicitly enabled via env
-    traceIncludeSensitiveData: adminAiSensitiveEnabled(),
-  })
-  const stream = await runner.run(startAgent as unknown as Parameters<typeof runner.run>[0], input, {
-    stream: true,
-    context,
-    maxTurns,
-  })
+  // Helper to run the agent once, with an optional stricter prelude
+  const runOnce = async (extraPrelude?: string): Promise<{ ranDomainTool: boolean }> => {
+    const runner = new Runner({
+      modelProvider: provider,
+      model,
+      workflowName: 'Admin AI Chat',
+      traceMetadata: traceMeta,
+      // Default to redacting sensitive data unless explicitly enabled via env
+      traceIncludeSensitiveData: adminAiSensitiveEnabled(),
+    })
+    const input = toAgentInput(messages, params.uiLanguage, extraPrelude)
+    const stream = await runner.run(startAgent as unknown as Parameters<typeof runner.run>[0], input, {
+      stream: true,
+      context,
+      maxTurns,
+    })
 
-  try {
     // Local state to suppress duplicate handoff events if the Agents SDK
     // emits multiple agent_updated events for the same target agent.
     let lastHandoffTo: string | undefined
+    let ranDomainTool = false
     for await (const evt of stream as AsyncIterable<unknown>) {
       // Agent change
       const e = evt as { type?: string; agent?: { name?: string } }
@@ -201,14 +215,16 @@ export async function runChatWithAgentsStream(params: {
         }
         for (const ne of events) {
           write(ne as Record<string, unknown>)
-          // Audit logs based on normalized events
+          // Track domain tool usage and audit logs
           if (ne.type === 'tool_start') {
+            ranDomainTool = true
             try {
               await logAdminAction({ action: 'FUNCTION_CALL', admin_email: userEmail, metadata: { name: ne.name, args: ne.args, call_id: ne.id } })
             } catch (e) {
               console.error('logAdminAction failed (FUNCTION_CALL)', e)
             }
           } else if (ne.type === 'tool_result') {
+            ranDomainTool = true
             try {
               await logAdminAction({ action: 'FUNCTION_SUCCESS', admin_email: userEmail, metadata: { name: ne.name, call_id: ne.id, result: typeof ne.result === 'string' ? ne.result : '[json]' } })
             } catch (e) {
@@ -232,6 +248,28 @@ export async function runChatWithAgentsStream(params: {
           } catch {}
         }
       }
+    }
+    return { ranDomainTool }
+  }
+
+  try {
+    // First pass
+    const first = await runOnce()
+    // Fallback: if this is a vision-style query (has image) but no domain tools ran,
+    // re-run once with a strict tool-first prelude.
+    if (adminAiVisionToolFallbackEnabled() && hasImage && !first.ranDomainTool) {
+      if (adminAiLogsEnabled()) {
+        try { console.log('[AdminAI orchestrator] fallback_rerun', { req: params.requestId?.slice(0, 8) }) } catch {}
+      }
+      const strictPrelude = [
+        'Tool-first execution required for images.',
+        'When an image or an "image_url:" text is present about a book, you MUST:',
+        '1) Call analyze_book_cover with stage="initial" using the most recent image_url;',
+        '2) Then call analyze_book_cover with stage="structured" with concise confirmed_info;',
+        '3) Then call check_duplicates with extracted fields and cover_image;',
+        'Only after these tool calls complete, produce a brief assistant message. Do not skip tools.',
+      ].join(' ')
+      await runOnce(strictPrelude)
     }
   } finally {
     write({ type: 'assistant_done' })
