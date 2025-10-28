@@ -13,12 +13,11 @@ import type { UILanguage } from '@/lib/admin/i18n'
 import { adminAiLogsEnabled, adminAiSensitiveEnabled } from '@/lib/observability/toggle'
 import { getAdminClient } from '@/lib/openai/client'
 
-// Configure Agents SDK to use our OpenAI client and API mode
+// Configure Agents SDK to use our OpenAI client and Responses API mode
 try {
   setDefaultOpenAIClient(getAdminClient() as unknown as any)
-  // Default to Responses API for Agents; allow explicit opt-out via OPENAI_USE_RESPONSES=0
-  const apiMode = process.env.OPENAI_USE_RESPONSES === '0' ? 'chat_completions' : 'responses'
-  setOpenAIAPI(apiMode as 'responses' | 'chat_completions')
+  // Use Responses API for Agents
+  setOpenAIAPI('responses')
 } catch {}
 
 type SSEWriter = (event: Record<string, unknown>) => void

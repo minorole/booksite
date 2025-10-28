@@ -66,6 +66,27 @@ All notable changes to this project will be documented in this file.
 - `.env.example` and README updated to reflect direct uploads, promotion flow, and reference‑aware purge.
 - [Mobile Menu] Dead code: text-cycling animation and old `toggleLabel`/`toggleOpenLabel` props.
 
+### OpenAI / Admin AI
+- Added
+  - Text streaming via OpenAI Responses in `createChatCompletion({ stream: true })`, returning a web `ReadableStream<Uint8Array>`.
+    - Files: `src/lib/openai/chat.ts`, `src/lib/openai/responses.ts`, `src/lib/openai/stream.ts`.
+  - Content-only SSE route: `POST /api/admin/ai-chat/stream/text` (emits `assistant_delta` and `assistant_done`).
+    - File: `src/app/api/admin/ai-chat/stream/text/route.ts`.
+- Changed
+  - Agents SDK locked to Responses API (removed env-driven mode switching).
+    - File: `src/lib/admin/chat/orchestrator-agentkit.ts`.
+  - Vision wrapper signature cleanup (removed unused `stream` option) and call site updated.
+    - Files: `src/lib/openai/vision.ts`, `src/lib/admin/services/vision/helpers.ts`.
+  - Simplified `ChatOptions`: removed tool-related fields.
+    - Files: `src/lib/openai/types.ts`, `src/lib/openai/chat.ts`.
+- Removed
+  - `OPENAI_USE_RESPONSES` toggle and helper; deprecated Chat Completions streaming iterator; unused `toResponsesPayload`; unused `DOMAIN_TOOL_NAMES` export.
+    - Files: `src/lib/openai/responses.ts`, `src/lib/openai/stream.ts`, `src/lib/admin/agents/tools.ts`.
+- Docs
+  - ADR 0002 updated to reflect Responses-as-default and corrected route names; Admin README lists the new text streaming route.
+    - Files: `doc/adr/0002-server-orchestrated-ai-chat-ui-refactor-streaming-and-gpt5-mini.md`, `src/lib/admin/README.md`.
+  - CHANGELOG note simplified to “use Responses API by default.”
+
 ### Home • Lotus 3D
 - Added spinner-style drag-to-spin with inertia; works with mouse and touch, scroll-safe (`touchAction: 'pan-y'`). Reduced motion disables drag.
 - Added an always-on base tilt toward the viewer (~5°) for depth; independent of cursor.
@@ -253,7 +274,7 @@ All notable changes to this project will be documented in this file.
 - [Admin] Tracing IDs: rely on Agents SDK-generated `trace_…` ids and attach server `request_id` via `traceMetadata` to avoid exporter 400s.
 - [Admin] Refactored `useChatSession` to delegate SSE parsing and buffering to the new helpers; preserved public API.
 - [Admin] Router agent config deduplicated and instantiated once via `Agent.create` using shared config to avoid drift.
-- [Admin] Agents SDK wired to project OpenAI client and API mode; default to Responses API (`OPENAI_USE_RESPONSES=0` to use Chat Completions).
+- [Admin] Agents SDK wired to project OpenAI client and API mode; use Responses API by default.
 - [Admin] Inventory enabled hosted `web_search` tool for narrow disambiguation (publisher/edition).
 - [Admin] Chat transcript now reuses results cards (duplicates/search/book/order) for a single source of truth.
 - [Admin] Duplicate transform unified via `toDuplicateMatch` helper.

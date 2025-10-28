@@ -118,6 +118,7 @@ UI consumes versioned events from `src/lib/admin/types/events.ts`. Examples belo
 ## Code Map
 - API entry (SSE)
   - `src/app/api/admin/ai-chat/stream/orchestrated/route.ts` — Admin‑only; adds `request_id`, rate limit + concurrency.
+  - `src/app/api/admin/ai-chat/stream/text/route.ts` — Content‑only streaming (assistant_delta + assistant_done), no tool execution.
 - Orchestrator
   - `src/lib/admin/chat/orchestrator-agentkit.ts` — Connects Agents SDK and streams normalized events.
 - Agents & Tools

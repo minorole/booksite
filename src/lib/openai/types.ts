@@ -6,8 +6,6 @@ export type ChatCompletionMessage = ChatCompletionCreateParamsBase['messages'][n
 export interface ChatOptions {
   messages: ChatCompletionMessage[]
   stream?: boolean
-  tools?: ChatCompletionCreateParamsBase['tools']
-  tool_choice?: ChatCompletionCreateParamsBase['tool_choice']
   temperature?: number
   max_tokens?: number
 }
@@ -24,4 +22,3 @@ export interface ContextMetadata {
   operation: string
   model: string
 }
-

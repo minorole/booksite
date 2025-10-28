@@ -2,20 +2,9 @@ import OpenAI from 'openai'
 import type { ChatCompletion } from 'openai/resources/chat/completions'
 import type { ChatCompletionMessage } from './types'
 import { OpenAIError } from './errors'
+import { responsesEventsToTextStream } from './stream'
 
-export function isResponsesAPIEnabled() {
-  return process.env.OPENAI_USE_RESPONSES === '1'
-}
-
-export function toResponsesPayload(messages: ChatCompletionMessage[]) {
-  const system = messages.find((m) => m.role === 'system')
-  const instructions = typeof system?.content === 'string' ? (system!.content as string) : undefined
-  const text = messages
-    .filter((m) => typeof m.content === 'string')
-    .map((m) => `${m.role}: ${m.content}`)
-    .join('\n')
-  return { instructions, input: text }
-}
+// (Removed unused toResponsesPayload helper)
 
 export async function createViaResponses(
   client: OpenAI,
@@ -152,4 +141,56 @@ export async function createViaResponsesFromMessages(
     ],
   }
   return synthetic
+}
+
+// Stream assistant text via Responses API from chat-style messages
+export async function streamViaResponsesFromMessages(
+  client: OpenAI,
+  model: string,
+  messages: ChatCompletionMessage[],
+  opts?: {
+    temperature?: number
+    max_tokens?: number
+    response_format?: unknown
+  }
+): Promise<ReadableStream<Uint8Array>> {
+  const system = messages.find((m) => m.role === 'system')
+  const instructions = typeof system?.content === 'string' ? (system!.content as string) : undefined
+  const input = messagesToResponsesInput(messages)
+
+  // Map legacy response_format (json_schema) into Responses text.format
+  let textConfig: any | undefined
+  const rf = opts?.response_format as any
+  if (rf && rf.type === 'json_schema' && rf.json_schema) {
+    textConfig = {
+      format: {
+        type: 'json_schema',
+        name: rf.json_schema.name ?? 'OutputSchema',
+        schema: rf.json_schema.schema ?? rf.json_schema,
+        strict: rf.json_schema.strict ?? true,
+      },
+    }
+  }
+
+  // Only include temperature when there are no image inputs.
+  const hasImage = Array.isArray(input) && input.some((it: any) => {
+    const content = (it && Array.isArray((it as any).content)) ? (it as any).content : []
+    return content.some((c: any) => c && (c.type === 'input_image'))
+  })
+
+  const payload: any = {
+    model,
+    input,
+    instructions,
+    max_output_tokens: opts?.max_tokens,
+    ...(textConfig ? { text: textConfig } : {}),
+    stream: true,
+  }
+  if (!hasImage && typeof opts?.temperature === 'number') {
+    payload.temperature = opts.temperature
+  }
+
+  // The SDK returns an async iterable of events when stream: true
+  const events = await client.responses.create(payload as any)
+  return responsesEventsToTextStream(events as unknown as AsyncIterable<unknown>)
 }

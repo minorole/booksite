@@ -1,5 +1,4 @@
 import { logOperation } from './logging'
-import type { ChatCompletionChunk } from 'openai/resources/chat/completions'
 
 export function iteratorToStream(iterator: AsyncIterator<Uint8Array>) {
   return new ReadableStream({
@@ -19,23 +18,30 @@ export function iteratorToStream(iterator: AsyncIterator<Uint8Array>) {
   })
 }
 
-export async function* createResponseIterator(response: AsyncIterable<ChatCompletionChunk>) {
+// (Removed deprecated Chat Completions streaming iterator)
+
+// Responses API streaming helpers
+// Convert an AsyncIterable of OpenAI Responses events to an iterator of UTF-8 text deltas
+export async function* responsesTextDeltaIterator(events: AsyncIterable<unknown>) {
   const encoder = new TextEncoder()
-  for await (const chunk of response) {
-    const { delta } = chunk.choices[0]
-
-    if (delta?.content) {
-      yield encoder.encode(`data: ${JSON.stringify({ message: { content: delta.content } })}\n\n`)
-    }
-
-    if (delta?.function_call) {
-      yield encoder.encode(
-        `data: ${JSON.stringify({ message: { function_call: delta.function_call } })}\n\n`
-      )
-    }
-
-    if (delta?.tool_calls) {
-      yield encoder.encode(`data: ${JSON.stringify({ message: { tool_calls: delta.tool_calls } })}\n\n`)
+  for await (const ev of events) {
+    try {
+      const type = (ev as any)?.type
+      if (type === 'response.output_text.delta') {
+        const delta = (ev as any)?.delta
+        if (typeof delta === 'string' && delta.length > 0) {
+          yield encoder.encode(delta)
+        }
+      }
+    } catch (error) {
+      logOperation('STREAM_ERROR', { error })
+      // propagate as stream error for the consumer
+      throw error
     }
   }
+}
+
+// Create a ReadableStream<Uint8Array> of assistant text deltas from Responses events
+export function responsesEventsToTextStream(events: AsyncIterable<unknown>): ReadableStream<Uint8Array> {
+  return iteratorToStream(responsesTextDeltaIterator(events))
 }

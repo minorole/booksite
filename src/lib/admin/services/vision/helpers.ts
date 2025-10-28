@@ -5,7 +5,6 @@ import { visionStructuredResponseFormat } from './schemas'
 export async function callVisionJSON<T>(schemaName: string, schema: Record<string, unknown>, messages: ChatCompletionMessageParam[]): Promise<T> {
   const response = (await createVisionChatCompletion({
     messages,
-    stream: false,
     response_format: visionStructuredResponseFormat(schemaName, schema),
   })) as ChatCompletion
   const content = response.choices[0]?.message?.content

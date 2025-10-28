@@ -305,5 +305,4 @@ export function getDomainToolNames(): Set<string> {
   return DOMAIN_TOOL_NAMES_CACHE
 }
 
-// Backward-compatible export: snapshot at module load (used nowhere else currently).
-export const DOMAIN_TOOL_NAMES = getDomainToolNames()
+// (Removed unused snapshot export of tool names)

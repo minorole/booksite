@@ -10,10 +10,9 @@ import { createViaResponsesFromMessages } from './responses'
 
 export async function createVisionChatCompletion({
   messages,
-  stream = false,
   max_tokens,
   response_format,
-}: Omit<ChatOptions, 'tools' | 'tool_choice' | 'temperature'> & { response_format?: unknown }): Promise<ChatResponse> {
+}: Omit<ChatOptions, 'temperature' | 'stream'> & { response_format?: unknown }): Promise<ChatResponse> {
   const startTime = Date.now()
   const maxTokens = max_tokens ?? OPENAI_CONFIG.TOKENS.MAX_OUTPUT
   const imageCount = messages.reduce((count, message) => {
@@ -31,7 +30,6 @@ export async function createVisionChatCompletion({
     logOperation('VISION_REQUEST', {
       messageCount: messages.length,
       imageCount,
-      stream,
       model: getModel('vision'),
     })
 
@@ -42,7 +40,7 @@ export async function createVisionChatCompletion({
     })
 
     const duration = Date.now() - startTime
-    logOperation('VISION_RESPONSE', { duration, stream, imageCount, status: 'success' })
+    logOperation('VISION_RESPONSE', { duration, imageCount, status: 'success' })
 
     return response as ChatCompletion
   } catch (error: unknown) {

@@ -4,15 +4,13 @@ import { getAdminClient } from './client'
 import { getModel } from './models'
 import { logOperation } from './logging'
 import { OpenAIError } from './errors'
-import { createViaResponsesFromMessages } from './responses'
+import { createViaResponsesFromMessages, streamViaResponsesFromMessages } from './responses'
 import { OPENAI_CONFIG } from './config'
 import type { ChatOptions, ChatResponse } from './types'
 
 export async function createChatCompletion({
   messages,
   stream,
-  tools,
-  tool_choice,
   temperature = 0.7,
   max_tokens,
 }: ChatOptions): Promise<ChatResponse> {
@@ -23,12 +21,20 @@ export async function createChatCompletion({
     const MODEL = getModel('text')
     logOperation('REQUEST', {
       messageCount: messages.length,
-      hasTools: !!tools,
       model: MODEL,
     })
 
     const client = getAdminClient()
-    // Use Responses API for chat as the default path (no tool calling required here)
+    // Streaming branch: return a ReadableStream of UTF-8 assistant text deltas
+    if (stream === true) {
+      const rs = await streamViaResponsesFromMessages(client, MODEL, messages as any, {
+        temperature,
+        max_tokens: maxTokens,
+      })
+      logOperation('RESPONSE_STREAMING_START', { model: MODEL, messageCount: messages.length })
+      return rs as unknown as ChatResponse
+    }
+    // Non-streaming: use Responses API and synthesize a ChatCompletion-shaped object
     const response = await createViaResponsesFromMessages(client, MODEL, messages as any, {
       temperature,
       max_tokens: maxTokens,
