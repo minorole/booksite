@@ -11,6 +11,11 @@ All notable changes to this project will be documented in this file.
   - Files: `test/admin-ai/orchestrator.input.test.ts`, `test/admin-ai/orchestrator.events.test.ts`, `test/admin-ai/orchestrator.results.unwrap.test.ts`.
 
 ### Admin AI
+- Fix: No output after Vision handoff — stream assistant text deltas from newer Agents SDK event shapes by hardening the extractor and preserving order.
+  - Files: `src/lib/admin/chat/normalize-agent-events.ts`, `src/lib/admin/chat/orchestrator-agentkit.ts`.
+  - Details: Add a conservative BFS deep scan for `output_text` / `output_text.delta` under nested `message`/`content`/`delta`/`output` nodes; add optional diagnostics (`DEBUG_LOGS=1`) when a `message_*` event yields no text.
+- Tests: Added deep-shape coverage for the normalizer and extended orchestrator event test with delta-style output.
+  - Files: `test/admin-ai/agent.normalizer.deep.test.ts`, `test/admin-ai/orchestrator.events.test.ts`.
 - Orchestrator: Deduplicate agent handoffs so only a single `handoff` SSE event is emitted per router→specialist transition. File: `src/lib/admin/chat/orchestrator-agentkit.ts`.
 - Stream normalizer: Filter out SDK‑internal `tool_called` / `tool_output` events; only first‑party tools are surfaced to the UI (`tool_start`, `tool_result`, `tool_append`). Files: `src/lib/admin/chat/normalize-agent-events.ts`, `src/lib/admin/agents/tools.ts`.
 - Agents: Router routes silently (no narration). Vision follows a tool‑first flow for images: `analyze_book_cover` (initial → structured) then `check_duplicates`. Files: `src/lib/admin/agents/router.ts`, `src/lib/admin/agents/vision.ts`.

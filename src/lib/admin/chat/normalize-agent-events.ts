@@ -35,7 +35,7 @@ export function extractAssistantTextDeltas(raw: unknown): string[] {
 
   if (!isObject(raw)) return pieces
 
-  // 1) content array with output_text segments
+  // Fast paths for the most common shapes
   if (Array.isArray((raw as any).content)) {
     for (const seg of (raw as any).content as unknown[]) {
       if (!isObject(seg)) continue
@@ -45,17 +45,45 @@ export function extractAssistantTextDeltas(raw: unknown): string[] {
       }
     }
   }
-
-  // 2) top-level type like 'output_text' or 'output_text.delta'
   if (isString((raw as any).type) && (raw as any).type.includes('output_text')) {
     add((raw as any).delta ?? (raw as any).text ?? (raw as any).textDelta)
   }
-
-  // 3) nested delta object with its own type field
   if (isObject((raw as any).delta)) {
     const d = (raw as any).delta
-    if (isString(d.type) && d.type.includes('output_text')) {
+    if (isString((d as any).type) && (d as any).type.includes('output_text')) {
       add((d as any).delta ?? (d as any).text ?? (d as any).textDelta)
+    }
+  }
+
+  if (pieces.length > 0) return pieces
+
+  // Long-term resilience: perform a conservative deep scan to find
+  // any nodes that look like output_text or output_text.delta segments.
+  const MAX_NODES = 5000
+  let visited = 0
+  // Use a queue (BFS) to preserve left-to-right order found in arrays
+  const queue: unknown[] = [raw]
+  while (queue.length > 0 && visited < MAX_NODES) {
+    const cur = queue.shift()
+    visited++
+    if (!cur || typeof cur !== 'object') continue
+    const obj = cur as Record<string, unknown>
+
+    // If this node advertises an output_text type, try to read text-like fields
+    const t = obj.type
+    if (isString(t) && t.includes('output_text')) {
+      add((obj as any).delta ?? (obj as any).text ?? (obj as any).textDelta)
+    }
+
+    // Traverse children (arrays and objects). We intentionally traverse broadly
+    // but only collect when `type` matches, to avoid false positives.
+    for (const v of Object.values(obj)) {
+      if (!v) continue
+      if (Array.isArray(v)) {
+        for (const it of v) queue.push(it)
+      } else if (typeof v === 'object') {
+        queue.push(v)
+      }
     }
   }
 

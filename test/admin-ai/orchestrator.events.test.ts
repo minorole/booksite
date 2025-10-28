@@ -13,6 +13,12 @@ vi.mock('@openai/agents-core', () => {
         name: 'message_output_created',
         item: { rawItem: { content: [{ type: 'output_text', text: 'Hello' }] } },
       }
+      // also emit a delta-style event to mimic newer SDKs
+      yield {
+        type: 'run_item_stream_event',
+        name: 'message_output_delta',
+        item: { rawItem: { message: { delta: { type: 'output_text.delta', delta: '!' } } } },
+      }
       // tool call
       yield {
         type: 'run_item_stream_event',

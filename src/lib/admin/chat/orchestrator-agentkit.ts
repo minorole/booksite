@@ -164,6 +164,42 @@ export async function runChatWithAgentsStream(params: {
           try { console.log('[AdminAI orchestrator] run_item', { name, req: params.requestId?.slice(0, 8) }) } catch {}
         }
         const events = normalizeRunItemToSSEEvents({ name, raw })
+        // Optional diagnostics: if the SDK reports a message_* event but
+        // no assistant text was extracted, log a compact shape preview.
+        if (
+          process.env.DEBUG_LOGS === '1' &&
+          typeof name === 'string' && name.startsWith('message_') &&
+          !events.some((e: any) => e && e.type === 'assistant_delta')
+        ) {
+          try {
+            const summarize = (x: unknown): Record<string, unknown> => {
+              if (!x || typeof x !== 'object') return { type: typeof x }
+              const o = x as Record<string, unknown>
+              const keys = Object.keys(o)
+              const types: Record<string, string> = {}
+              for (const k of keys.slice(0, 10)) {
+                const v = o[k]
+                const vt = typeof v === 'object' ? (Array.isArray(v) ? 'array' : 'object') : typeof v
+                types[k] = vt
+              }
+              // Surface nested `.type` fields one level deep for hints
+              const nestedTypes: Array<string> = []
+              for (const k of keys.slice(0, 10)) {
+                const v = o[k] as any
+                if (v && typeof v === 'object') {
+                  const t = (v as any).type
+                  if (typeof t === 'string') nestedTypes.push(`${k}.type=${t}`)
+                }
+              }
+              return { keys: keys.slice(0, 10), types, nestedTypes }
+            }
+            console.log('[AdminAI orchestrator] no_text_after_message_event', {
+              name,
+              shape: summarize(raw),
+              req: params.requestId?.slice(0, 8),
+            })
+          } catch {}
+        }
         for (const ne of events) {
           write(ne as Record<string, unknown>)
           // Audit logs based on normalized events
