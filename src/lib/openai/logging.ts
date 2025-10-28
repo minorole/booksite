@@ -1,3 +1,5 @@
+import { debugLogsEnabled } from '@/lib/observability/toggle'
+
 export function logOperation(operation: string, details: Record<string, unknown>, error?: Error) {
   const logEntry = {
     operation,
@@ -11,7 +13,7 @@ export function logOperation(operation: string, details: Record<string, unknown>
       },
     }),
   }
-  const shouldLog = process.env.DEBUG_LOGS === '1'
+  const shouldLog = debugLogsEnabled()
   const isError = operation.toUpperCase().includes('ERROR') || !!error
   if (isError) {
     console.error(`[OpenAI ${operation}]`, logEntry)

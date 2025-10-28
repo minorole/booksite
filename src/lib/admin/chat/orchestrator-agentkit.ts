@@ -10,7 +10,7 @@ import { ADMIN_AGENT_MAX_TURNS_DEFAULT } from '@/lib/admin/constants'
 import { getModel } from '@/lib/openai/models'
 import { logAdminAction } from '@/lib/db/admin'
 import type { UILanguage } from '@/lib/admin/i18n'
-import { adminAiLogsEnabled, adminAiSensitiveEnabled, adminAiVisionToolFallbackEnabled } from '@/lib/observability/toggle'
+import { adminAiLogsEnabled, adminAiSensitiveEnabled, adminAiVisionToolFallbackEnabled, debugLogsEnabled } from '@/lib/observability/toggle'
 import { getAdminClient } from '@/lib/openai/client'
 
 // Configure Agents SDK to use our OpenAI client and Responses API mode
@@ -222,7 +222,7 @@ export async function runChatWithAgentsStream(params: {
       model,
       workflowName: 'Admin AI Chat',
       traceMetadata: traceMeta,
-      // Default to redacting sensitive data unless explicitly enabled via env
+      // Include sensitive data in traces by default; can be disabled via env
       traceIncludeSensitiveData: adminAiSensitiveEnabled(),
     })
     const input = toAgentInput(messages, params.uiLanguage, extraPrelude)
@@ -274,7 +274,7 @@ export async function runChatWithAgentsStream(params: {
         // Optional diagnostics: if the SDK reports a message_* event but
         // no assistant text was extracted, log a compact shape preview.
         if (
-          process.env.DEBUG_LOGS === '1' &&
+          debugLogsEnabled() &&
           typeof name === 'string' && name.startsWith('message_') &&
           !events.some((e: any) => e && e.type === 'assistant_delta')
         ) {

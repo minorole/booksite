@@ -15,7 +15,7 @@ This is the single entry point for the Admin AI chat: what it is, how it works, 
 - Helpful toggles
   - Client SSE logs: disable with `NEXT_PUBLIC_ADMIN_AI_TRACE_DISABLED=1` (default: ON)
   - Server logs: disable with `ADMIN_AI_TRACE_DISABLED=1` (default: ON)
-  - Deep diagnostics: `DEBUG_LOGS=1` (prints compact shapes for unexpected stream events)
+  - Deep diagnostics: default ON; disable with `DEBUG_LOGS=0` (compact shapes for unexpected stream events)
 
 ## Architecture (at a glance)
 
@@ -153,7 +153,7 @@ UI consumes versioned events from `src/lib/admin/types/events.ts`. Examples belo
 
 ## Troubleshooting
 - “Handoff to Vision” then silence
-  - Normalizer now handles nested message/delta shapes; if it ever occurs, set `DEBUG_LOGS=1` to log compact shapes.
+  - Normalizer now handles nested message/delta shapes; if it ever occurs, ensure `DEBUG_LOGS` is not disabled (default ON). Set `DEBUG_LOGS=0` to suppress.
   - Code: `src/lib/admin/chat/normalize-agent-events.ts`, `src/lib/admin/chat/orchestrator-agentkit.ts`
 - 401 Unauthorized
   - Ensure admin login and role; `SUPER_ADMIN_EMAIL` must be set or your DB role set to admin.
@@ -169,7 +169,7 @@ UI consumes versioned events from `src/lib/admin/types/events.ts`. Examples belo
 - Vision JSON must be valid JSON text; helpers expect model output to be strictly JSON and will throw on non‑JSON (see `src/lib/admin/services/vision/helpers.ts`).
 - Rate limiting/concurrency depends on a KV backend; without a configured KV, set `KV_USE_MEMORY=1` locally (dev only).
 - Tool results are unwrapped to `data` for `tool_result`, but the full envelope is sent via `tool_append` for transcript continuity.
-- Agents SDK updates can change event shapes; our normalizer is resilient, but if upgrading `@openai/agents*`, run tests and enable `DEBUG_LOGS=1` to see shapes.
+- Agents SDK updates can change event shapes; our normalizer is resilient, but if upgrading `@openai/agents*`, run tests and keep `DEBUG_LOGS` enabled (default ON) to see shapes.
 
 ## Validation
 - Manual E2E plan: `doc/admin-ai/e2e-manual-test.md`
@@ -202,4 +202,4 @@ curl -N \
 ```
 
 ## Version Compatibility
-- Agents SDK / OpenAI provider pinned to `^0.1.9`. Our normalizer handles nested `output_text(.delta)` shapes. If upgrading these deps, re‑run `npm test` and consider enabling `DEBUG_LOGS=1` during initial validation to inspect event shapes.
+- Agents SDK / OpenAI provider pinned to `^0.1.9`. Our normalizer handles nested `output_text(.delta)` shapes. If upgrading these deps, re‑run `npm test` and keep `DEBUG_LOGS` enabled (default ON) during initial validation to inspect event shapes.

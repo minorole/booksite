@@ -1,4 +1,5 @@
 import { FILE_CONFIG, CLOUDINARY_CONFIG } from './constants'
+import { getUrlValidationCache } from '@/lib/runtime/request-context'
 import { type AllowedMimeType, type ImageUploadResult } from './types'
 import { createHash } from 'node:crypto'
 
@@ -9,72 +10,166 @@ async function getCloudinary() {
 }
 
 /**
- * Basic URL validation for any image URL
+ * Basic URL validation for any non-Cloudinary image URL.
+ * Tries a quick HEAD first (with 1 retry), then falls back to a tiny GET (Range: 0-0).
+ * Accepts any `image/*` content-type to accommodate optimized formats (e.g., AVIF).
  */
 async function validateExternalUrl(url: string): Promise<boolean> {
-  try {
-    console.log('🔍 Validating external URL:', url)
-    
-    // Basic URL validation
+  // Per-request memoization (in-flight and success)
+  const cache = getUrlValidationCache()
+  const cacheKey = `ext|${url}`
+  if (cache?.has(cacheKey)) {
+    return cache.get(cacheKey) as Promise<boolean>
+  }
+  const work = (async () => {
+    try {
+      console.log('🔍 Validating external URL:', url)
+
     if (!url || typeof url !== 'string') {
       console.log('❌ Invalid URL format:', url)
       return false
     }
 
-    // Test URL accessibility with timeout
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 5000)
+    const acceptHeader = { Accept: 'image/*' }
+    const isImageContentType = (ct: string | null): boolean => {
+      if (!ct) return false
+      const normalized = ct.split(';')[0].trim().toLowerCase()
+      if (normalized.startsWith('image/')) return true
+      return FILE_CONFIG.ALLOWED_TYPES.includes(normalized as AllowedMimeType)
+    }
 
+    const tryHead = async (timeoutMs: number): Promise<Response> => {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+      try {
+        return await fetch(url, { method: 'HEAD', headers: acceptHeader, signal: controller.signal })
+      } finally {
+        clearTimeout(timeoutId)
+      }
+    }
+
+    // Attempt HEAD with a modest timeout and one retry with backoff
     try {
-      const response = await fetch(url, { 
-        method: 'HEAD',
-        signal: controller.signal
-      })
-      clearTimeout(timeoutId)
-      
-      if (!response.ok) {
-        console.log('❌ URL not accessible:', url)
+      const head = await tryHead(7000)
+      if (!head.ok) {
+        // Some CDNs disallow HEAD; fall back to GET below
+        throw new Error(`HEAD not ok: ${head.status}`)
+      }
+      const ct = head.headers.get('content-type')
+      if (!isImageContentType(ct)) {
+        console.log('❌ Invalid content type (HEAD):', ct)
         return false
       }
-
-      // Check content type
-      const contentType = response.headers.get('content-type')
-      if (!contentType || !FILE_CONFIG.ALLOWED_TYPES.includes(contentType as AllowedMimeType)) {
-        console.log('❌ Invalid content type:', contentType)
-        return false
-      }
-
-      console.log('✅ External URL validated:', url)
+      console.log('✅ External URL validated via HEAD:', url)
       return true
+    } catch (e) {
+      // Retry once for transient errors, then fall back
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 300))
+        const head2 = await tryHead(7000)
+        if (head2.ok) {
+          const ct = head2.headers.get('content-type')
+          if (isImageContentType(ct)) {
+            console.log('✅ External URL validated via HEAD (retry):', url)
+            return true
+          }
+          console.log('❌ Invalid content type (HEAD retry):', ct)
+          return false
+        }
+      } catch {}
+      // Fallback: tiny GET with byte-range
+      try {
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 8000)
+        const rsp = await fetch(url, {
+          method: 'GET',
+          headers: { ...acceptHeader, Range: 'bytes=0-0' },
+          signal: controller.signal,
+        })
+        clearTimeout(timeoutId)
+        if (!rsp.ok && rsp.status !== 206) {
+          console.log('❌ URL not accessible (GET fallback):', url, rsp.status)
+          return false
+        }
+        const ct = rsp.headers.get('content-type')
+        if (isImageContentType(ct)) {
+          console.log('✅ External URL validated via GET fallback:', url)
+          return true
+        }
+        // Last-chance: infer via file extension
+        try {
+          const ext = new URL(url).pathname.split('.').pop()?.toLowerCase()
+          const okExt = new Set(['jpg', 'jpeg', 'png', 'webp', 'avif', 'heic', 'heif'])
+          if (ext && okExt.has(ext)) {
+            console.log('⚠️  Assuming image by file extension:', ext)
+            return true
+          }
+        } catch {}
+        console.log('❌ Invalid content type (GET fallback):', ct)
+        return false
+      } catch (err) {
+        console.log('❌ URL fetch failed (GET fallback):', err)
+        return false
+      }
+    }
     } catch (error) {
-      console.log('❌ URL fetch failed:', error)
+      console.error('❌ URL validation error:', error)
       return false
     }
-  } catch (error) {
-    console.error('❌ URL validation error:', error)
-    return false
+  })()
+  if (cache) {
+    cache.set(cacheKey, work)
+    const ok = await work
+    if (!ok) cache.delete(cacheKey)
+    return ok
   }
+  return work
 }
 
 /**
  * Validates Cloudinary URL format and accessibility
  */
 export async function validateCloudinaryUrl(url: string): Promise<boolean> {
+  const cache = getUrlValidationCache()
+  const cacheKey = `cld|${url}`
+  if (cache?.has(cacheKey)) {
+    return cache.get(cacheKey) as Promise<boolean>
+  }
+  const work = (async () => {
   try {
     console.log('🔍 Validating Cloudinary URL:', url)
-    
-    // Check if URL is from Cloudinary
+    // Basic host check
     if (!url.includes('res.cloudinary.com')) {
       console.log('❌ Not a Cloudinary URL:', url)
       return false
     }
-
-    // Validate accessibility
+    // Structural check for Cloudinary delivery URL
+    try {
+      const u = new URL(url.replace('http://', 'https://'))
+      const path = u.pathname || ''
+      const hasUpload = path.includes('/image/upload/')
+      // Allow version and transforms; require a plausible image extension
+      const ext = path.split('.').pop()?.toLowerCase()
+      const okExt = new Set(['jpg', 'jpeg', 'png', 'webp', 'avif', 'heic', 'heif'])
+      if (hasUpload && ext && okExt.has(ext)) {
+        console.log('✅ Cloudinary URL validated by pattern:', url)
+        return true
+      }
+    } catch {}
+    // Fallback to external validation for unusual shapes
     return await validateExternalUrl(url)
   } catch (error) {
     console.error('❌ Cloudinary URL validation error:', error)
     return false
   }
+  })()
+  if (cache) {
+    cache.set(cacheKey, work)
+    const ok = await work
+    if (!ok) cache.delete(cacheKey)
+    return ok
+  }
+  return work
 }
 
 /**

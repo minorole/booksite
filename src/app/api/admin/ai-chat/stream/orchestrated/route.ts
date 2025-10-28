@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { assertAdmin, UnauthorizedError } from '@/lib/security/guards'
 import type { Message } from '@/lib/admin/types'
 import { runChatWithAgentsStream } from '@/lib/admin/chat/orchestrator-agentkit'
+import { withRequestContext } from '@/lib/runtime/request-context'
 import { checkRateLimit, rateLimitHeaders, acquireConcurrency, releaseConcurrency } from '@/lib/security/ratelimit'
 import { adminAiLogsEnabled } from '@/lib/observability/toggle'
 
@@ -68,7 +69,10 @@ export async function POST(request: Request) {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify(enriched)}\n\n`))
         }
         // Agents decide next steps based solely on messages (including any user-confirmed info embedded in prior turns)
-        void runChatWithAgentsStream({ messages, userEmail: user.email!, write, uiLanguage, requestId })
+        // Wrap the run in a request-scoped context to enable per-request caches (e.g., URL validation)
+        void withRequestContext(requestId, () =>
+          runChatWithAgentsStream({ messages, userEmail: user.email!, write, uiLanguage, requestId })
+        )
           .then(async () => {
             try {
               await releaseConcurrency({ route: routeKey, userId: user.id, ttlSeconds: 120 })

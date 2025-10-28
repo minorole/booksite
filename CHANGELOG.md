@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+### Admin AI • Vision & Images
+- Trust Cloudinary delivery URLs by pattern (no network preflight) to avoid transient HEAD timeouts.
+- Harden external URL validation: HEAD with 1 retry and fallback to tiny GET (Range: 0-0); accept any `image/*` content type; infer by extension as last resort.
+- Allow AVIF in allowed MIME types and file input accept list.
+- Add per-request cache for URL validations (orchestrated admin chat route) to eliminate redundant checks within a single run.
+
+### Admin AI • Vision utilities
+- Add `validateAnalysisResult` runtime guard for `VisionAnalysisResult` and export from `@/lib/admin/services/vision`.
+
 ### Admin AI • Orchestrator/Vision
 - Enforce tool-first behavior for Vision agent: require `analyze_book_cover` (initial → structured) then `check_duplicates` before any assistant reply; keep non-book flow via `analyze_item_photo`.
 - Orchestrator fallback: when an image is present but no domain tools are called in the first pass, re-run once with a strict tool-first prelude. Emits `assistant_done` only once.

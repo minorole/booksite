@@ -8,6 +8,7 @@ export const FILE_CONFIG: ImageConfig = {
     'image/jpeg',
     'image/png', 
     'image/webp',
+    'image/avif',
     'image/heic',
     'image/heif',
     'image/heic-sequence',
@@ -16,7 +17,7 @@ export const FILE_CONFIG: ImageConfig = {
     'image/pjpeg',
     'image/x-png'
   ] as const,
-  ACCEPT_STRING: "image/jpeg,image/jpg,image/pjpeg,image/png,image/x-png,image/webp,image/heic,image/heif,image/heic-sequence,image/heif-sequence"
+  ACCEPT_STRING: "image/jpeg,image/jpg,image/pjpeg,image/png,image/x-png,image/webp,image/avif,image/heic,image/heif,image/heic-sequence,image/heif-sequence"
 } as const
 
 // Cloudinary config

@@ -4,6 +4,7 @@ export type AllowedMimeType =
   | 'image/jpeg'
   | 'image/png'
   | 'image/webp'
+  | 'image/avif'
   | 'image/heic'
   | 'image/heif'
   | 'image/heic-sequence'
@@ -32,4 +33,3 @@ export interface ImageUploadResult {
   format: string
   bytes: number
 }
-
