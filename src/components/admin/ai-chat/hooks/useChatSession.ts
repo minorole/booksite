@@ -29,6 +29,7 @@ export function useChatSession(
   const [loadingKey, setLoadingKey] = useState<keyof typeof LOADING_MESSAGES['en'] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [thinkingAgent, setThinkingAgent] = useState<string | null>(null)
+  const [inflightTools, setInflightTools] = useState<Message[]>([])
   const abortRef = useRef<AbortController | null>(null)
   const [steps, setSteps] = useState<Array<{ id: string; name: string; status: 'running' | 'done' | 'error'; summary?: string }>>([])
   const [inputPlaceholder, setInputPlaceholder] = useState<string | null>(null)
@@ -116,6 +117,8 @@ export function useChatSession(
               const target = (evt?.to as string) || 'agent'
               // Track current agent for inline thinking indicator
               setThinkingAgent(target)
+              // Reset diagnostic details for the next agent
+              setInflightTools([])
               setSteps((prev) => [
                 ...prev,
                 { id: `handoff:${Date.now()}:${target}`, name: `handoff:${target}`, status: 'done' },
@@ -142,6 +145,7 @@ export function useChatSession(
               }
               // Clear thinking indicator when assistant is done
               setThinkingAgent(null)
+              setInflightTools([])
               break
             }
             case 'error': {
@@ -155,6 +159,7 @@ export function useChatSession(
               }
               // Clear thinking indicator on error
               setThinkingAgent(null)
+              setInflightTools([])
               break
             }
             case 'tool_start': {
@@ -168,7 +173,18 @@ export function useChatSession(
             }
             case 'tool_append': {
               const msg = evt.message as Message
-              setMessages((prev) => [...prev, msg])
+              const name = (msg && (msg as any).name) as string | undefined
+              const DIAGNOSTIC_TOOLS = new Set([
+                'analyze_book_cover',
+                'analyze_item_photo',
+                'check_duplicates',
+                'search_books',
+              ])
+              if (name && DIAGNOSTIC_TOOLS.has(name)) {
+                setInflightTools((prev) => [...prev, msg])
+              } else {
+                setMessages((prev) => [...prev, msg])
+              }
               break
             }
             default:
@@ -229,6 +245,7 @@ export function useChatSession(
     setError(null)
     setUploadError(null)
     setSteps([])
+    setInflightTools([])
     setInputPlaceholder(null)
     try {
       localStorage.removeItem(`admin-ai-input-draft:${language}`)
@@ -251,5 +268,6 @@ export function useChatSession(
     reset,
     inputPlaceholder,
     thinkingAgent,
+    inflightTools,
   }
 }

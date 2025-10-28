@@ -44,6 +44,8 @@ export function MessageList({
   containerRef,
   onScroll,
   thinkingAgent,
+  inflightTools,
+  currentStepName,
 }: {
   messages: Message[]
   loading: boolean
@@ -52,6 +54,8 @@ export function MessageList({
   containerRef?: React.RefObject<HTMLDivElement>
   onScroll?: React.UIEventHandler<HTMLDivElement>
   thinkingAgent?: string | null
+  inflightTools?: Message[]
+  currentStepName?: string | null
 }) {
   return (
     <div ref={containerRef} onScroll={onScroll} className="flex-1 p-4 overflow-y-auto scroll-smooth">
@@ -72,6 +76,8 @@ export function MessageList({
                 message={message}
                 loading={loading}
                 thinkingAgent={thinkingAgent || null}
+                inflightTools={inflightTools || []}
+                currentStepName={currentStepName || null}
                 onSelectImage={onSelectImage}
               />
             </div>

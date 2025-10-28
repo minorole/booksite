@@ -38,6 +38,7 @@ import { UI_STRINGS } from '@/lib/admin/i18n'
     reset,
     inputPlaceholder,
     thinkingAgent,
+    inflightTools,
   } = useChatSession(locale, {
     onRequestId: (id) => setRequestId(id),
   })
@@ -122,6 +123,8 @@ import { UI_STRINGS } from '@/lib/admin/i18n'
               endRef={messagesEndRef}
               containerRef={listRef}
               thinkingAgent={thinkingAgent}
+              inflightTools={inflightTools}
+              currentStepName={steps.find((s) => s.status === 'running')?.name || null}
             />
 
             {!atBottom && (
