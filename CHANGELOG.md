@@ -10,6 +10,12 @@ All notable changes to this project will be documented in this file.
 - Allow AVIF in allowed MIME types and file input accept list.
 - Add per-request cache for URL validations (orchestrated admin chat route) to eliminate redundant checks within a single run.
   - Extended request-scoped context/caching to: `/api/upload`, `/api/admin/image-embeddings/backfill`, and text-stream route for consistency.
+ - Verify `cloud_name` when trusting Cloudinary delivery URLs to ensure they belong to our account.
+ - Gate image URL validator logs behind `IMAGE_VALIDATION_DEBUG` (off by default) to reduce noise in production.
+
+### Observability
+- DEBUG logs: default ON; disable with `DEBUG_LOGS=0|false`.
+- Sensitive traces: default ON; disable with `ADMIN_AI_TRACE_SENSITIVE=0|false`.
 
 ### Admin AI • Vision utilities
 - Add `validateAnalysisResult` runtime guard for `VisionAnalysisResult` and export from `@/lib/admin/services/vision`.
