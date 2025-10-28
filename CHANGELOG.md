@@ -9,6 +9,7 @@ All notable changes to this project will be documented in this file.
 - Harden external URL validation: HEAD with 1 retry and fallback to tiny GET (Range: 0-0); accept any `image/*` content type; infer by extension as last resort.
 - Allow AVIF in allowed MIME types and file input accept list.
 - Add per-request cache for URL validations (orchestrated admin chat route) to eliminate redundant checks within a single run.
+  - Extended request-scoped context/caching to: `/api/upload`, `/api/admin/image-embeddings/backfill`, and text-stream route for consistency.
 
 ### Admin AI • Vision utilities
 - Add `validateAnalysisResult` runtime guard for `VisionAnalysisResult` and export from `@/lib/admin/services/vision`.

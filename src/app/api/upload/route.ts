@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { handleImageUpload } from '@/lib/admin/image-upload'
+import { withRequestContext } from '@/lib/runtime/request-context'
 import { env } from '@/lib/config/env'
 import { assertAdmin, UnauthorizedError, getAuthUser } from '@/lib/security/guards'
 import { checkRateLimit, rateLimitHeaders, acquireConcurrency, releaseConcurrency } from '@/lib/security/ratelimit'
@@ -51,10 +52,13 @@ export async function POST(request: Request) {
     const isTemp = new URL(request.url).searchParams.get('temp') === '1'
     const rawPrefix = env.cloudinaryTempPrefix?.() || 'temp-uploads/'
     const tempFolder = rawPrefix.endsWith('/') ? rawPrefix.slice(0, -1) : rawPrefix
-    const secureUrl = await handleImageUpload(file, {
-      folder: isTemp ? tempFolder : undefined,
-      tags: isTemp ? ['temp'] : undefined,
-    })
+    const requestId = (globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2)) as string
+    const secureUrl = await withRequestContext(requestId, () =>
+      handleImageUpload(file, {
+        folder: isTemp ? tempFolder : undefined,
+        tags: isTemp ? ['temp'] : undefined,
+      })
+    )
     console.log('📤 Upload complete:', secureUrl)
 
     return NextResponse.json(

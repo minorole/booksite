@@ -26,3 +26,9 @@ export function adminAiVisionToolFallbackEnabled(): boolean {
   if (v === '0' || v === 'false') return false
   return true
 }
+
+// Image validation logs (off by default). Enable by setting IMAGE_VALIDATION_DEBUG=1|true
+export function imageValidationLogsEnabled(): boolean {
+  const v = process.env.IMAGE_VALIDATION_DEBUG?.toLowerCase()
+  return v === '1' || v === 'true'
+}

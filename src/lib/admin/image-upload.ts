@@ -1,5 +1,6 @@
 import { FILE_CONFIG, CLOUDINARY_CONFIG } from './constants'
 import { getUrlValidationCache } from '@/lib/runtime/request-context'
+import { imageValidationLogsEnabled } from '@/lib/observability/toggle'
 import { type AllowedMimeType, type ImageUploadResult } from './types'
 import { createHash } from 'node:crypto'
 
@@ -23,10 +24,10 @@ async function validateExternalUrl(url: string): Promise<boolean> {
   }
   const work = (async () => {
     try {
-      console.log('🔍 Validating external URL:', url)
+      if (imageValidationLogsEnabled()) console.log('🔍 Validating external URL:', url)
 
     if (!url || typeof url !== 'string') {
-      console.log('❌ Invalid URL format:', url)
+      if (imageValidationLogsEnabled()) console.log('❌ Invalid URL format:', url)
       return false
     }
 
@@ -57,10 +58,10 @@ async function validateExternalUrl(url: string): Promise<boolean> {
       }
       const ct = head.headers.get('content-type')
       if (!isImageContentType(ct)) {
-        console.log('❌ Invalid content type (HEAD):', ct)
+        if (imageValidationLogsEnabled()) console.log('❌ Invalid content type (HEAD):', ct)
         return false
       }
-      console.log('✅ External URL validated via HEAD:', url)
+      if (imageValidationLogsEnabled()) console.log('✅ External URL validated via HEAD:', url)
       return true
     } catch (e) {
       // Retry once for transient errors, then fall back
@@ -70,10 +71,10 @@ async function validateExternalUrl(url: string): Promise<boolean> {
         if (head2.ok) {
           const ct = head2.headers.get('content-type')
           if (isImageContentType(ct)) {
-            console.log('✅ External URL validated via HEAD (retry):', url)
+            if (imageValidationLogsEnabled()) console.log('✅ External URL validated via HEAD (retry):', url)
             return true
           }
-          console.log('❌ Invalid content type (HEAD retry):', ct)
+          if (imageValidationLogsEnabled()) console.log('❌ Invalid content type (HEAD retry):', ct)
           return false
         }
       } catch {}
@@ -88,12 +89,12 @@ async function validateExternalUrl(url: string): Promise<boolean> {
         })
         clearTimeout(timeoutId)
         if (!rsp.ok && rsp.status !== 206) {
-          console.log('❌ URL not accessible (GET fallback):', url, rsp.status)
+          if (imageValidationLogsEnabled()) console.log('❌ URL not accessible (GET fallback):', url, rsp.status)
           return false
         }
         const ct = rsp.headers.get('content-type')
         if (isImageContentType(ct)) {
-          console.log('✅ External URL validated via GET fallback:', url)
+          if (imageValidationLogsEnabled()) console.log('✅ External URL validated via GET fallback:', url)
           return true
         }
         // Last-chance: infer via file extension
@@ -101,19 +102,19 @@ async function validateExternalUrl(url: string): Promise<boolean> {
           const ext = new URL(url).pathname.split('.').pop()?.toLowerCase()
           const okExt = new Set(['jpg', 'jpeg', 'png', 'webp', 'avif', 'heic', 'heif'])
           if (ext && okExt.has(ext)) {
-            console.log('⚠️  Assuming image by file extension:', ext)
+            if (imageValidationLogsEnabled()) console.log('⚠️  Assuming image by file extension:', ext)
             return true
           }
         } catch {}
-        console.log('❌ Invalid content type (GET fallback):', ct)
+        if (imageValidationLogsEnabled()) console.log('❌ Invalid content type (GET fallback):', ct)
         return false
       } catch (err) {
-        console.log('❌ URL fetch failed (GET fallback):', err)
+        if (imageValidationLogsEnabled()) console.log('❌ URL fetch failed (GET fallback):', err)
         return false
       }
     }
     } catch (error) {
-      console.error('❌ URL validation error:', error)
+      if (imageValidationLogsEnabled()) console.error('❌ URL validation error:', error)
       return false
     }
   })()
@@ -137,29 +138,39 @@ export async function validateCloudinaryUrl(url: string): Promise<boolean> {
   }
   const work = (async () => {
   try {
-    console.log('🔍 Validating Cloudinary URL:', url)
+    if (imageValidationLogsEnabled()) console.log('🔍 Validating Cloudinary URL:', url)
     // Basic host check
     if (!url.includes('res.cloudinary.com')) {
-      console.log('❌ Not a Cloudinary URL:', url)
+      if (imageValidationLogsEnabled()) console.log('❌ Not a Cloudinary URL:', url)
       return false
     }
-    // Structural check for Cloudinary delivery URL
+    // Structural check for Cloudinary delivery URL and (when available) our cloud name
     try {
       const u = new URL(url.replace('http://', 'https://'))
       const path = u.pathname || ''
+      const parts = path.split('/').filter(Boolean)
       const hasUpload = path.includes('/image/upload/')
       // Allow version and transforms; require a plausible image extension
       const ext = path.split('.').pop()?.toLowerCase()
       const okExt = new Set(['jpg', 'jpeg', 'png', 'webp', 'avif', 'heic', 'heif'])
-      if (hasUpload && ext && okExt.has(ext)) {
-        console.log('✅ Cloudinary URL validated by pattern:', url)
+      // Attempt to verify cloud name when configured
+      let ourCloud: string | undefined
+      try {
+        const cloudinary = await getCloudinary()
+        const cfg = cloudinary.config() as unknown as { cloud_name?: string }
+        ourCloud = (cfg?.cloud_name || '').trim() || undefined
+      } catch {}
+      const cloudFromUrl = parts.length > 0 ? parts[0] : undefined
+      const cloudMatches = ourCloud ? (cloudFromUrl === ourCloud) : true
+      if (hasUpload && cloudMatches && ext && okExt.has(ext)) {
+        if (imageValidationLogsEnabled()) console.log('✅ Cloudinary URL validated by pattern:', { url, cloud: cloudFromUrl })
         return true
       }
     } catch {}
     // Fallback to external validation for unusual shapes
     return await validateExternalUrl(url)
   } catch (error) {
-    console.error('❌ Cloudinary URL validation error:', error)
+    if (imageValidationLogsEnabled()) console.error('❌ Cloudinary URL validation error:', error)
     return false
   }
   })()
@@ -197,10 +208,10 @@ export async function standardizeImageUrl(url: string): Promise<string> {
       }
     }
 
-    console.log('✅ URL standardized:', secureUrl)
+    if (imageValidationLogsEnabled()) console.log('✅ URL standardized:', secureUrl)
     return secureUrl
   } catch (error) {
-    console.error('❌ URL standardization error:', error)
+    if (imageValidationLogsEnabled()) console.error('❌ URL standardization error:', error)
     throw error
   }
 }

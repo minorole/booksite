@@ -5,6 +5,7 @@ import type { ChatCompletionMessageParam } from 'openai/resources/chat/completio
 import { createChatCompletion } from '@/lib/openai'
 import { checkRateLimit, rateLimitHeaders, acquireConcurrency, releaseConcurrency } from '@/lib/security/ratelimit'
 import { adminAiLogsEnabled } from '@/lib/observability/toggle'
+import { withRequestContext } from '@/lib/runtime/request-context'
 
 function toOpenAIMessages(messages: AdminMessage[] | ChatCompletionMessageParam[]): ChatCompletionMessageParam[] {
   const arr = Array.isArray(messages) ? messages : []
@@ -91,7 +92,9 @@ export async function POST(request: Request) {
         const enc = new TextEncoder()
         const dec = new TextDecoder()
         try {
-          const rs = (await createChatCompletion({ messages: openaiMessages as any, stream: true, temperature, max_tokens })) as unknown as ReadableStream<Uint8Array>
+          const rs = await withRequestContext(requestId, async () => (
+            (await createChatCompletion({ messages: openaiMessages as any, stream: true, temperature, max_tokens })) as unknown as ReadableStream<Uint8Array>
+          ))
           const reader = rs.getReader()
           while (true) {
             const { value, done } = await reader.read()
@@ -144,4 +147,3 @@ export async function POST(request: Request) {
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 export const revalidate = 0
-
