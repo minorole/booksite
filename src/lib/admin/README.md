@@ -103,6 +103,18 @@ sequenceDiagram
   ORC-->>UI: sse: assistant_done
 ```
 
+## SSE Event Cheat‑Sheet
+UI consumes versioned events from `src/lib/admin/types/events.ts`. Examples below are abbreviated for clarity.
+
+```json
+{ "type": "handoff", "to": "Vision", "request_id": "b1730a55..." }
+{ "type": "assistant_delta", "content": "Analyzing cover..." }
+{ "type": "tool_start", "id": "call_1", "name": "analyze_book_cover", "args": { "stage": "initial", "image_url": "https://..." }, "startedAt": "2025-10-28T...Z" }
+{ "type": "tool_result", "id": "call_1", "name": "analyze_book_cover", "success": true, "result": { "vision_analysis": { "natural_analysis": { "summary": "..." } } }, "finishedAt": "2025-10-28T...Z" }
+{ "type": "tool_append", "message": { "role": "tool", "name": "analyze_book_cover", "tool_call_id": "call_1", "content": "{\\"success\\":true,\\"message\\":\\"...\\",\\"data\\":{...}}" } }
+{ "type": "assistant_done" }
+```
+
 ## Code Map
 - API entry (SSE)
   - `src/app/api/admin/ai-chat/stream/orchestrated/route.ts` — Admin‑only; adds `request_id`, rate limit + concurrency.
@@ -144,12 +156,19 @@ sequenceDiagram
   - Code: `src/lib/admin/chat/normalize-agent-events.ts`, `src/lib/admin/chat/orchestrator-agentkit.ts`
 - 401 Unauthorized
   - Ensure admin login and role; `SUPER_ADMIN_EMAIL` must be set or your DB role set to admin.
+  - Where enforced: `src/lib/security/guards.ts:27` (`assertAdmin`), `src/middleware.ts:109` (admin gate using `is_admin` RPC).
 - 429 Rate limited / concurrency
   - See `src/lib/security/limits.ts`; for local dev without Vercel KV, use `KV_USE_MEMORY=1`.
 - Tool schema “uri” format error
   - Use `src/lib/schema/http-url.ts` for Agents tool URL params; avoid `.url()` which emits `format: 'uri'`.
 - OpenAI config error
   - Ensure `OPENAI_API_KEY` for admin calls; `OPENAI_API_KEY_USER` for user-key flows if used.
+
+### Known Pitfalls
+- Vision JSON must be valid JSON text; helpers expect model output to be strictly JSON and will throw on non‑JSON (see `src/lib/admin/services/vision/helpers.ts`).
+- Rate limiting/concurrency depends on a KV backend; without a configured KV, set `KV_USE_MEMORY=1` locally (dev only).
+- Tool results are unwrapped to `data` for `tool_result`, but the full envelope is sent via `tool_append` for transcript continuity.
+- Agents SDK updates can change event shapes; our normalizer is resilient, but if upgrading `@openai/agents*`, run tests and enable `DEBUG_LOGS=1` to see shapes.
 
 ## Validation
 - Manual E2E plan: `doc/admin-ai/e2e-manual-test.md`
@@ -159,3 +178,27 @@ sequenceDiagram
 - Features: `doc/admin-ai/features.md`
 - UI roadmap: `doc/admin-ai/admin-ai-ui-roadmap.md`
 - Client helpers README: `src/lib/admin/chat/client/README.md`
+
+## cURL Smoke Test (needs admin session cookie)
+
+```bash
+curl -N \
+  -H 'Content-Type: application/json' \
+  -H 'Cookie: <your-supabase-session-cookies>' \
+  -X POST http://localhost:3000/api/admin/ai-chat/stream/orchestrated \
+  -d '{
+    "messages": [
+      {
+        "role": "user",
+        "content": [
+          { "type": "text", "text": "请分析这本书封面并准备创建条目。" },
+          { "type": "image_url", "image_url": { "url": "https://res.cloudinary.com/demo/image/upload/sample.jpg" } }
+        ]
+      }
+    ],
+    "uiLanguage": "zh"
+  }'
+```
+
+## Version Compatibility
+- Agents SDK / OpenAI provider pinned to `^0.1.9`. Our normalizer handles nested `output_text(.delta)` shapes. If upgrading these deps, re‑run `npm test` and consider enabling `DEBUG_LOGS=1` during initial validation to inspect event shapes.
