@@ -22,6 +22,94 @@ try {
 
 type SSEWriter = (event: Record<string, unknown>) => void
 
+// Compact logger for raw model stream events to reduce noise while keeping
+// all meaningful milestones and aggregated function-call argument sizes.
+type RawModelLogState = { argBytes: Map<string, number>; seen: Set<string>; toolNames: Map<string, string> }
+
+function logRawModelEventCompact(evt: unknown, reqId?: string, state?: RawModelLogState) {
+  if (!adminAiLogsEnabled()) return
+  const req = (reqId as any)?.slice?.(0, 8)
+  try {
+    const data = (evt as any)?.data
+    // Response lifecycle outside 'model'
+    if (data?.type === 'response_started' || data?.type === 'response_done') {
+      const rid = data?.response?.id || data?.providerData?.response?.id || ''
+      const key = `${data.type}:${rid}`
+      if (state?.seen?.has(key)) return
+      state?.seen?.add(key)
+      console.log(`[AdminAI orchestrator] model_${data.type}`, { req, id: rid })
+      return
+    }
+
+    if (data?.type === 'model') {
+      const ev = data.event || {}
+      const t = ev?.type
+
+      if (t === 'response.function_call_arguments.delta') {
+        const itemId = ev?.item_id || ''
+        const d = ev?.delta ?? ''
+        const addLen = typeof d === 'string' ? d.length : JSON.stringify(d).length
+        const prev = state?.argBytes?.get(itemId) ?? 0
+        state?.argBytes?.set(itemId, prev + addLen)
+        return
+      }
+
+      if (t === 'response.function_call_arguments.done') {
+        const itemId = ev?.item_id || ''
+        const total = state?.argBytes?.get(itemId) ?? 0
+        state?.argBytes?.delete(itemId)
+        const toolName = state?.toolNames?.get(itemId)
+        console.log('[AdminAI orchestrator] function_args_collected', {
+          req,
+          item_id: itemId,
+          name: toolName,
+          bytes: total,
+          output_index: ev?.output_index,
+        })
+        return
+      }
+
+      if (t === 'response.output_item.added' || t === 'response.output_item.done') {
+        const key = `oi:${t}:${ev?.output_index}:${ev?.sequence_number ?? ''}`
+        if (!state?.seen?.has(key)) {
+          state?.seen?.add(key)
+          // Best-effort: extract function name/id for mapping later
+          try {
+            const item = (ev as any)?.item
+            const itemId = item?.id || item?.callId || item?.tool_call_id
+            const name = item?.name || item?.tool?.name
+            if (itemId && name && state?.toolNames) state.toolNames.set(String(itemId), String(name))
+          } catch {}
+          console.log(`[AdminAI orchestrator] model_${t}`, {
+            req,
+            output_index: ev?.output_index,
+            seq: ev?.sequence_number,
+          })
+        }
+        return
+      }
+
+      if (t === 'response.created' || t === 'response.in_progress' || t === 'response.completed') {
+        const rid = ev?.response?.id || ''
+        const key = `${t}:${rid}`
+        if (state?.seen?.has(key)) return
+        state?.seen?.add(key)
+        console.log(`[AdminAI orchestrator] model_${t}`, { req, id: rid })
+        return
+      }
+    }
+
+    // Fallback minimal one-liner for any other shape
+    const t = data?.type ?? (evt as any)?.type ?? '(unknown)'
+    console.log('[AdminAI orchestrator] event', { req, type: t })
+  } catch {
+    // Be resilient to unknown shapes
+    try {
+      console.log('[AdminAI orchestrator] event', { req, type: (evt as any)?.type ?? '(unknown)' })
+    } catch {}
+  }
+}
+
 function toAgentInput(
   messages: Message[],
   uiLanguage: UILanguage | undefined,
@@ -148,6 +236,12 @@ export async function runChatWithAgentsStream(params: {
     // emits multiple agent_updated events for the same target agent.
     let lastHandoffTo: string | undefined
     let ranDomainTool = false
+    // Compact raw model logging state
+    const rawState: RawModelLogState = { argBytes: new Map(), seen: new Set(), toolNames: new Map() }
+    // Aggregate assistant text logs: preview once, total char count across the run
+    let assistantLoggedFirstPreview = false
+    let assistantFirstPreview = ''
+    let assistantChars = 0
     for await (const evt of stream as AsyncIterable<unknown>) {
       // Agent change
       const e = evt as { type?: string; agent?: { name?: string } }
@@ -234,7 +328,13 @@ export async function runChatWithAgentsStream(params: {
             if (adminAiLogsEnabled()) {
               try {
                 const txt = (ne as unknown as { content?: string }).content || ''
-                console.log('[AdminAI orchestrator] assistant_delta', { req: params.requestId?.slice(0, 8), len: txt.length, preview: txt.slice(0, 80) })
+                // Aggregate chars and log a single early preview
+                if (!assistantLoggedFirstPreview && txt) {
+                  assistantFirstPreview = txt.slice(0, 80)
+                  console.log('[AdminAI orchestrator] assistant_preview', { req: params.requestId?.slice(0, 8), len: txt.length, preview: assistantFirstPreview })
+                  assistantLoggedFirstPreview = true
+                }
+                assistantChars += txt.length
               } catch {}
             }
           }
@@ -242,12 +342,26 @@ export async function runChatWithAgentsStream(params: {
       }
       // Optional diagnostics for unexpected events
       else {
-        if (process.env.DEBUG_LOGS === '1') {
-          try {
-            console.log('[AdminAI orchestrator] Unhandled agent stream event', e?.type ?? '(unknown)', evt)
-          } catch {}
+        // Compact, structured logging for raw model events; avoid full dumps
+        if ((evt as any)?.type === 'raw_model_stream_event') {
+          logRawModelEventCompact(evt, params.requestId, rawState)
+        } else if (adminAiLogsEnabled()) {
+          const t = (e?.type as string | undefined) || '(unknown)'
+          console.log('[AdminAI orchestrator] event', { req: params.requestId?.slice(0, 8), type: t })
         }
       }
+    }
+    // Emit a single summary for assistant text collected during this run
+    if (adminAiLogsEnabled()) {
+      try {
+        if (assistantChars > 0) {
+          console.log('[AdminAI orchestrator] assistant_text_collected', {
+            req: params.requestId?.slice(0, 8),
+            totalChars: assistantChars,
+            preview: assistantFirstPreview,
+          })
+        }
+      } catch {}
     }
     return { ranDomainTool }
   }

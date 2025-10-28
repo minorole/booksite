@@ -6,48 +6,37 @@ All notable changes to this project will be documented in this file.
 
 ### Admin AI • Orchestrator/Vision
 - Enforce tool-first behavior for Vision agent: require `analyze_book_cover` (initial → structured) then `check_duplicates` before any assistant reply; keep non-book flow via `analyze_item_photo`.
-  - Files: `src/lib/admin/agents/vision.ts`.
 - Orchestrator fallback: when an image is present but no domain tools are called in the first pass, re-run once with a strict tool-first prelude. Emits `assistant_done` only once.
-  - Files: `src/lib/admin/chat/orchestrator-agentkit.ts`, `src/lib/observability/toggle.ts` (env `ADMIN_AI_VISION_TOOL_FALLBACK`).
+
+### Admin AI • Logging
+- Orchestrator: compact raw model stream logging (no full event dumps). Aggregate function-call arg deltas into a single `function_args_collected` line including `name`, `item_id`, `bytes`, and `output_index`; deduplicate `model_response.output_item.*` entries; aggregate assistant text logs (one `assistant_preview` + final `assistant_text_collected` summary). No behavior changes.
 
 ### Cleanup
 - Remove unused analysis progress messages.
-  - Files: `src/lib/admin/constants.ts` (deleted `ANALYSIS_MESSAGES`).
 - Remove unused Responses wrapper.
-  - Files: `src/lib/openai/responses.ts` (deleted `createViaResponses`).
 - Delete unused vision validation helper and re-export.
-  - Files: `src/lib/admin/services/vision/validation.ts` (deleted), `src/lib/admin/services/vision/index.ts` (removed re-export).
 
 ### Admin AI Chat
 - Inline thinking indicator inside the assistant bubble and synced agent handoffs; removed the bottom “Processing…” during streaming to avoid duplicate state.
-  - Files: `src/components/admin/ai-chat/hooks/useChatSession.ts`, `src/components/admin/ai-chat/MessageContent.tsx`, `src/components/admin/ai-chat/MessageList.tsx`, `src/components/admin/ai-chat/chat-interface.tsx`, `src/lib/admin/i18n.ts`.
-- Tests: fixed orchestrator test mocks by stubbing the `tool` export from `@openai/agents-core`; added suppression for footer spinner only during `processing` streaming phase. All tests pass locally.
-  - Files: `test/admin-ai/orchestrator.input.test.ts`, `test/admin-ai/orchestrator.events.test.ts`, `test/admin-ai/orchestrator.results.unwrap.test.ts`.
+ 
 
 ### Admin AI
-- Fix: No output after Vision handoff — stream assistant text deltas from newer Agents SDK event shapes by hardening the extractor and preserving order.
-  - Files: `src/lib/admin/chat/normalize-agent-events.ts`, `src/lib/admin/chat/orchestrator-agentkit.ts`.
-  - Details: Add a conservative BFS deep scan for `output_text` / `output_text.delta` under nested `message`/`content`/`delta`/`output` nodes; add optional diagnostics (`DEBUG_LOGS=1`) when a `message_*` event yields no text.
-- Tests: Added deep-shape coverage for the normalizer and extended orchestrator event test with delta-style output.
-  - Files: `test/admin-ai/agent.normalizer.deep.test.ts`, `test/admin-ai/orchestrator.events.test.ts`.
-- Orchestrator: Deduplicate agent handoffs so only a single `handoff` SSE event is emitted per router→specialist transition. File: `src/lib/admin/chat/orchestrator-agentkit.ts`.
-- Stream normalizer: Filter out SDK‑internal `tool_called` / `tool_output` events; only first‑party tools are surfaced to the UI (`tool_start`, `tool_result`, `tool_append`). Files: `src/lib/admin/chat/normalize-agent-events.ts`, `src/lib/admin/agents/tools.ts`.
-- Agents: Router routes silently (no narration). Vision follows a tool‑first flow for images: `analyze_book_cover` (initial → structured) then `check_duplicates`. Files: `src/lib/admin/agents/router.ts`, `src/lib/admin/agents/vision.ts`.
-- Chat input UX: After image attach, show a placeholder hint instead of inserting text into the input. Files: `src/components/admin/ai-chat/hooks/useChatSession.ts`, `src/components/admin/ai-chat/ChatInput.tsx`, `src/components/admin/ai-chat/chat-interface.tsx`.
-- Tool discovery: Domain tool names are now auto‑derived from tool factories with memoization. Files: `src/lib/admin/agents/tools.ts`, `src/lib/admin/chat/normalize-agent-events.ts`.
-- Lint: Resolved an ESLint directive placement issue for the nav logo `<img>`. File: `src/components/layout/pill/LogoButton.tsx`.
+- Fix: Reliable assistant text deltas from newer Agents SDK; hardened nested event parsing with optional `DEBUG_LOGS` diagnostics.
+- Orchestrator: Deduplicate agent handoffs; only one `handoff` SSE per router→specialist transition.
+- Stream normalizer: Filter out SDK‑internal `tool_called` / `tool_output`; surface only first‑party `tool_start`, `tool_result`, `tool_append`.
+- Agents: Router routes silently (no narration). Vision follows a tool‑first flow for images: `analyze_book_cover` then `check_duplicates`.
+- Chat input UX: After image attach, show a placeholder hint instead of inserting text into the input.
+- Tool discovery: Domain tool names are now auto‑derived from tool factories with memoization.
 
 ### Added
- - Uploads: Direct-to-Cloudinary signed uploads for admin chat with server fallback (`src/app/api/upload/sign/route.ts`, `src/components/admin/ai-chat/hooks/useImageUpload.ts`).
- - Cloudinary: Tag-based purge with folder fallback, dry-run, retries, chunked deletes (`scripts/cloudinary-purge-temp.mjs`).
+ - Uploads: Direct-to-Cloudinary signed uploads for admin chat with server fallback.
+ - Cloudinary: Tag-based purge with folder fallback, dry-run, retries, chunked deletes.
  - Config: Optional envs `CLOUDINARY_TEMP_PREFIX` and `CLOUDINARY_TEMP_RETENTION_DAYS` to centralize temp uploads.
- - Promotion: Server-side promotion of temp assets to permanent on book creation (`src/lib/admin/cloudinary.ts`, used in `src/app/api/admin/manual/books/route.ts`).
+ - Promotion: Promote temp assets to permanent on book creation.
  - API: Reference-aware purge endpoint for platform cron (`POST /api/admin/cloudinary/purge`).
-- [Admin • Shared UI] Centralized user management UI and logic:
-  - Components: `UsersTable`, `RoleSelect`, `PaginationControls`.
-  - Hooks: `useUsers` (debounce, pagination, enabled flag), `useUserRoleUpdate`.
-  - Typed clients: users (list, role update, orders) and books (list/update/delete).
-- [Super Admin] Extracted `ClipHealthCard` and refactored super-admin panel to use shared users UI.
+ - [Admin • Shared UI] Centralized user management UI (components + hooks).
+ - Typed clients for users (list/role/orders) and books (list/update/delete).
+ - [Super Admin] Extracted `ClipHealthCard` and refactored super-admin panel to use shared users UI.
 
 ### Changed
  - Security: Added rate limit to `/api/upload/sign` (`src/lib/security/limits.ts`, `src/app/api/upload/sign/route.ts`).
@@ -64,7 +53,7 @@ All notable changes to this project will be documented in this file.
 - [Navigation • Logo] Removed dark halo/padding from the nav logo button and sized the image via CSS vars to match other circular buttons.
   - Logo image now uses `--logo` (fallback `--nav-h`) for width/height.
   - Admin navbar sets `--logo: 32px` to match the `h-8 w-8` avatar.
-  - Files: `src/components/layout/pill/LogoButton.tsx`, `src/components/admin/admin-navbar.tsx`.
+ 
 
 ### Performance
 - [Users] Abort in‑flight fetches on search/page/limit changes to avoid race conditions and wasted work; hook cleans up on unmount.
@@ -83,24 +72,16 @@ All notable changes to this project will be documented in this file.
 ### OpenAI / Admin AI
 - Added
   - Text streaming via OpenAI Responses in `createChatCompletion({ stream: true })`, returning a web `ReadableStream<Uint8Array>`.
-    - Files: `src/lib/openai/chat.ts`, `src/lib/openai/responses.ts`, `src/lib/openai/stream.ts`.
   - Content-only SSE route: `POST /api/admin/ai-chat/stream/text` (emits `assistant_delta` and `assistant_done`).
-    - File: `src/app/api/admin/ai-chat/stream/text/route.ts`.
 - Changed
   - Agents SDK locked to Responses API (removed env-driven mode switching).
-    - File: `src/lib/admin/chat/orchestrator-agentkit.ts`.
   - Vision wrapper signature cleanup (removed unused `stream` option) and call site updated.
-    - Files: `src/lib/openai/vision.ts`, `src/lib/admin/services/vision/helpers.ts`.
   - Simplified `ChatOptions`: removed tool-related fields.
-    - Files: `src/lib/openai/types.ts`, `src/lib/openai/chat.ts`.
   - Admin chat UX: fold analysis/duplicate/search tool cards into the inline Thinking bubble as collapsible "Details"; keep write actions in transcript.
-    - Files: `src/components/admin/ai-chat/hooks/useChatSession.ts`, `src/components/admin/ai-chat/chat-interface.tsx`, `src/components/admin/ai-chat/MessageList.tsx`, `src/components/admin/ai-chat/MessageContent.tsx`, `src/lib/admin/i18n.ts`.
-- Removed
+  - Removed
   - `OPENAI_USE_RESPONSES` toggle and helper; deprecated Chat Completions streaming iterator; unused `toResponsesPayload`; unused `DOMAIN_TOOL_NAMES` export.
-    - Files: `src/lib/openai/responses.ts`, `src/lib/openai/stream.ts`, `src/lib/admin/agents/tools.ts`.
-- Docs
+  - Docs
   - ADR 0002 updated to reflect Responses-as-default and corrected route names; Admin README lists the new text streaming route.
-    - Files: `doc/adr/0002-server-orchestrated-ai-chat-ui-refactor-streaming-and-gpt5-mini.md`, `src/lib/admin/README.md`.
   - CHANGELOG note simplified to “use Responses API by default.”
 
 ### Home • Lotus 3D
@@ -262,14 +243,7 @@ All notable changes to this project will be documented in this file.
 - [Admin UI] Switched Admin AI to a single-stream chat: removed right-pane ResultsPanel and the client results store. Inline cards remain the single source of truth.
 - [Admin UI] Removed the inline image "expand" overlay icon to reduce visual noise; click the image itself to zoom.
 ### Fixed
-- [Agents] Replace Zod `.url()` with centralized Agents-safe `HttpUrl` to avoid JSON Schema `format: 'uri'` in tool parameters.
-  - Added: `src/lib/schema/http-url.ts`
-  - Updated: `src/lib/admin/agents/tools.ts` parameters:
-    - `analyze_book_cover.parameters.image_url`
-    - `analyze_item_photo.parameters.image_url`
-    - `check_duplicates.parameters.cover_image`
-    - `create_book.parameters.cover_image`
-    - `update_book.parameters.cover_image`
+- [Agents] Replace Zod `.url()` with centralized `HttpUrl` across tools to avoid JSON Schema `uri` format.
 ### Changed
 - [Admin AI] Mark inventory tool schema URI issue as Fixed and reference the `HttpUrl` helper (`doc/admin-ai/inventory-tool-schema-uri-format.md`).
 - Clarify low-stock warnings as planned (`doc/admin-ai/features.md`).
