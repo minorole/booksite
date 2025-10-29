@@ -23,7 +23,10 @@ export async function PUT(
 
     const data = await request.json()
     const { id } = await context.params
-    console.log('📝 Updating book:', { id, ...data })
+    try {
+      const keys = Object.keys(data || {})
+      console.log('[admin] update_book', { id, keys, tagsCount: Array.isArray((data as any)?.tags) ? (data as any).tags.length : undefined })
+    } catch {}
 
     // Validate category type when provided
     if (data.category_type) {

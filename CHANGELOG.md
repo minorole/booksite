@@ -11,11 +11,14 @@ All notable changes to this project will be documented in this file.
 - Add per-request cache for URL validations (orchestrated admin chat route) to eliminate redundant checks within a single run.
   - Extended request-scoped context/caching to: `/api/upload`, `/api/admin/image-embeddings/backfill`, and text-stream route for consistency.
  - Verify `cloud_name` when trusting Cloudinary delivery URLs to ensure they belong to our account.
- - Gate image URL validator logs behind `IMAGE_VALIDATION_DEBUG` (off by default) to reduce noise in production.
+- Gate image URL validator logs behind `IMAGE_VALIDATION_DEBUG` (off by default) to reduce noise in production.
+- Sanitize image validation logs (host-only, structured); remove full URL prints from success paths.
 
 ### Observability
 - DEBUG logs: default ON; disable with `DEBUG_LOGS=0|false`.
 - Sensitive traces: default ON; disable with `ADMIN_AI_TRACE_SENSITIVE=0|false`.
+ - Upload API route logging: add per-request `requestId`, compact `request_start`/`request_complete` logs (host-only), move authorization log to DEBUG, and include `requestId` in errors.
+ - .env: document `IMAGE_VALIDATION_DEBUG` in `.env.example`; comments in `.env.local` clarify default-ON diagnostics and how to turn them off.
 
 ### Admin AI • Vision utilities
 - Add `validateAnalysisResult` runtime guard for `VisionAnalysisResult` and export from `@/lib/admin/services/vision`.
@@ -26,6 +29,10 @@ All notable changes to this project will be documented in this file.
 
 ### Admin AI • Logging
 - Orchestrator: compact raw model stream logging (no full event dumps). Aggregate function-call arg deltas into a single `function_args_collected` line including `name`, `item_id`, `bytes`, and `output_index`; deduplicate `model_response.output_item.*` entries; aggregate assistant text logs (one `assistant_preview` + final `assistant_text_collected` summary). No behavior changes.
+ - Admin AI SSE route: reduce event noise by logging `sse_out` only for non-`assistant_delta` events when DEBUG is enabled.
+
+### Admin • Manual (API)
+- Update route logging to avoid payload dumps; log only `{ id, keys, tagsCount }` when editing a book.
 
 ### Cleanup
 - Remove unused analysis progress messages.

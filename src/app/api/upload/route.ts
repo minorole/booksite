@@ -4,10 +4,12 @@ import { withRequestContext } from '@/lib/runtime/request-context'
 import { env } from '@/lib/config/env'
 import { assertAdmin, UnauthorizedError, getAuthUser } from '@/lib/security/guards'
 import { checkRateLimit, rateLimitHeaders, acquireConcurrency, releaseConcurrency } from '@/lib/security/ratelimit'
+import { debugLogsEnabled } from '@/lib/observability/toggle'
 
 export async function POST(request: Request) {
+  const requestId = (globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2)) as string
   try {
-    console.log('📥 Starting file upload process...')
+    console.log('[upload] request_start', { requestId })
     
     // Verify admin access (DB authoritative)
     let user
@@ -39,11 +41,9 @@ export async function POST(request: Request) {
       )
     }
 
+    const dbg = debugLogsEnabled()
     const roleMeta = ((user.user_metadata ?? null) as Record<string, unknown> | null)?.role as string | undefined
-    console.log('✅ User authorized:', {
-      email: user.email,
-      role: roleMeta,
-    })
+    if (dbg) console.log('[upload] authorized', { requestId, role: roleMeta })
 
     const formData = await request.formData()
     const file = formData.get('file') as File
@@ -52,14 +52,14 @@ export async function POST(request: Request) {
     const isTemp = new URL(request.url).searchParams.get('temp') === '1'
     const rawPrefix = env.cloudinaryTempPrefix?.() || 'temp-uploads/'
     const tempFolder = rawPrefix.endsWith('/') ? rawPrefix.slice(0, -1) : rawPrefix
-    const requestId = (globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2)) as string
     const secureUrl = await withRequestContext(requestId, () =>
       handleImageUpload(file, {
         folder: isTemp ? tempFolder : undefined,
         tags: isTemp ? ['temp'] : undefined,
       })
     )
-    console.log('📤 Upload complete:', secureUrl)
+    const host = (() => { try { return new URL(secureUrl).hostname } catch { return '(invalid)' } })()
+    console.log('[upload] request_complete', { requestId, host })
 
     return NextResponse.json(
       { url: secureUrl },
@@ -67,11 +67,12 @@ export async function POST(request: Request) {
     )
 
   } catch (error) {
-    console.error('❌ Upload error:', error instanceof Error ? {
+    console.error('[upload] request_error', error instanceof Error ? {
+      requestId,
       name: error.name,
       message: error.message,
       stack: error.stack
-    } : error)
+    } : { requestId, error })
 
     // Return specific error messages for known errors
     if (error instanceof Error) {
@@ -80,7 +81,7 @@ export async function POST(request: Request) {
           return NextResponse.json({ error: 'No file provided' }, { status: 400 })
         case 'Invalid file type':
           return NextResponse.json({ 
-            error: 'Invalid file type. Only JPEG, PNG, WebP, and HEIC images are allowed.' 
+            error: 'Invalid file type. Allowed: JPEG, PNG, WebP, AVIF, HEIC/HEIF.' 
           }, { status: 400 })
         case 'File too large':
           return NextResponse.json({ 
@@ -110,7 +111,7 @@ export async function POST(request: Request) {
         await releaseConcurrency({ route: '/api/upload', userId: user.id, ttlSeconds: 60 })
       }
     } catch (e) {
-      console.error('releaseConcurrency failed', e)
+      console.error('releaseConcurrency failed', { requestId, error: e })
     }
   }
 }

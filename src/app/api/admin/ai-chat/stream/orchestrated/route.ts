@@ -4,7 +4,7 @@ import type { Message } from '@/lib/admin/types'
 import { runChatWithAgentsStream } from '@/lib/admin/chat/orchestrator-agentkit'
 import { withRequestContext } from '@/lib/runtime/request-context'
 import { checkRateLimit, rateLimitHeaders, acquireConcurrency, releaseConcurrency } from '@/lib/security/ratelimit'
-import { adminAiLogsEnabled } from '@/lib/observability/toggle'
+import { adminAiLogsEnabled, debugLogsEnabled } from '@/lib/observability/toggle'
 
 export async function POST(request: Request) {
   try {
@@ -63,8 +63,11 @@ export async function POST(request: Request) {
         const encoder = new TextEncoder()
         const write = (event: Record<string, unknown>) => {
           const enriched = { version: '1', request_id: requestId, ...event }
-          if (adminAiLogsEnabled()) {
-            try { console.log('[AdminAI route] sse_out', { requestId, type: (event as any)?.type }) } catch {}
+          if (adminAiLogsEnabled() && debugLogsEnabled()) {
+            try {
+              const t = (event as any)?.type
+              if (t !== 'assistant_delta') console.log('[AdminAI route] sse_out', { requestId, type: t })
+            } catch {}
           }
           controller.enqueue(encoder.encode(`data: ${JSON.stringify(enriched)}\n\n`))
         }

@@ -3,6 +3,7 @@ import { getUrlValidationCache } from '@/lib/runtime/request-context'
 import { imageValidationLogsEnabled } from '@/lib/observability/toggle'
 import { type AllowedMimeType, type ImageUploadResult } from './types'
 import { createHash } from 'node:crypto'
+const hostForLog = (u: string) => { try { return new URL(u).hostname } catch { return '(invalid)' } }
 
 // Lazy-load Cloudinary only when needed to avoid build-time env validation
 async function getCloudinary() {
@@ -24,10 +25,10 @@ async function validateExternalUrl(url: string): Promise<boolean> {
   }
   const work = (async () => {
     try {
-      if (imageValidationLogsEnabled()) console.log('🔍 Validating external URL:', url)
+      if (imageValidationLogsEnabled()) console.log('[upload] validate_external_url_start', { host: hostForLog(url) })
 
     if (!url || typeof url !== 'string') {
-      if (imageValidationLogsEnabled()) console.log('❌ Invalid URL format:', url)
+      if (imageValidationLogsEnabled()) console.warn('[upload] external_url_invalid', { host: hostForLog(url), reason: 'invalid_format' })
       return false
     }
 
@@ -51,37 +52,37 @@ async function validateExternalUrl(url: string): Promise<boolean> {
 
     // Attempt HEAD with a modest timeout and one retry with backoff
     try {
-      const head = await tryHead(7000)
+      const head = await tryHead(3000)
       if (!head.ok) {
         // Some CDNs disallow HEAD; fall back to GET below
         throw new Error(`HEAD not ok: ${head.status}`)
       }
       const ct = head.headers.get('content-type')
       if (!isImageContentType(ct)) {
-        if (imageValidationLogsEnabled()) console.log('❌ Invalid content type (HEAD):', ct)
+        if (imageValidationLogsEnabled()) console.warn('[upload] external_url_invalid', { host: hostForLog(url), reason: 'invalid_content_type_head', contentType: ct?.split?.(';')[0] || null })
         return false
       }
-      if (imageValidationLogsEnabled()) console.log('✅ External URL validated via HEAD:', url)
+      if (imageValidationLogsEnabled()) console.log('[upload] external_url_valid', { host: hostForLog(url), via: 'HEAD', contentType: ct?.split?.(';')[0] || null })
       return true
     } catch (e) {
       // Retry once for transient errors, then fall back
       try {
         await new Promise((resolve) => setTimeout(resolve, 300))
-        const head2 = await tryHead(7000)
+        const head2 = await tryHead(3000)
         if (head2.ok) {
           const ct = head2.headers.get('content-type')
           if (isImageContentType(ct)) {
-            if (imageValidationLogsEnabled()) console.log('✅ External URL validated via HEAD (retry):', url)
+            if (imageValidationLogsEnabled()) console.log('[upload] external_url_valid', { host: hostForLog(url), via: 'HEAD(retry)', contentType: ct?.split?.(';')[0] || null })
             return true
           }
-          if (imageValidationLogsEnabled()) console.log('❌ Invalid content type (HEAD retry):', ct)
+          if (imageValidationLogsEnabled()) console.warn('[upload] external_url_invalid', { host: hostForLog(url), reason: 'invalid_content_type_head_retry', contentType: ct?.split?.(';')[0] || null })
           return false
         }
       } catch {}
       // Fallback: tiny GET with byte-range
       try {
         const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 8000)
+        const timeoutId = setTimeout(() => controller.abort(), 5000)
         const rsp = await fetch(url, {
           method: 'GET',
           headers: { ...acceptHeader, Range: 'bytes=0-0' },
@@ -89,12 +90,12 @@ async function validateExternalUrl(url: string): Promise<boolean> {
         })
         clearTimeout(timeoutId)
         if (!rsp.ok && rsp.status !== 206) {
-          if (imageValidationLogsEnabled()) console.log('❌ URL not accessible (GET fallback):', url, rsp.status)
+          if (imageValidationLogsEnabled()) console.warn('[upload] external_url_invalid', { host: hostForLog(url), reason: 'not_accessible', status: rsp.status })
           return false
         }
         const ct = rsp.headers.get('content-type')
         if (isImageContentType(ct)) {
-          if (imageValidationLogsEnabled()) console.log('✅ External URL validated via GET fallback:', url)
+          if (imageValidationLogsEnabled()) console.log('[upload] external_url_valid', { host: hostForLog(url), via: 'GET', contentType: ct?.split?.(';')[0] || null })
           return true
         }
         // Last-chance: infer via file extension
@@ -102,14 +103,14 @@ async function validateExternalUrl(url: string): Promise<boolean> {
           const ext = new URL(url).pathname.split('.').pop()?.toLowerCase()
           const okExt = new Set(['jpg', 'jpeg', 'png', 'webp', 'avif', 'heic', 'heif'])
           if (ext && okExt.has(ext)) {
-            if (imageValidationLogsEnabled()) console.log('⚠️  Assuming image by file extension:', ext)
+            if (imageValidationLogsEnabled()) console.log('[upload] external_url_assumed_by_ext', { host: hostForLog(url), ext })
             return true
           }
         } catch {}
-        if (imageValidationLogsEnabled()) console.log('❌ Invalid content type (GET fallback):', ct)
+        if (imageValidationLogsEnabled()) console.warn('[upload] external_url_invalid', { host: hostForLog(url), reason: 'invalid_content_type_get', contentType: ct?.split?.(';')[0] || null })
         return false
       } catch (err) {
-        if (imageValidationLogsEnabled()) console.log('❌ URL fetch failed (GET fallback):', err)
+        if (imageValidationLogsEnabled()) console.warn('[upload] external_url_invalid', { host: hostForLog(url), reason: 'fetch_failed' })
         return false
       }
     }
@@ -138,10 +139,10 @@ export async function validateCloudinaryUrl(url: string): Promise<boolean> {
   }
   const work = (async () => {
   try {
-    if (imageValidationLogsEnabled()) console.log('🔍 Validating Cloudinary URL:', url)
+    if (imageValidationLogsEnabled()) console.log('[upload] validate_cloudinary_url_start', { host: hostForLog(url) })
     // Basic host check
     if (!url.includes('res.cloudinary.com')) {
-      if (imageValidationLogsEnabled()) console.log('❌ Not a Cloudinary URL:', url)
+      if (imageValidationLogsEnabled()) console.warn('[upload] cloudinary_url_invalid', { host: hostForLog(url), reason: 'not_cloudinary' })
       return false
     }
     // Structural check for Cloudinary delivery URL and (when available) our cloud name
@@ -163,7 +164,7 @@ export async function validateCloudinaryUrl(url: string): Promise<boolean> {
       const cloudFromUrl = parts.length > 0 ? parts[0] : undefined
       const cloudMatches = ourCloud ? (cloudFromUrl === ourCloud) : true
       if (hasUpload && cloudMatches && ext && okExt.has(ext)) {
-        if (imageValidationLogsEnabled()) console.log('✅ Cloudinary URL validated by pattern:', { url, cloud: cloudFromUrl })
+        if (imageValidationLogsEnabled()) console.log('[upload] cloudinary_url_valid', { host: hostForLog(url), cloud: cloudFromUrl, via: 'pattern' })
         return true
       }
     } catch {}
@@ -208,7 +209,7 @@ export async function standardizeImageUrl(url: string): Promise<string> {
       }
     }
 
-    if (imageValidationLogsEnabled()) console.log('✅ URL standardized:', secureUrl)
+    if (imageValidationLogsEnabled()) console.log('[upload] url_standardized', { host: hostForLog(secureUrl) })
     return secureUrl
   } catch (error) {
     if (imageValidationLogsEnabled()) console.error('❌ URL standardization error:', error)
@@ -252,29 +253,24 @@ export function getSimilarityImageUrl(standardizedUrl: string): string {
  * Validates file before upload
  */
 export function validateImageFile(file: File): void {
-  console.log('🔍 Validating file:', {
-    name: file.name,
-    type: file.type,
-    size: `${(file.size / 1024 / 1024).toFixed(2)}MB`
-  })
+  const mb = (file.size / 1024 / 1024).toFixed(2)
+  if (imageValidationLogsEnabled()) console.log('[upload] file_validation', { name: file.name, type: file.type, mb })
 
   if (!file) {
     throw new Error('No file provided')
   }
 
   if (!FILE_CONFIG.ALLOWED_TYPES.includes(file.type as AllowedMimeType)) {
-    console.log('❌ Invalid file type:', file.type)
-    console.log('Allowed types:', FILE_CONFIG.ALLOWED_TYPES)
+    if (imageValidationLogsEnabled()) console.warn('[upload] file_invalid', { reason: 'type', type: file.type })
     throw new Error('Invalid file type')
   }
 
   if (file.size > FILE_CONFIG.MAX_SIZE) {
-    console.log('❌ File too large:', `${(file.size / 1024 / 1024).toFixed(2)}MB`)
-    console.log('Max size:', `${(FILE_CONFIG.MAX_SIZE / 1024 / 1024).toFixed(2)}MB`)
+    if (imageValidationLogsEnabled()) console.warn('[upload] file_invalid', { reason: 'size', mb, maxMb: (FILE_CONFIG.MAX_SIZE / 1024 / 1024).toFixed(2) })
     throw new Error('File too large')
   }
 
-  console.log('✅ File validated')
+  if (imageValidationLogsEnabled()) console.log('[upload] file_valid', { type: file.type, mb })
 }
 
 /**
@@ -284,7 +280,8 @@ export async function handleImageUpload(
   file: File,
   opts?: { maxRetries?: number; folder?: string; tags?: string[] }
 ): Promise<string> {
-  console.log('📤 Starting image upload process...')
+  const mb = (file.size / 1024 / 1024).toFixed(2)
+  console.log('[upload] upload_start', { name: file.name, type: file.type, mb, folder: (typeof opts?.folder === 'string' && opts.folder.trim()) || CLOUDINARY_CONFIG.FOLDER })
   
   let lastError: Error | null = null
   const maxRetries = typeof opts?.maxRetries === 'number' ? opts.maxRetries : 2
@@ -293,7 +290,7 @@ export async function handleImageUpload(
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       if (attempt > 0) {
-        console.log(`🔄 Retry attempt ${attempt}/${maxRetries}...`)
+        console.warn('[upload] upload_retry', { attempt, max: maxRetries })
       }
       
       // 1. Validate file
@@ -310,7 +307,7 @@ export async function handleImageUpload(
       try {
         const existing = await cloudinary.api.resource(publicId).catch(() => null as any)
         if (existing && typeof existing.secure_url === 'string') {
-          console.log('♻️  Reusing existing Cloudinary asset by hash:', { publicId })
+          console.log('[upload] upload_reuse', { publicId })
           const standardizedUrl = await standardizeImageUrl(existing.secure_url)
           return standardizedUrl
         }
@@ -341,7 +338,7 @@ export async function handleImageUpload(
         try {
           const fallback = await cloudinary.api.resource(publicId)
           if (fallback && typeof fallback.secure_url === 'string') {
-            console.log('⚖️  Detected concurrent upload; reusing existing asset:', { publicId })
+            console.log('[upload] upload_reuse', { publicId })
             const standardizedUrl = await standardizeImageUrl(fallback.secure_url)
             return standardizedUrl
           }
@@ -349,11 +346,10 @@ export async function handleImageUpload(
         throw e
       }
 
-      console.log('✅ Upload successful:', {
+      console.log('[upload] upload_success', {
         publicId: result.public_id,
         format: result.format,
-        size: `${(result.bytes / 1024 / 1024).toFixed(2)}MB`,
-        url: result.secure_url
+        mb: (result.bytes / 1024 / 1024).toFixed(2),
       })
 
       // 5. Validate and standardize Cloudinary URL
