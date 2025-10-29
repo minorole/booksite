@@ -89,9 +89,8 @@ export async function POST(request: Request) {
           })
           .catch((err) => {
             const msg = (err as Error)?.message || 'orchestrator error'
-            if (adminAiLogsEnabled()) {
-              try { console.error('[AdminAI route] orchestrator_error', { requestId, message: msg }) } catch {}
-            }
+            // Always log a minimal error for server operators, regardless of env flags
+            try { console.error('[AdminAI route] orchestrator_error', { requestId, message: msg }) } catch {}
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ version: '1', request_id: requestId, type: 'error', message: msg })}\n\n`))
             void releaseConcurrency({ route: routeKey, userId: user.id, ttlSeconds: 120 }).finally(() => controller.close())
           })

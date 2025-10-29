@@ -7,6 +7,7 @@ import { createAgentRegistry } from '@/lib/admin/agents'
 import { normalizeRunItemToSSEEvents, normalizeAgentUpdatedToSSEEvents } from '@/lib/admin/chat/normalize-agent-events'
 import type { AgentContext } from '@/lib/admin/agents/tools'
 import { ADMIN_AGENT_MAX_TURNS_DEFAULT } from '@/lib/admin/constants'
+import { ALLOWED_BOOK_FIELDS, UNSUPPORTED_FIELD_EXAMPLES } from '@/lib/admin/agents/constraints'
 import { getModel } from '@/lib/openai/models'
 import { logAdminAction } from '@/lib/db/admin'
 import type { UILanguage } from '@/lib/admin/i18n'
@@ -126,6 +127,12 @@ function toAgentInput(
   items.push(
     msgSystem(
       `When replying, mirror the language of the user's most recent message. If the language is unclear or there is no prior user text, default to ${fallbackName}. Preserve user-provided language/script when quoting content; do not translate quoted user text.`
+    )
+  )
+  // Keep the model aligned with our actual schema during create/update to avoid wasted tokens on unsupported fields
+  items.push(
+    msgSystem(
+      `When creating or updating listings, use only these fields: ${ALLOWED_BOOK_FIELDS.join(', ')}. Do not ask for or propose unsupported fields (e.g., ${UNSUPPORTED_FIELD_EXAMPLES.join(', ')}).`
     )
   )
   for (const m of messages) {
@@ -377,10 +384,9 @@ export async function runChatWithAgentsStream(params: {
       }
       const strictPrelude = [
         'Tool-first execution required for images.',
-        'When an image or an "image_url:" text is present about a book, you MUST:',
-        '1) Call analyze_book_cover with stage="initial" using the most recent image_url;',
-        '2) Then call analyze_book_cover with stage="structured" with concise confirmed_info;',
-        '3) Then call check_duplicates with extracted fields and cover_image;',
+        'When an image or an "image_url:" text is present:',
+        'If it is a book cover: (1) analyze_book_cover stage="initial" with the most recent image_url; (2) analyze_book_cover stage="structured" with concise confirmed_info; (3) check_duplicates with extracted fields and cover_image.',
+        'If it is a non-book item: (1) analyze_item_photo; (2) check_duplicates with the extracted item fields and the image.',
         'Only after these tool calls complete, produce a brief assistant message. Do not skip tools.',
       ].join(' ')
       await runOnce(strictPrelude)

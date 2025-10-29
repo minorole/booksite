@@ -41,7 +41,7 @@ flowchart TD
 
   subgraph Tools
     VT[Vision Tools<br/>analyze_book_cover, analyze_item_photo, check_duplicates]
-    IT[Inventory Tools<br/>create/update/search/adjust]
+    IT[Inventory Tools<br/>create/update/search/adjust/check_duplicates]
     OT[Order Tools<br/>get/search/update]
   end
 

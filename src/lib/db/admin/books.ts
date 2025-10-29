@@ -180,6 +180,10 @@ export async function updateBookDb(id: string, patch: Omit<BookUpdate, 'book_id'
   if (patch.description_en !== undefined) update.description_en = patch.description_en
   if (typeof patch.quantity === 'number') update.quantity = patch.quantity
   if (patch.cover_image !== undefined) update.cover_image = patch.cover_image
+  if (patch.author_zh !== undefined) update.author_zh = patch.author_zh as any
+  if (patch.author_en !== undefined) update.author_en = patch.author_en as any
+  if (patch.publisher_zh !== undefined) update.publisher_zh = patch.publisher_zh as any
+  if (patch.publisher_en !== undefined) update.publisher_en = patch.publisher_en as any
   if (category_id) update.category_id = category_id
   if (patch.analysis_result !== undefined) {
     update.image_analysis_data = patch.analysis_result as unknown as import('@/types/supabase.generated').Json

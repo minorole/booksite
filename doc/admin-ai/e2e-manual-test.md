@@ -9,7 +9,7 @@ References to code include exact file paths and important line anchors to help v
 
 - Exercise every tool at least once:
   - Vision: `analyze_book_cover` (initial + structured), `analyze_item_photo`, `check_duplicates` (src/lib/admin/agents/tools.ts)
-  - Inventory: `create_book`, `update_book`, `search_books`, `adjust_book_quantity` (src/lib/admin/agents/tools.ts)
+  - Inventory: `create_book`, `update_book`, `search_books`, `adjust_book_quantity`, `check_duplicates` (src/lib/admin/agents/tools.ts)
   - Orders: `get_order`, `search_orders`, `update_order` (src/lib/admin/agents/tools.ts)
 - Observe correct SSE event sequence in the browser console and UI:
   - `handoff` → `assistant_delta` → `tool_start` → `tool_result` → `tool_append` → `assistant_done`
@@ -136,7 +136,19 @@ Helpful toggles/config:
   - `handoff` to `Vision`
   - `tool_start` analyze_item_photo `{ image_url }` (src/lib/admin/agents/tools.ts:75)
   - `tool_result { success:true, data.item_analysis.structured_data }` (src/lib/admin/services/vision/item-analysis.ts:1)
-  - Assistant summarizes; the inline analysis remains informational unless you proceed to create an item as a book entry (out of current scope for items).
+  - `tool_start` check_duplicates with extracted item fields + image (src/lib/admin/agents/tools.ts:49)
+  - `tool_result` shows duplicate candidates and recommendation (src/lib/admin/services/duplicates.ts:1)
+  - Assistant summarizes.
+
+## D2. Text‑Only Create (No Photo)
+
+15) Ask to add a book by title/author without a photo
+- Send: “Add ‘Title XYZ’ by ‘Author ABC’ with 5 in stock.”
+- Expected SSE:
+  - `handoff` to `Inventory`
+  - `tool_start` check_duplicates with provided text fields (src/lib/admin/agents/tools.ts:97–120, 1–95 builder)
+  - `tool_result` shows duplicate candidates and recommendation
+  - If you confirm create, `tool_start` create_book with `confirmed:true`
 
 
 ## E. Bilingual Behavior & Language Mirroring

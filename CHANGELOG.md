@@ -4,6 +4,31 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+### Admin AI • Field Constraints & Token Efficiency
+- Centralize allowed vs. unsupported book fields for agents to eliminate wasted tokens on unsupported suggestions (e.g., price/定价, ISBN): `src/lib/admin/agents/constraints.ts`.
+- Inventory agent instructions now explicitly ask only for supported fields and avoid unsupported ones: `src/lib/admin/agents/inventory.ts`.
+- Orchestrator injects a concise system prelude each run to enforce allowed fields across all agents, preventing drift and retries: `src/lib/admin/chat/orchestrator-agentkit.ts`.
+- No schema change; this aligns the conversational layer with existing DB types (`books` has no price/ISBN).
+
+### Admin AI • Agents & Orchestrator Prompts
+- Router: scope includes books or items for inventory handoff: `src/lib/admin/agents/router.ts`.
+- Vision: for non‑book items, require duplicate check after item analysis: `src/lib/admin/agents/vision.ts`.
+- Inventory: remove default web search and gate behind `ADMIN_AI_INVENTORY_WEB_SEARCH` (default OFF); wording reflects books and items: `src/lib/admin/agents/inventory.ts`.
+- Orchestrator fallback: strict prelude now covers both book and item image paths; allowed‑fields prelude scoped to create/update only to avoid constraining analysis: `src/lib/admin/chat/orchestrator-agentkit.ts`.
+
+### Admin AI • Docs
+- Features doc updated to reflect item duplicate checks, allowed fields for create/update, author/publisher updates, and the Inventory web search toggle: `doc/admin-ai/features.md`.
+
+### Admin AI • Duplicates & Inventory
+- Text-only flows: Inventory can now run duplicate checks via the same `check_duplicates` tool used by Vision, ensuring duplicates are checked even without images. Files: `src/lib/admin/agents/tools.ts` (shared builder + added to `inventoryTools`).
+- Exact-image fast path: duplicate service adds a sha1 hash gate that flags an exact cover image match as a high-confidence duplicate before deeper checks. Files: `src/lib/admin/services/duplicates.ts`.
+
+### Admin AI • Metadata Updates
+- Author/publisher updates enabled on `update_book`; DB persists changes and text embeddings refresh includes these fields. Files: `src/lib/admin/agents/tools.ts`, `src/lib/db/admin/books.ts`, `src/lib/admin/services/books.ts`, types in `src/lib/admin/types/books.ts`.
+
+### Admin AI • Orchestrator Logging
+- Always log orchestrator stream errors to the server console for operator visibility (in addition to SSE error to UI). File: `src/app/api/admin/ai-chat/stream/orchestrated/route.ts`.
+
 ### Admin AI • Vision & Images
 - Trust Cloudinary delivery URLs by pattern (no network preflight) to avoid transient HEAD timeouts.
 - Harden external URL validation: HEAD with 1 retry and fallback to tiny GET (Range: 0-0); accept any `image/*` content type; infer by extension as last resort.
@@ -13,6 +38,9 @@ All notable changes to this project will be documented in this file.
  - Verify `cloud_name` when trusting Cloudinary delivery URLs to ensure they belong to our account.
 - Gate image URL validator logs behind `IMAGE_VALIDATION_DEBUG` (off by default) to reduce noise in production.
 - Sanitize image validation logs (host-only, structured); remove full URL prints from success paths.
+ - Tune external image validator timeouts to reduce tail latency (quick HEAD retry, smaller byte‑range GET fallback).
+ - Gate file validation logs behind `IMAGE_VALIDATION_DEBUG` (compact, host‑only logging retained).
+ - Upload API: update invalid file‑type error message to include AVIF and HEIF.
 
 ### Observability
 - DEBUG logs: default ON; disable with `DEBUG_LOGS=0|false`.
@@ -96,7 +124,8 @@ All notable changes to this project will be documented in this file.
 - Added
   - Text streaming via OpenAI Responses in `createChatCompletion({ stream: true })`, returning a web `ReadableStream<Uint8Array>`.
   - Content-only SSE route: `POST /api/admin/ai-chat/stream/text` (emits `assistant_delta` and `assistant_done`).
-- Changed
+  - Changed
+  - Config: add `OPENAI_MAX_RETRIES` env override (defaults to 3); `.env.example` updated.
   - Agents SDK locked to Responses API (removed env-driven mode switching).
   - Vision wrapper signature cleanup (removed unused `stream` option) and call site updated.
   - Simplified `ChatOptions`: removed tool-related fields.

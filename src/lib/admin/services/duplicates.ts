@@ -30,6 +30,46 @@ export async function checkDuplicates(
   adminEmail: string
 ): Promise<AdminOperationResult> {
   try {
+    // 0) Exact-image hash match gate (fast path): if the new cover_image URL contains a 40-hex sha1
+    // that matches any existing book cover URL, flag as high-confidence duplicate immediately.
+    if (args.cover_image && typeof args.cover_image === 'string') {
+      const hashMatch = extractSha1FromUrl(args.cover_image)
+      if (hashMatch) {
+        try {
+          const db = await (await import('@/lib/db/client')).getServerDb()
+          const { data: rows } = await db
+            .from('books')
+            .select('id, cover_image')
+            .ilike('cover_image', `%/${hashMatch}.%`)
+            .limit(5)
+          if (Array.isArray(rows) && rows.length > 0) {
+            const matches = rows.map((r) => ({
+              book_id: String((r as any).id || ''),
+              similarity_score: 1,
+              differences: {},
+              visual_analysis: { layout_similarity: 1, content_similarity: 1, confidence: 1 },
+            }))
+            await logAdminAction({
+              action: 'CHECK_DUPLICATE',
+              admin_email: adminEmail,
+              metadata: { fast_path: 'hash_match', matches: matches.length },
+            })
+            return {
+              success: true,
+              message: 'Exact image match found',
+              data: {
+                duplicate_detection: {
+                  matches,
+                  analysis: { has_duplicates: true, confidence: 1, recommendation: 'update_existing' },
+                },
+                search: { found: true, books: [] },
+              },
+            }
+          }
+        } catch {}
+      }
+    }
+
     // Determine search keys: prefer explicit book titles; if absent, map item name to title fields
     const titleZh = args.title_zh ?? args.item_name_zh ?? undefined
     const titleEn = args.title_en ?? args.item_name_en ?? undefined
@@ -171,6 +211,15 @@ export async function checkDuplicates(
     }
   } catch (error) {
     return handleOperationError(error, 'check duplicates')
+  }
+}
+
+function extractSha1FromUrl(url: string): string | null {
+  try {
+    const m = url.match(/\/([a-f0-9]{40})\.(?:jpe?g|png|webp|avif|heic|heif)(?:\?|$)/i)
+    return m ? m[1] : null
+  } catch {
+    return null
   }
 }
 

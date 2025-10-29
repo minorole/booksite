@@ -28,6 +28,10 @@ export interface BookCreate extends BookBase {
 
 export interface BookUpdate extends Partial<BookBase> {
   book_id: string
+  author_zh?: string | null
+  author_en?: string | null
+  publisher_zh?: string | null
+  publisher_en?: string | null
 }
 
 export interface BookSearch {

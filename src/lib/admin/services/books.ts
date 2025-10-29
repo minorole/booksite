@@ -77,11 +77,11 @@ export async function updateBook(args: BookUpdate, adminEmail: string): Promise<
       const text = buildQueryTextForEmbedding({
         title_zh: typeof args.title_zh === 'string' ? args.title_zh : updatedBook.title_zh,
         title_en: args.title_en !== undefined ? args.title_en : updatedBook.title_en ?? null,
-        // We don't have authors/publishers in BookBase; rely on titles and tags for now
-        author_zh: null,
-        author_en: null,
-        publisher_zh: null,
-        publisher_en: null,
+        // Include authors/publishers when provided
+        author_zh: args.author_zh ?? null,
+        author_en: args.author_en ?? null,
+        publisher_zh: args.publisher_zh ?? null,
+        publisher_en: args.publisher_en ?? null,
         tags: args.tags ?? undefined,
       })
       if (text.trim()) {

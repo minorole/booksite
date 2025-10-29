@@ -1,20 +1,50 @@
 import { z } from 'zod'
 import { tool, type Tool } from '@openai/agents-core'
 import type { RunContext } from '@openai/agents-core'
-import {
-  analyzeBookCover,
-  analyzeItemPhoto,
-} from '@/lib/admin/services/vision'
+import { analyzeBookCover, analyzeItemPhoto } from '@/lib/admin/services/vision'
 import { checkDuplicates } from '@/lib/admin/services/duplicates'
 import { createBook, updateBook, searchBooks, adjustBookQuantity } from '@/lib/admin/services/books'
 import { updateOrder } from '@/lib/admin/services/orders'
 import { getOrderDb, searchOrdersDb } from '@/lib/db/admin'
 import { HttpUrl } from '@/lib/schema/http-url'
+import { VisionAnalysisResultZ } from '@/lib/admin/types/vision.zod'
 
 // Agent context
 export type AgentContext = {
   userEmail: string
   uiLanguage?: import('@/lib/admin/i18n').UILanguage
+}
+
+function buildCheckDuplicatesTool(): Tool<AgentContext> {
+  return tool({
+    name: 'check_duplicates',
+    description: 'Check for duplicate books or items based on extracted fields and optional cover image. Provide either book fields (title/author/publisher) or item fields (name/type/tags).',
+    strict: true,
+    parameters: z.object({
+      // Book-style fields (optional)
+      title_zh: z.string().nullable(),
+      title_en: z.string().nullable(),
+      author_zh: z.string().nullable(),
+      author_en: z.string().nullable(),
+      publisher_zh: z.string().nullable(),
+      publisher_en: z.string().nullable(),
+      // Item-style fields (optional)
+      item_name_zh: z.string().nullable(),
+      item_name_en: z.string().nullable(),
+      item_type_zh: z.string().nullable(),
+      item_type_en: z.string().nullable(),
+      tags: z.array(z.string()).nullable(),
+      // Optional category hint
+      category_type: z.enum(['PURE_LAND_BOOKS', 'OTHER_BOOKS', 'DHARMA_ITEMS', 'BUDDHA_STATUES']).nullable(),
+      // Visual input
+      cover_image: HttpUrl.nullable(),
+    }).strict(),
+    async execute(input: unknown, context?: RunContext<AgentContext>) {
+      const email = context?.context?.userEmail || 'admin@unknown'
+      const result = await checkDuplicates(input as any, email)
+      return result
+    },
+  })
 }
 
 export function visionTools(): Tool<AgentContext>[] {
@@ -37,7 +67,7 @@ export function visionTools(): Tool<AgentContext>[] {
           category_type: z.enum(['PURE_LAND_BOOKS', 'OTHER_BOOKS', 'DHARMA_ITEMS', 'BUDDHA_STATUES']).nullable(),
         })
         .nullable(),
-    }),
+    }).strict(),
     async execute(input: unknown, context?: RunContext<AgentContext>) {
       const email = context?.context?.userEmail || 'admin@unknown'
       const result = await analyzeBookCover(input as import('@/lib/admin/types').BookAnalyzeParams, email)
@@ -45,35 +75,7 @@ export function visionTools(): Tool<AgentContext>[] {
     },
   })
 
-  const dup = tool({
-    name: 'check_duplicates',
-    description: 'Check for duplicate books or items based on extracted fields and optional cover image. Provide either book fields (title/author/publisher) or item fields (name/type/tags).',
-    strict: true,
-    parameters: z.object({
-      // Book-style fields (optional)
-      title_zh: z.string().nullable(),
-      title_en: z.string().nullable(),
-      author_zh: z.string().nullable(),
-      author_en: z.string().nullable(),
-      publisher_zh: z.string().nullable(),
-      publisher_en: z.string().nullable(),
-      // Item-style fields (optional)
-      item_name_zh: z.string().nullable(),
-      item_name_en: z.string().nullable(),
-      item_type_zh: z.string().nullable(),
-      item_type_en: z.string().nullable(),
-      tags: z.array(z.string()).nullable(),
-      // Optional category hint
-      category_type: z.enum(['PURE_LAND_BOOKS', 'OTHER_BOOKS', 'DHARMA_ITEMS', 'BUDDHA_STATUES']).nullable(),
-      // Visual input
-      cover_image: HttpUrl.nullable(),
-    }),
-    async execute(input: unknown, context?: RunContext<AgentContext>) {
-      const email = context?.context?.userEmail || 'admin@unknown'
-      const result = await checkDuplicates(input as any, email)
-      return result
-    },
-  })
+  const dup = buildCheckDuplicatesTool()
 
   const analyzeItem = tool({
     name: 'analyze_item_photo',
@@ -81,7 +83,7 @@ export function visionTools(): Tool<AgentContext>[] {
     strict: true,
     parameters: z.object({
       image_url: HttpUrl,
-    }),
+    }).strict(),
     async execute(input: unknown, context?: RunContext<AgentContext>) {
       const email = context?.context?.userEmail || 'admin@unknown'
       const { image_url } = input as { image_url: string }
@@ -94,6 +96,7 @@ export function visionTools(): Tool<AgentContext>[] {
 }
 
 export function inventoryTools(): Tool<AgentContext>[] {
+  const dup = buildCheckDuplicatesTool()
   const create = tool({
     name: 'create_book',
     description: 'Create a new book listing with initial quantity and tags.',
@@ -114,9 +117,9 @@ export function inventoryTools(): Tool<AgentContext>[] {
       author_en: z.string().nullable(),
       publisher_zh: z.string().nullable(),
       publisher_en: z.string().nullable(),
-      // Optional vision analysis payload passthrough
-      analysis_result: z.any().nullable(),
-    }),
+      // Optional vision analysis payload passthrough (strictly typed)
+      analysis_result: VisionAnalysisResultZ.nullable(),
+    }).strict(),
     async execute(input: unknown, context?: RunContext<AgentContext>) {
       const email = context?.context?.userEmail || 'admin@unknown'
       const payload = input as Record<string, unknown>
@@ -154,9 +157,13 @@ export function inventoryTools(): Tool<AgentContext>[] {
       tags: z.array(z.string()).nullable(),
       cover_image: HttpUrl.nullable(),
       cover_url: HttpUrl.nullable(),
-      // Allow attaching updated analysis data
-      analysis_result: z.any().nullable(),
-    }),
+      author_zh: z.string().nullable(),
+      author_en: z.string().nullable(),
+      publisher_zh: z.string().nullable(),
+      publisher_en: z.string().nullable(),
+      // Allow attaching updated analysis data (strictly typed)
+      analysis_result: VisionAnalysisResultZ.nullable(),
+    }).strict(),
     async execute(input: unknown, context?: RunContext<AgentContext>) {
       const email = context?.context?.userEmail || 'admin@unknown'
       // convert nulls to undefined for partial updates
@@ -190,7 +197,7 @@ export function inventoryTools(): Tool<AgentContext>[] {
       category_type: z.enum(['PURE_LAND_BOOKS', 'OTHER_BOOKS', 'DHARMA_ITEMS', 'BUDDHA_STATUES']).nullable(),
       min_quantity: z.number().int().nullable(),
       max_quantity: z.number().int().nullable(),
-    }),
+    }).strict(),
     async execute(input: unknown) {
       const pruned: Record<string, unknown> = {}
       if (typeof input === 'object' && input !== null) {
@@ -210,7 +217,7 @@ export function inventoryTools(): Tool<AgentContext>[] {
     parameters: z.object({
       book_id: z.string(),
       delta: z.number().int(),
-    }),
+    }).strict(),
     async execute(input: unknown, context?: RunContext<AgentContext>) {
       const email = context?.context?.userEmail || 'admin@unknown'
       const { book_id, delta } = input as { book_id: string; delta: number }
@@ -219,7 +226,7 @@ export function inventoryTools(): Tool<AgentContext>[] {
     },
   })
 
-  return [create, update, search, adjust]
+  return [create, update, search, adjust, dup]
 }
 
 export function orderTools(): Tool<AgentContext>[] {
@@ -234,7 +241,7 @@ export function orderTools(): Tool<AgentContext>[] {
       tracking_number: z.string().nullable(),
       admin_notes: z.string().nullable(),
       override_monthly: z.boolean().nullable(),
-    }),
+    }).strict(),
     async execute(input: unknown, context?: RunContext<AgentContext>) {
       const email = context?.context?.userEmail || 'admin@unknown'
       const pruned: Record<string, unknown> = {}
@@ -257,7 +264,7 @@ export function orderTools(): Tool<AgentContext>[] {
     name: 'get_order',
     description: 'Fetch a single order by ID.',
     strict: true,
-    parameters: z.object({ order_id: z.string() }),
+    parameters: z.object({ order_id: z.string() }).strict(),
     async execute(input: unknown) {
       const { order_id } = input as { order_id: string }
       const o = await getOrderDb(order_id)
@@ -270,7 +277,7 @@ export function orderTools(): Tool<AgentContext>[] {
     name: 'search_orders',
     description: 'Search orders by status or query string (id or tracking number).',
     strict: true,
-    parameters: z.object({ status: z.string().nullable(), q: z.string().nullable() }),
+    parameters: z.object({ status: z.string().nullable(), q: z.string().nullable() }).strict(),
     async execute(input: unknown) {
       const { status, q } = input as { status?: string | null; q?: string | null }
       const rows = await searchOrdersDb({ status: status ?? undefined, q: q ?? undefined })
