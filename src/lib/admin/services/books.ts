@@ -41,18 +41,10 @@ export async function createBook(args: BookCreate, adminEmail: string): Promise<
       },
     })
 
-    // Image embedding upsert (if provider configured and cover present)
-    try {
-      const provider = (process.env.IMAGE_EMBEDDINGS_PROVIDER || '').toLowerCase()
-      if (provider === 'clip' && args.cover_image) {
-        const ivec = await createImageEmbeddingClip(args.cover_image)
-        await upsertBookImageEmbeddingClip(book.id!, ivec)
-      }
-    } catch (e) {
-      const strict = (process.env.IMAGE_EMBEDDINGS_STRICT || '').trim() === '1'
-      if (strict) {
-        throw e instanceof Error ? e : new Error('image_embeddings_unavailable')
-      }
+    // Image embedding upsert (required when cover present)
+    if (args.cover_image) {
+      const ivec = await createImageEmbeddingClip(args.cover_image)
+      await upsertBookImageEmbeddingClip(book.id!, ivec)
     }
 
     return { success: true, message: 'Book created successfully', data: { book } }
@@ -105,18 +97,12 @@ export async function updateBook(args: BookUpdate, adminEmail: string): Promise<
       },
     })
 
-    // Image embedding refresh when cover_image is updated
-    try {
-      const provider = (process.env.IMAGE_EMBEDDINGS_PROVIDER || '').toLowerCase()
+    // Image embedding refresh when cover_image is updated (required)
+    {
       const newCover = (args as any).cover_image as string | undefined
-      if (provider === 'clip' && newCover) {
+      if (newCover) {
         const ivec = await createImageEmbeddingClip(newCover)
         await upsertBookImageEmbeddingClip(args.book_id, ivec)
-      }
-    } catch (e) {
-      const strict = (process.env.IMAGE_EMBEDDINGS_STRICT || '').trim() === '1'
-      if (strict) {
-        throw e instanceof Error ? e : new Error('image_embeddings_unavailable')
       }
     }
 

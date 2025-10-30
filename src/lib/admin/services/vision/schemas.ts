@@ -10,37 +10,7 @@ export function visionStructuredResponseFormat(name: string, schema: Record<stri
 }
 
 // Cover analysis — initial stage schema
-export const initialCoverAnalysisSchema: Record<string, unknown> = {
-  type: 'object',
-  additionalProperties: false,
-  properties: {
-    summary: { type: 'string' },
-    title_zh: { anyOf: [{ type: 'string' }, { type: 'null' }] },
-    title_en: { anyOf: [{ type: 'string' }, { type: 'null' }] },
-    author_zh: { anyOf: [{ type: 'string' }, { type: 'null' }] },
-    author_en: { anyOf: [{ type: 'string' }, { type: 'null' }] },
-    publisher_zh: { anyOf: [{ type: 'string' }, { type: 'null' }] },
-    publisher_en: { anyOf: [{ type: 'string' }, { type: 'null' }] },
-    category_suggestion: {
-      anyOf: [
-        { type: 'string', enum: ['PURE_LAND_BOOKS', 'OTHER_BOOKS', 'DHARMA_ITEMS', 'BUDDHA_STATUES'] },
-        { type: 'null' },
-      ],
-    },
-    quality_issues: { type: 'array', items: { type: 'string' } },
-  },
-  required: [
-    'summary',
-    'title_zh',
-    'title_en',
-    'author_zh',
-    'author_en',
-    'publisher_zh',
-    'publisher_en',
-    'category_suggestion',
-    'quality_issues',
-  ],
-}
+// (Removed initialCoverAnalysisSchema — we now run structured-only analysis)
 
 // Cover analysis — structured (VisionAnalysisResult)
 export const structuredVisionAnalysisSchema: Record<string, unknown> = {

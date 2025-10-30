@@ -93,7 +93,7 @@
 - DB changes must include migrations and, if applicable, seed updates.
 
 ## Security & Configuration Tips
-- Required envs: `OPENAI_API_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPER_ADMIN_EMAIL`, `CLOUDINARY_URL`.
+- Required envs: `OPENAI_API_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPER_ADMIN_EMAIL`, `CLOUDINARY_URL`, `CLIP_EMBEDDINGS_URL` (image embeddings required for duplicates and create/update flows).
 - Optional envs: `OPENAI_API_KEY_USER`, `DATABASE_URL`, `DIRECT_URL` (not required for Supabase), `CLOUDINARY_TEMP_PREFIX` (default `temp-uploads/`), `CLOUDINARY_TEMP_RETENTION_DAYS` (default `7`). For local rate limiting:
   - Vercel KV local dev: set `KV_REST_API_URL`, `KV_REST_API_TOKEN`.
   - Fully local (no Vercel project): set `KV_USE_MEMORY=1` to use an in‑memory backend (blocked in production).

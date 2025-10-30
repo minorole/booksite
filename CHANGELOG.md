@@ -4,6 +4,28 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+### Admin AI — Structured‑Only Vision, Deterministic Duplicates, Orchestrator Observability
+- Vision flows simplified to one-shot structured analysis; removed the legacy “initial” stage. Adds `cover_url` to structured results. Files: `src/lib/admin/services/vision/cover-analysis.ts`, `src/lib/admin/services/vision/schemas.ts`.
+- Duplicates: embeddings-first shortlist with fused scoring (0.6 text + 0.4 image). Select top‑3 candidates: 1 from image-KNN (best) + 2 from text-KNN (best excluding image-top). Confidence gate: skip visual comparison if best fused < 0.6; otherwise visually compare only selected candidates. Files: `src/lib/admin/services/duplicates.ts`.
+- Embeddings: image embeddings are now required for image flows; fail fast when `CLIP_EMBEDDINGS_URL` is missing/unreachable. File: `src/lib/admin/services/image-embeddings/openclip.ts`.
+- Orchestrator: single-pass policy; emit `assistant_done` only on success; improved tool lifecycle logging (durations, arg bytes) and raw model compact logs; turns metric increments on completion. Files: `src/lib/admin/chat/orchestrator-agentkit.ts`, `src/lib/admin/chat/logging.ts`, `src/lib/admin/chat/metrics.ts`.
+- Agents/Tools refactor: split domain tools under `src/lib/admin/agents/tooling/*` with a barrel export to keep imports stable; per-request tool-call dedup via AsyncLocalStorage. Files: `src/lib/admin/agents/tools.ts`, `src/lib/admin/agents/tooling/*`, `src/lib/runtime/request-context.ts`.
+- Route: SSE stream now enriches error logs with metrics and maxTurns, includes `request_id` in every event, retains stable event contract. File: `src/app/api/admin/ai-chat/stream/orchestrated/route.ts`.
+- UI/Types: remove `natural_analysis` rendering; structured-only panels remain. Files: `src/components/admin/ai-chat/MessageContent.tsx`, `src/lib/admin/types/results.ts`.
+- OpenAI config: per-kind retries/timeouts (`text` vs `vision`), central env parsing; explicit clients by kind. Files: `src/lib/openai.ts`, `src/lib/openai/client.ts`, `src/lib/openai/chat.ts`, `src/lib/openai/vision.ts`.
+- Docs: updated features, vision modules, agentkit notes, e2e manual test, admin README; ADR updated to note structured-only + embeddings-required. Files: `doc/admin-ai/*.md`, `src/lib/admin/README.md`, `doc/adr/0004-admin-ai-simplification-responses-structured-outputs.md`.
+- Removed: unused content‑only streaming route. File: `src/app/api/admin/ai-chat/stream/text/route.ts` (deleted).
+
+### Admin AI — Follow-ups (Tests, Consistency, Metrics)
+- Tests: add unit tests covering fused top‑3 duplicate selection and confidence gate behavior (visual compare on/off). File: `test/admin-ai/duplicates.policy.test.ts`.
+- Logging consistency: item photo analysis now logs `STRUCTURED_ANALYSIS` to match cover analysis. File: `src/lib/admin/services/vision/item-analysis.ts`.
+- Orchestrator metrics: increment `turns` on run completion and report before `assistant_done`. File: `src/lib/admin/chat/orchestrator-agentkit.ts`.
+
+### Admin AI • Tool Schemas & Logging
+- Tools: avoid JSON Schema `format: 'uri'` in Agents-exposed parameters by switching `VisionAnalysisResult.cover_url` from `z.string().url()` to the project’s `HttpUrl` regex schema. This resolves 400 “Invalid schema for function 'create_book'” errors from the Agents SDK and aligns with existing URL params. File: `src/lib/admin/types/vision.zod.ts`.
+- Orchestrator: enrich stream error logs and SSE error events with `tool` and a simplified JSON path (parsed from the SDK error context) to pinpoint schema issues quickly. File: `src/app/api/admin/ai-chat/stream/orchestrated/route.ts`.
+- Manual route: align `cover_image` validation to `HttpUrl` for consistency with tools. File: `src/app/api/admin/manual/books/route.ts`.
+
 ### Admin AI • Field Constraints & Token Efficiency
 - Centralize allowed vs. unsupported book fields for agents to eliminate wasted tokens on unsupported suggestions (e.g., price/定价, ISBN): `src/lib/admin/agents/constraints.ts`.
 - Inventory agent instructions now explicitly ask only for supported fields and avoid unsupported ones: `src/lib/admin/agents/inventory.ts`.
@@ -208,6 +230,8 @@ All notable changes to this project will be documented in this file.
 - [Cleanup] Moved shared `UserOrdersDialog` to `src/components/admin/users/UserOrdersDialog.tsx` and removed the legacy location.
 
 - [Infra] Removed legacy Supabase schema dumps to avoid drift and large diffs.
+
+- [Users API] Removed legacy `list_users` fallback and in-memory sorting/filtering; the route now exclusively uses `list_users_paginated`. File: `src/app/api/users/route.ts`.
 
 ## 2025-10-21
 ### Fixed

@@ -5,6 +5,7 @@ import { CATEGORY_TYPES, type CategoryType } from '@/lib/db/enums'
 import { createBookDb, logAdminAction } from '@/lib/db/admin'
 import { z } from 'zod'
 import { promoteTempAsset } from '@/lib/admin/cloudinary'
+import { HttpUrl } from '@/lib/schema/http-url'
 
 export async function GET() {
   try {
@@ -53,7 +54,7 @@ export async function POST(request: Request) {
       description_en: z.string().trim().optional(),
       category_type: z.enum(CATEGORY_TYPES),
       quantity: z.number().int().min(0),
-      cover_image: z.string().url().optional(),
+      cover_image: HttpUrl.optional(),
       tags: z.union([z.array(z.string()), z.string()]).optional(),
     })
 

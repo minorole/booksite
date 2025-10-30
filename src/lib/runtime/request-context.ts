@@ -4,13 +4,14 @@ type RequestContext = {
   id?: string
   caches: {
     urlValidation: Map<string, Promise<boolean>>
+    toolCalls: Set<string>
   }
 }
 
 const storage = new AsyncLocalStorage<RequestContext>()
 
 export async function withRequestContext<T>(id: string, fn: () => Promise<T>): Promise<T> {
-  const ctx: RequestContext = { id, caches: { urlValidation: new Map() } }
+  const ctx: RequestContext = { id, caches: { urlValidation: new Map(), toolCalls: new Set() } }
   return await new Promise<T>((resolve, reject) => {
     storage.run(ctx, () => {
       Promise.resolve()
@@ -28,3 +29,6 @@ export function getUrlValidationCache(): Map<string, Promise<boolean>> | undefin
   return storage.getStore()?.caches.urlValidation
 }
 
+export function getToolCallsCache(): Set<string> | undefined {
+  return storage.getStore()?.caches.toolCalls
+}

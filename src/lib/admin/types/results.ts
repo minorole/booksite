@@ -54,18 +54,7 @@ export type AdminOperationResult = OperationResult<{
   }
   duplicate_detection?: DuplicateDetectionResult
   vision_analysis?: {
-    stage: 'initial' | 'structured'
-    natural_analysis?: {
-      summary?: string
-      title_zh?: string
-      title_en?: string
-      author_zh?: string
-      author_en?: string
-      publisher_zh?: string
-      publisher_en?: string
-      category_suggestion?: CategoryType
-      quality_issues?: string[]
-    }
+    stage: 'structured'
     structured_data?: VisionAnalysisResult
   }
   item_analysis?: {

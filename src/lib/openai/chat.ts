@@ -24,7 +24,7 @@ export async function createChatCompletion({
       model: MODEL,
     })
 
-    const client = getAdminClient()
+    const client = getAdminClient('text')
     // Streaming branch: return a ReadableStream of UTF-8 assistant text deltas
     if (stream === true) {
       const rs = await streamViaResponsesFromMessages(client, MODEL, messages as any, {

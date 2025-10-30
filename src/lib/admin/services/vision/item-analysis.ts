@@ -46,7 +46,7 @@ export async function analyzeItemPhoto(
       cover_url: standardizedUrl,
     }
 
-    await logAnalysisOperation('INITIAL_ANALYSIS', {
+    await logAnalysisOperation('STRUCTURED_ANALYSIS', {
       admin_email: adminEmail,
       image_url: standardizedUrl,
       analysis_result: { item_analysis: structured },

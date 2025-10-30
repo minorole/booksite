@@ -26,7 +26,7 @@ export async function GET(request: Request) {
     const offset = Number.isFinite(offsetParam) ? Math.max(0, offsetParam) : 0
 
     const db = await createRouteSupabaseClient()
-    // Prefer new paginated RPC; fall back to legacy list_users if unavailable
+    // Use the paginated RPC only; remove legacy fallback to list_users
     let users: Array<{ id: string; email: string; name: string | null; role: 'USER' | 'ADMIN' | 'SUPER_ADMIN'; created_at: string }>
     let total: number | undefined
     try {
@@ -55,33 +55,7 @@ export async function GET(request: Request) {
       if (process.env.NODE_ENV !== 'production') {
         try { console.error('[users api] list_users_paginated error', err) } catch {}
       }
-      const { data, error } = await db.rpc('list_users')
-      if (error) {
-        if (process.env.NODE_ENV !== 'production') {
-          try { console.error('[users api] list_users error', error) } catch {}
-        }
-        return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 })
-      }
-      type UserRow = { id: string; email: string; name: string | null; role: 'USER' | 'ADMIN' | 'SUPER_ADMIN'; created_at: string }
-      const rows = (data ?? []) as UserRow[]
-      let mapped = rows.map((u) => ({
-        id: u.id,
-        email: u.email,
-        name: u.name ?? null,
-        role: u.role ?? 'USER',
-        created_at: u.created_at,
-      }))
-      // Apply sorting and in-memory filter as fallback
-      mapped.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-      if (hideSuper) mapped = mapped.filter(u => u.role !== 'SUPER_ADMIN')
-      if (q) {
-        const needle = q.toLowerCase()
-        users = mapped.filter(u => u.email.toLowerCase().includes(needle) || (u.name ?? '').toLowerCase().includes(needle))
-      } else {
-        users = mapped
-      }
-      total = users.length
-      users = users.slice(offset, offset + limit)
+      return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 })
     }
 
     return NextResponse.json({ users, total })

@@ -83,6 +83,8 @@ export function useChatSession(
               if ((evt as any).type === 'assistant_delta') {
                 const t = (evt as any).content || ''
                 console.debug('[AdminAI client]', { type: 'assistant_delta', req: (evt as any).request_id?.slice?.(0, 8), len: String(t).length, preview: String(t).slice(0, 80) })
+              } else if ((evt as any).type === 'tool_start' || (evt as any).type === 'tool_result' || (evt as any).type === 'tool_append') {
+                console.debug('[AdminAI client]', { type: (evt as any).type, name: (evt as any).name || (evt as any).message?.name, id: (evt as any).id || (evt as any).message?.tool_call_id, req: (evt as any).request_id?.slice?.(0, 8) })
               } else {
                 console.debug('[AdminAI client]', { type: (evt as any).type, req: (evt as any).request_id?.slice?.(0, 8) })
               }

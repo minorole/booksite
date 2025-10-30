@@ -33,7 +33,7 @@ export async function createVisionChatCompletion({
       model: getModel('vision'),
     })
 
-    const client = getAdminClient()
+    const client = getAdminClient('vision')
     const response = await createViaResponsesFromMessages(client, getModel('vision'), messages as any, {
       max_tokens: maxTokens,
       response_format,

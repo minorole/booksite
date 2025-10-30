@@ -91,8 +91,8 @@ sequenceDiagram
   ORC->>API: agent_updated (to=Vision)
   API-->>UI: sse: handoff (to=Vision)
   ORC->>AG: route to Vision
-  AG->>TO: analyze_book_cover (initial)
-  TO-->>ORC: tool_result (initial)
+  AG->>TO: analyze_book_cover (structured)
+  TO-->>ORC: tool_result (structured)
   ORC-->>UI: sse: tool_start/tool_result
   AG->>TO: analyze_book_cover (structured)
   TO-->>ORC: tool_result (structured)
@@ -109,8 +109,8 @@ UI consumes versioned events from `src/lib/admin/types/events.ts`. Examples belo
 ```json
 { "type": "handoff", "to": "Vision", "request_id": "b1730a55..." }
 { "type": "assistant_delta", "content": "Analyzing cover..." }
-{ "type": "tool_start", "id": "call_1", "name": "analyze_book_cover", "args": { "stage": "initial", "image_url": "https://..." }, "startedAt": "2025-10-28T...Z" }
-{ "type": "tool_result", "id": "call_1", "name": "analyze_book_cover", "success": true, "result": { "vision_analysis": { "natural_analysis": { "summary": "..." } } }, "finishedAt": "2025-10-28T...Z" }
+{ "type": "tool_start", "id": "call_1", "name": "analyze_book_cover", "args": { "image_url": "https://..." }, "startedAt": "2025-10-28T...Z" }
+{ "type": "tool_result", "id": "call_1", "name": "analyze_book_cover", "success": true, "result": { "vision_analysis": { "stage": "structured", "structured_data": { /* ... */ } } }, "finishedAt": "2025-10-28T...Z" }
 { "type": "tool_append", "message": { "role": "tool", "name": "analyze_book_cover", "tool_call_id": "call_1", "content": "{\\"success\\":true,\\"message\\":\\"...\\",\\"data\\":{...}}" } }
 { "type": "assistant_done" }
 ```
@@ -118,7 +118,7 @@ UI consumes versioned events from `src/lib/admin/types/events.ts`. Examples belo
 ## Code Map
 - API entry (SSE)
   - `src/app/api/admin/ai-chat/stream/orchestrated/route.ts` — Admin‑only; adds `request_id`, rate limit + concurrency.
-  - `src/app/api/admin/ai-chat/stream/text/route.ts` — Content‑only streaming (assistant_delta + assistant_done), no tool execution.
+  
 - Orchestrator
   - `src/lib/admin/chat/orchestrator-agentkit.ts` — Connects Agents SDK and streams normalized events.
 - Agents & Tools

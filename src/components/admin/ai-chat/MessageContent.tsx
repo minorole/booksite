@@ -5,8 +5,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { Message, MessageContent as MsgContent } from '@/lib/admin/types'
 import Image from 'next/image'
-import { CATEGORY_LABELS } from '@/lib/admin/constants'
-import type { CategoryType } from '@/lib/db/enums'
+// CATEGORY_LABELS import removed: natural_analysis rendering dropped
 import type { DuplicateDetectionResult } from '@/lib/admin/types/results'
 import { DuplicateMatchesCard } from '@/components/admin/ai-chat/cards/DuplicateMatchesCard'
 import { SearchResultsList } from '@/components/admin/ai-chat/cards/SearchResultsList'
@@ -101,37 +100,7 @@ export function MessageContent({
       if (order && name === 'update_order') {
         return <OrderUpdateCard data={data as { order?: { order_id: string; status?: string | null; tracking_number?: string | null } } | null} />
       }
-      if (vision?.natural_analysis) {
-        const a = vision.natural_analysis
-        return (
-          <div className="space-y-2">
-            <p><Bilingual cnText="我已分析该书封面，发现如下：" enText="I’ve analyzed this book cover. Here’s what I found:" /></p>
-            <div className="pl-4 border-l-2 border-primary/20 space-y-1">
-              {a.title_zh && <p><Bilingual cnText="标题（中文）" enText="Title (Chinese)" />: {a.title_zh}</p>}
-              {a.title_en && <p><Bilingual cnText="标题（英文）" enText="Title (English)" />: {a.title_en}</p>}
-              {a.author_zh && <p><Bilingual cnText="作者（中文）" enText="Author (Chinese)" />: {a.author_zh}</p>}
-              {a.author_en && <p><Bilingual cnText="作者（英文）" enText="Author (English)" />: {a.author_en}</p>}
-              {a.publisher_zh && <p><Bilingual cnText="出版社（中文）" enText="Publisher (Chinese)" />: {a.publisher_zh}</p>}
-              {a.publisher_en && <p><Bilingual cnText="出版社（英文）" enText="Publisher (English)" />: {a.publisher_en}</p>}
-              {a.category_suggestion && (
-                <p>
-                  <Bilingual cnText="建议分类" enText="Suggested Category" />: {a.category_suggestion} ({CATEGORY_LABELS[a.category_suggestion as CategoryType]})
-                </p>
-              )}
-              {a.quality_issues?.length ? (
-                <div className="mt-2">
-                  <p className="font-medium"><Bilingual cnText="质量问题：" enText="Quality Issues:" /></p>
-                  <ul className="list-disc list-inside">
-                    {a.quality_issues.map((issue: string, i: number) => (
-                      <li key={i}>{issue}</li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-            </div>
-          </div>
-        )
-      }
+      // natural_analysis branch removed (structured-only analysis)
     } catch {}
     return <p>{String((msg as any)?.content || '')}</p>
   }

@@ -10,8 +10,7 @@ Overview (files)
 
 - `src/lib/admin/services/vision/schemas.ts`
   - `visionStructuredResponseFormat(name, schema)` — wraps JSON Schema into OpenAI `response_format`.
-  - `initialCoverAnalysisSchema` — initial book cover analysis contract (summary + tentative fields).
-  - `structuredVisionAnalysisSchema` — full VisionAnalysisResult JSON contract.
+  - `structuredVisionAnalysisSchema` — full VisionAnalysisResult JSON contract (we use structured‑only now).
   - `itemAnalysisSchema` — non-book item analysis contract.
   - `visualSimilaritySchema` — layout/content/confidence (0–1) contract.
 
@@ -19,9 +18,7 @@ Overview (files)
   - `callVisionJSON<T>(schemaName, schema, messages)` — standard helper to call the vision model via Chat Completions with `response_format` and parse JSON reliably.
 
 - `src/lib/admin/services/vision/cover-analysis.ts`
-  - `analyzeBookCover(args, adminEmail)` — implements both stages:
-    - `initial` uses `initialCoverAnalysisSchema` and returns natural analysis for review (no UI confirmation modal).
-    - `structured` uses `structuredVisionAnalysisSchema` and appends `cover_url`.
+  - `analyzeBookCover(args, adminEmail)` — structured‑only path using `structuredVisionAnalysisSchema`; appends `cover_url`.
   - Uses `callVisionJSON` and logs via `logAnalysisOperation`.
 
 - `src/lib/admin/services/vision/similarity.ts`
@@ -40,21 +37,11 @@ Key Contracts & Invariants
 - Prefer `nullable` fields over `optional` in tool schemas (see AgentKit notes); prune `null` to `undefined` before service calls when needed.
 
 Usage Examples
-- Initial cover analysis (pseudocode):
-```
-const json = await callVisionJSON('InitialCoverAnalysis', initialCoverAnalysisSchema, [
-  { role: 'user', content: [
-    { type: 'text', text: 'Analyze this cover...' },
-    { type: 'image_url', image_url: { url: standardizedUrl } },
-  ] },
-])
-```
-
-- Structured cover analysis (optional confirmed info embedded in text):
+- Structured cover analysis:
 ```
 const structured = await callVisionJSON('VisionAnalysisResult', structuredVisionAnalysisSchema, [
   { role: 'user', content: [
-    { type: 'text', text: `Extract as-is. Use: ${JSON.stringify(confirmedInfo)}` },
+    { type: 'text', text: 'Extract as-is (do not translate). Return only valid JSON.' },
     { type: 'image_url', image_url: { url: standardizedUrl } },
   ] },
 ])

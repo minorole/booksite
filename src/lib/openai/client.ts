@@ -3,7 +3,7 @@ import { env } from '@/lib/config/env'
 import { OPENAI_CONFIG } from './config'
 import { OpenAIError } from './errors'
 
-function getOpenAIClient(role: 'ADMIN' | 'USER' = 'ADMIN') {
+function getOpenAIClient(role: 'ADMIN' | 'USER' = 'ADMIN', kind: 'text' | 'vision' = 'text') {
   const apiKey = role === 'ADMIN'
     ? (() => { try { return env.openaiApiKeyAdmin() } catch { return undefined } })()
     : env.openaiApiKeyUser()
@@ -17,17 +17,17 @@ function getOpenAIClient(role: 'ADMIN' | 'USER' = 'ADMIN') {
 
   return new OpenAI({
     apiKey,
-    maxRetries: OPENAI_CONFIG.MAX_RETRIES,
-    timeout: OPENAI_CONFIG.TIMEOUT,
+    maxRetries: OPENAI_CONFIG.RETRIES[kind],
+    timeout: OPENAI_CONFIG.TIMEOUTS[kind],
   })
 }
 
-export function getAdminClient() {
-  return getOpenAIClient('ADMIN')
+export function getAdminClient(kind: 'text' | 'vision' = 'text') {
+  return getOpenAIClient('ADMIN', kind)
 }
 
-export function getUserClient() {
-  return getOpenAIClient('USER')
+export function getUserClient(kind: 'text' | 'vision' = 'text') {
+  return getOpenAIClient('USER', kind)
 }
 
 export { getOpenAIClient }

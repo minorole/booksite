@@ -5,6 +5,7 @@ import { runChatWithAgentsStream } from '@/lib/admin/chat/orchestrator-agentkit'
 import { withRequestContext } from '@/lib/runtime/request-context'
 import { checkRateLimit, rateLimitHeaders, acquireConcurrency, releaseConcurrency } from '@/lib/security/ratelimit'
 import { adminAiLogsEnabled, debugLogsEnabled } from '@/lib/observability/toggle'
+import { ADMIN_AGENT_MAX_TURNS_DEFAULT } from '@/lib/admin/constants'
 
 export async function POST(request: Request) {
   try {
@@ -61,6 +62,7 @@ export async function POST(request: Request) {
     const stream = new ReadableStream<Uint8Array>({
       start(controller) {
         const encoder = new TextEncoder()
+        let metrics = { turns: 0, toolCalls: 0, handoffs: 0 }
         const write = (event: Record<string, unknown>) => {
           const enriched = { version: '1', request_id: requestId, ...event }
           if (adminAiLogsEnabled() && debugLogsEnabled()) {
@@ -74,7 +76,16 @@ export async function POST(request: Request) {
         // Agents decide next steps based solely on messages (including any user-confirmed info embedded in prior turns)
         // Wrap the run in a request-scoped context to enable per-request caches (e.g., URL validation)
         void withRequestContext(requestId, () =>
-          runChatWithAgentsStream({ messages, userEmail: user.email!, write, uiLanguage, requestId })
+          runChatWithAgentsStream({
+            messages,
+            userEmail: user.email!,
+            write,
+            uiLanguage,
+            requestId,
+            onMetrics: (m) => {
+              metrics = { ...metrics, ...m }
+            },
+          })
         )
           .then(async () => {
             try {
@@ -88,10 +99,47 @@ export async function POST(request: Request) {
             controller.close()
           })
           .catch((err) => {
-            const msg = (err as Error)?.message || 'orchestrator error'
-            // Always log a minimal error for server operators, regardless of env flags
-            try { console.error('[AdminAI route] orchestrator_error', { requestId, message: msg }) } catch {}
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ version: '1', request_id: requestId, type: 'error', message: msg })}\n\n`))
+            const e = err as any
+            const msg = (e?.message as string) || 'orchestrator error'
+            // Best-effort extraction of tool name and JSON path from the error message
+            const tool =
+              typeof e?.functionName === 'string'
+                ? (e.functionName as string)
+                : (/function '([^']+)'/.exec(msg)?.[1] || undefined)
+            const contextPath = (() => {
+              try {
+                const m = /context=\(([^)]+)\)/.exec(msg)
+                if (!m) return undefined
+                const parts = m[1]
+                  .split(',')
+                  .map((s) => s.replace(/['\s]/g, ''))
+                  .filter(Boolean)
+                // Drop structural markers like anyOf/properties and numeric indices
+                return parts
+                  .filter((p) => p !== 'anyOf' && p !== 'properties' && !/^\d+$/.test(p))
+                  .join('.') || undefined
+              } catch {
+                return undefined
+              }
+            })()
+            // Always log a structured error for operators
+            try {
+              const raw = process.env.AGENT_MAX_TURNS?.trim()
+              const envMax = raw ? Number.parseInt(raw, 10) : NaN
+              const maxTurns = Number.isFinite(envMax) && envMax > 0 ? envMax : ADMIN_AGENT_MAX_TURNS_DEFAULT
+              console.error('[AdminAI route] orchestrator_error', {
+                requestId,
+                message: msg,
+                tool,
+                path: contextPath,
+                code: e?.code,
+                status: e?.status,
+                metrics,
+                maxTurns,
+              })
+            } catch {}
+            const payload = { version: '1', request_id: requestId, type: 'error', message: msg, tool, path: contextPath }
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify(payload)}\n\n`))
             void releaseConcurrency({ route: routeKey, userId: user.id, ttlSeconds: 120 }).finally(() => controller.close())
           })
       },

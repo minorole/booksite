@@ -4,7 +4,7 @@ import { createImageEmbeddingClip } from '@/lib/admin/services/image-embeddings/
 import { searchBooksByImageEmbeddingClip } from '@/lib/db/admin/image-embeddings'
 import { buildQueryTextForEmbedding } from './embeddings'
 import { createTextEmbedding } from '@/lib/openai/embeddings'
-import { analyzeVisualSimilarity } from './vision'
+import { analyzeVisualSimilarity } from '@/lib/admin/services/vision'
 import { handleOperationError } from './utils'
 import { type AdminOperationResult } from '@/lib/admin/types'
 
@@ -78,6 +78,8 @@ export async function checkDuplicates(
     const hasText = Boolean(titleZh || titleEn || args.author_zh || args.author_en)
     let potentialMatches: Awaited<ReturnType<typeof checkDuplicatesDb>> = []
     let fusedRanking: Array<{ id: string; score: number }> = []
+    let textKnn: Array<{ book_id: string; distance: number }> = []
+    let imageKnn: Array<{ book_id: string; distance: number }> = []
     if (hasText) {
       // Try vector KNN first; fallback to ILIKE search if unavailable or no results
       try {
@@ -91,22 +93,12 @@ export async function checkDuplicates(
           tags: args.tags ?? null,
         })
         const embedding = await createTextEmbedding(queryText)
-        const textKnn = await searchBooksByTextEmbedding({ embedding, limit: 20, category_type: args.category_type ?? null })
+        textKnn = await searchBooksByTextEmbedding({ embedding, limit: 20, category_type: args.category_type ?? null })
 
-        // Optional image KNN if provider configured and cover image present
-        let imageKnn: Array<{ book_id: string; distance: number }> = []
-        const provider = (process.env.IMAGE_EMBEDDINGS_PROVIDER || '').toLowerCase()
-        if (provider === 'clip' && args.cover_image) {
-          try {
-            const ivec = await createImageEmbeddingClip(args.cover_image)
-            imageKnn = await searchBooksByImageEmbeddingClip({ embedding: ivec, limit: 20, category_type: args.category_type ?? null })
-          } catch (e) {
-            const strict = (process.env.IMAGE_EMBEDDINGS_STRICT || '').trim() === '1'
-            if (strict) {
-              throw new Error('image_embeddings_unavailable')
-            }
-            // non-strict: ignore image path errors; proceed with text only
-          }
+        // Always compute image KNN when a cover image is provided; fail fast on error
+        if (args.cover_image) {
+          const ivec = await createImageEmbeddingClip(args.cover_image)
+          imageKnn = await searchBooksByImageEmbeddingClip({ embedding: ivec, limit: 20, category_type: args.category_type ?? null })
         }
 
         const textScores = new Map<string, number>()
@@ -153,22 +145,42 @@ export async function checkDuplicates(
     }> = []
 
     if (args.cover_image && potentialMatches.length > 0) {
-      const subset = potentialMatches.slice(0, 3)
-      visualAnalysis = await Promise.all(
-        subset.map(async (match) => {
-          if (!match.cover_image) return null
-          const analysis = await analyzeVisualSimilarity(args.cover_image!, match.cover_image)
-          return {
-            book: match,
-            similarity: {
-              layout: analysis.layout_similarity,
-              content: analysis.content_similarity,
-              confidence: analysis.confidence,
-            },
-            differences: { publisher: undefined, edition: false, layout: analysis.layout_similarity < 0.8 },
-          }
-        })
-      ).then((r) => r.filter((x): x is NonNullable<typeof x> => x !== null))
+      // Build selected top-3: 1 from image KNN (best), 2 from text KNN (best excluding imageTop)
+      // Recompute text/image score maps (from earlier) for id selection
+      const bestImageId = (imageKnn.length > 0 ? imageKnn[0].book_id : undefined)
+      // text top-2 excluding image top
+      const textTopIds = (() => {
+        // Pick top-2 from textKnn excluding imageTop
+        const out: string[] = []
+        for (const r of textKnn) {
+          if (r.book_id === bestImageId) continue
+          out.push(r.book_id)
+          if (out.length >= 2) break
+        }
+        return out
+      })()
+      const selectedIds = [bestImageId, ...textTopIds].filter((x): x is string => !!x)
+      // Confidence gate: if best fused score is low, skip visual compare
+      const bestFused = fusedRanking.length > 0 ? fusedRanking[0].score : 0
+      if (bestFused >= 0.6) {
+        const pickById = new Map(potentialMatches.map((b) => [b.id!, b]))
+        const subset = selectedIds.map((id) => pickById.get(id)).filter((b): b is NonNullable<typeof b> => !!b)
+        visualAnalysis = await Promise.all(
+          subset.map(async (match) => {
+            if (!match.cover_image) return null
+            const analysis = await analyzeVisualSimilarity(args.cover_image!, match.cover_image)
+            return {
+              book: match,
+              similarity: {
+                layout: analysis.layout_similarity,
+                content: analysis.content_similarity,
+                confidence: analysis.confidence,
+              },
+              differences: { publisher: undefined, edition: false, layout: analysis.layout_similarity < 0.8 },
+            }
+          })
+        ).then((r) => r.filter((x): x is NonNullable<typeof x> => x !== null))
+      }
     }
 
     await logAdminAction({

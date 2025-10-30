@@ -16,6 +16,12 @@ const OptionalKeys = [
   'CLIP_EMBEDDINGS_URL',
   'CLIP_EMBEDDINGS_API_KEY',
   'IMAGE_EMBEDDINGS_STRICT',
+  // OpenAI tuning
+  'OPENAI_MAX_RETRIES',
+  'OPENAI_TEXT_MAX_RETRIES',
+  'OPENAI_VISION_MAX_RETRIES',
+  'OPENAI_TEXT_TIMEOUT_MS',
+  'OPENAI_VISION_TIMEOUT_MS',
   // Admin task token for cron-authenticated maintenance endpoints
   'ADMIN_TASK_TOKEN',
   // Cloudinary temp uploads configuration (optional)
@@ -58,6 +64,11 @@ export const env = {
   clipUrl: () => getOptionalEnv('CLIP_EMBEDDINGS_URL'),
   clipToken: () => getOptionalEnv('CLIP_EMBEDDINGS_API_KEY'),
   imageEmbStrict: () => getOptionalEnv('IMAGE_EMBEDDINGS_STRICT'),
+  openaiMaxRetries: () => getOptionalEnv('OPENAI_MAX_RETRIES'),
+  openaiTextMaxRetries: () => getOptionalEnv('OPENAI_TEXT_MAX_RETRIES'),
+  openaiVisionMaxRetries: () => getOptionalEnv('OPENAI_VISION_MAX_RETRIES'),
+  openaiTextTimeoutMs: () => getOptionalEnv('OPENAI_TEXT_TIMEOUT_MS'),
+  openaiVisionTimeoutMs: () => getOptionalEnv('OPENAI_VISION_TIMEOUT_MS'),
   adminTaskToken: () => getOptionalEnv('ADMIN_TASK_TOKEN'),
   // Cloudinary temp uploads (optional)
   cloudinaryTempPrefix: () => getOptionalEnv('CLOUDINARY_TEMP_PREFIX'),

@@ -7,9 +7,9 @@ Scope
 - Applies to admin AI chat orchestration, agents, tools, and the vision pipeline in this repo.
 
 Quick Start
-- Env: set `OPENAI_API_KEY` and (recommended) `OPENAI_DEFAULT_MODEL=gpt-5-mini`.
+- Env: set `OPENAI_API_KEY` and (recommended) `OPENAI_DEFAULT_MODEL=gpt-5-mini`. For image flows, `CLIP_EMBEDDINGS_URL` is required.
 - Entry point: `src/app/api/admin/ai-chat/stream/orchestrated/route.ts` streams SSE using AgentKit.
-- Agents/Tools: see `src/lib/admin/agents/**` and `src/lib/admin/agents/tools.ts`.
+- Agents/Tools: see `src/lib/admin/agents/**` (tools split by domain under `tooling/`).
 - SSE events consumed by UI: `handoff`, `assistant_delta`, `assistant_done`, `tool_start`, `tool_result`, `tool_append`.
 
 Gotchas & Time Savers
@@ -21,11 +21,9 @@ Gotchas & Time Savers
     - Search pruning: `src/lib/admin/agents/tools.ts:138`
     - Order update pruning: `src/lib/admin/agents/tools.ts:158`
 
-2) Vision: structured outputs with images
+2) Vision: structured outputs with images (one‑shot)
 - We enforce JSON via `response_format: { type: 'json_schema', strict: true }` on Chat Completions to preserve image inputs.
-- Initial stage returns `{ summary, title_zh/en, author_zh/en, publisher_zh/en, category_suggestion, quality_issues }` with required+nullable fields.
-- Structured stage strictly matches `VisionAnalysisResult`.
-- Similarity returns `{ layout_similarity, content_similarity, confidence }` strictly.
+- Analysis is structured‑only; no separate “initial” stage. Similarity returns `{ layout_similarity, content_similarity, confidence }` strictly.
 - Removed brittle parsing: no regex or “last JSON” scraping, no retry path.
 
 3) Package versions & types
@@ -33,7 +31,7 @@ Gotchas & Time Savers
 - AgentKit docs mention Node 22+, but the server route runs fine on Node 20.19.5. Verify after Node bumps.
 
 4) Routing heuristics vs agents
-- Removed route-level heuristics and forced tool_choice. The Router agent handles handoffs. Keep prompts per agent small and focused.
+- The Router agent handles handoffs; no route‑level heuristics or fallback reruns. Keep prompts per agent small and focused.
 - Confirmation is enforced at the tool layer: mutating tools require `confirmed: true` param. No visible UI modal; agents include `confirmed: true` only after explicit admin confirmation in chat.
 
 5) SSE bridge
@@ -58,7 +56,7 @@ Testing
 
 Operational Tips
 - For OCR quality: instruct “Extract text as-is; do not translate.” Ask for manual confirmation when confidence < threshold.
-- For duplicate detection: keep Supabase search + one vision compare now; add pgvector later if recall/precision becomes an issue.
+- For duplicate detection: always compute image embeddings; pick top‑3 candidates (1 image‑KNN + 2 text‑KNN). Skip visual compare when confidence is low; otherwise compare selected candidates.
  - Avoid UI confirmation surfaces; keep confirmation in chat and enforce via tool parameter.
 
 Where to Look

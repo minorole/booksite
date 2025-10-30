@@ -3,6 +3,8 @@
 Status: Accepted (implemented, refreshed)
 Date: 2025-10-16
 
+Update (2025-10-30): Vision flow is now one‑shot structured analysis (no initial stage). Image embeddings are required for image flows; content‑only streaming route removed.
+
 Context
 The admin AI accumulated complexity across multiple layers:
 - Brittle JSON handling in the vision flow, scraping JSON out of free‑text and retrying on failure (legacy; now replaced by strict JSON schemas).

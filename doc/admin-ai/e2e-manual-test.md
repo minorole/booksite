@@ -8,7 +8,7 @@ References to code include exact file paths and important line anchors to help v
 ## Scope & Success Criteria
 
 - Exercise every tool at least once:
-  - Vision: `analyze_book_cover` (initial + structured), `analyze_item_photo`, `check_duplicates` (src/lib/admin/agents/tools.ts)
+  - Vision: `analyze_book_cover` (structured only), `analyze_item_photo`, `check_duplicates` (src/lib/admin/agents/tools.ts)
   - Inventory: `create_book`, `update_book`, `search_books`, `adjust_book_quantity`, `check_duplicates` (src/lib/admin/agents/tools.ts)
   - Orders: `get_order`, `search_orders`, `update_order` (src/lib/admin/agents/tools.ts)
 - Observe correct SSE event sequence in the browser console and UI:
@@ -60,8 +60,8 @@ Helpful toggles/config:
 - Send: “请分析这本书封面并准备创建条目。”
 - Expected SSE:
   - `handoff` to `Vision` (src/lib/admin/agents/router.ts:1; src/lib/admin/agents/vision.ts:1)
-  - `tool_start` analyze_book_cover with `{ stage:"initial", image_url }` (src/lib/admin/agents/tools.ts:20)
-  - `tool_result` with `data.vision_analysis.stage === 'initial'` (src/lib/admin/services/vision/cover-analysis.ts:15)
+  - `tool_start` analyze_book_cover with `{ image_url }`
+  - `tool_result` with `data.vision_analysis.stage === 'structured'`
   - `assistant_delta` explaining findings
 
 3) Duplicate check
@@ -223,7 +223,7 @@ curl -F 'file=@/path/to/book.jpg' http://localhost:3000/api/upload
 
 ## Validation Checklist (Quick)
 
-- Vision initial → `data.vision_analysis.stage === 'initial'` and assistant summary
+- Vision structured → `data.vision_analysis.stage === 'structured'` and assistant summary
 - Duplicates → `data.duplicate_detection.analysis.recommendation` present
 - Vision structured → `structured_data.cover_url` echoed
 - Create/update/quantity → `success:true` and Book card updates
