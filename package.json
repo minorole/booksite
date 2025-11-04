@@ -16,6 +16,8 @@
     "db:types": "supabase gen types typescript --linked --schema public > src/types/supabase.generated.ts",
     "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx,css,md,mdx,json}\" \"scripts/**/*.{js,mjs,ts}\"",
     "format:check": "prettier --check \"src/**/*.{js,jsx,ts,tsx,css,md,mdx,json}\" \"scripts/**/*.{js,mjs,ts}\"",
+    "format:docs": "prettier --write \"doc/**/*.{md,mdx}\" \"emails/**/*.md\"",
+    "format:docs:check": "prettier --check \"doc/**/*.{md,mdx}\" \"emails/**/*.md\"",
     "check:ci": "npm run format:check && npm run lint:ci && npm run typecheck && npm run test && npm run build",
     "cloudinary:purge-temp": "node scripts/cloudinary-purge-temp.mjs"
   },

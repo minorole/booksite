@@ -1,16 +1,19 @@
 Supabase‑Native Database Redesign & Migration Plan
 
 Purpose
+
 - Replace Prisma with Supabase‑native Postgres secured by RLS, while keeping Supabase Auth and Next.js server‑centric APIs.
 - Normalize the data model, improve search (FTS + vectors), and establish a thin, testable DB access layer.
 - Produce a durable, maintainable, and performant foundation for long‑term growth.
 
 Non‑Goals
+
 - No UI redesign.
 - No OpenAI config changes beyond data access wiring.
 - No client‑side database access; all logic remains server‑side in `src/app/api/**`.
 
 Outcomes (Acceptance Criteria)
+
 - No Prisma code or dependencies remain (files and imports).
 - Supabase Postgres schema created via SQL migrations with RLS policies in place.
 - API routes compile and return the same JSON shapes (or documented deltas).
@@ -19,6 +22,7 @@ Outcomes (Acceptance Criteria)
 - DB access goes through `src/lib/db/**` helpers (no direct ORM calls in routes).
 
 Guardrails & Decisions
+
 - Roles (Confirmed): `profiles.role` is authoritative (USER | ADMIN | SUPER_ADMIN). `user_metadata.role` may mirror for convenience but is not authoritative.
 - Embeddings (Confirmed): Use OpenAI `text-embedding-3-small` (1536 dimensions), cosine similarity, and consistent dimension across schema, indexes, and queries.
 - Search: English uses FTS (`tsvector`/`ts_rank_cd`); Chinese uses trigram similarity (`pg_trgm`) on zh fields. A search RPC blends both signals and supports keyset pagination.
@@ -26,17 +30,20 @@ Guardrails & Decisions
 - Performance budgets (Confirmed): keep P95 ≤ 150 ms for common catalog queries on warmed cache; admin mutating actions ≤ 300 ms.
 
 Environments & Prerequisites
+
 - Supabase project(s): dev, staging, prod.
 - Enable extensions: `pgvector`, `pg_trgm` (for zh trigram search), `pgcrypto` or `uuid-ossp` for UUIDs, and optionally `unaccent` (normalize diacritics for FTS if needed).
 - Required envs: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, service role key for admin seed/scripts (not checked in), plus existing app envs.
 
 Supabase CLI Workflow
+
 - Link this repo to a Supabase project: `supabase login` → `supabase link --project-ref <PROJECT_REF>`.
 - Author migrations under `supabase/migrations/**` and push with `supabase db push`.
 - Generate app types: `supabase gen types typescript --linked --schema public > src/types/supabase.generated.ts`.
 - See `supabase/README.md` for details and conventions.
 
 High‑Level Architecture
+
 - Data: Supabase Postgres with SQL‑first migrations (`supabase/migrations/**`).
 - Security: RLS enforced on user‑scoped tables; admin‑only tables restricted to admins.
 - Access: `@supabase/supabase-js` (server) via helpers in `src/lib/supabase.ts` and `src/lib/db/client.ts`.
@@ -45,6 +52,7 @@ High‑Level Architecture
 
 Schema (Normalized, with Performance Considerations)
 Users & Profiles
+
 - `profiles` (app users; references `auth.users`)
   - `id uuid primary key references auth.users(id) on delete cascade`
   - `name text null`
@@ -55,6 +63,7 @@ Users & Profiles
   - RLS: users can select/update own row; admins can select/update all.
 
 Catalog
+
 - `categories`
   - `id uuid pk`, `type text unique check (...)`
   - `name_zh text`, `name_en text`, `description_zh text null`, `description_en text null`
@@ -76,6 +85,7 @@ Catalog
   - `book_similarities` (`book_id uuid fk`, `similar_book_id uuid fk`, `score real`, primary key `(book_id, similar_book_id)`, indexes on both columns)
 
 Orders
+
 - `shipping_addresses`
   - `id uuid pk`, `user_id uuid references profiles(id)`
   - Address fields (`address1`, `address2?`, `city`, `state`, `zip`, `country` default 'US')
@@ -92,6 +102,7 @@ Orders
   - Primary key `(order_id, book_id)`, index on `(book_id)`.
 
 Carts
+
 - `carts`
   - `id uuid pk`, `user_id uuid references profiles(id)`, timestamps, `expires_at timestamptz`
   - Indexes on `(user_id)`, `(expires_at)`.
@@ -100,27 +111,32 @@ Carts
   - Primary key `(cart_id, book_id)`, index `(book_id)`.
 
 Admin & Chat
+
 - `admin_chat_sessions`: `id uuid pk`, `admin_email text`, `session_type text check (...)`, `context jsonb`, `current_books text[]`, `current_orders text[]`, `last_activity timestamptz`, `active boolean default true`, `prompt_version int null`, `llm_settings jsonb null`; indexes `(admin_email)`, `(session_type)`, `(last_activity)`.
 - `user_chat_sessions`: `id uuid pk`, `user_id uuid fk profiles`, `context jsonb`, `current_books text[]`, `conversation_history jsonb`, `language_preference text`, `last_activity timestamptz`, `active boolean default true`; indexes `(user_id)`, `(last_activity)`.
 - `admin_logs`: `id uuid pk`, `action text check (...)`, `admin_email text`, optional `book_id uuid`, `metadata jsonb`, `llm_context jsonb`, `related_items text[]`, `confidence real`, `session_id text`, `prompt_version int`, timestamps; indexes `(admin_email)`, `(action)`, `(created_at)`.
 - `tag_history`: `id uuid pk`, `book_id uuid fk`, `tag text`, `is_auto boolean`, approvals (`approved boolean default false`, `approved_by text null`, `approved_at timestamptz null`), `confidence real`, `prompt_version int`, timestamps; indexes `(book_id)`, `(tag)`, `(added_at)`.
 
 System
+
 - `system_settings`: `id uuid pk`, `key text unique`, `value jsonb`, `updated_by text`, `updated_at timestamptz`; index `(key)`.
 - `system_prompts`: `id uuid pk`, `name text unique`, `use_case text`, `version int default 1`, `is_active boolean default true`, `prompt_text text`, `performance_metrics jsonb null`, timestamps; indexes `(name)`, `(use_case)`, `(version)`.
 
 RLS Policies (Illustrative)
+
 - Public read (select) for `books`, `categories`, `tags`.
 - Admin write for `books`, `categories`, `tags`, `system_*`, `admin_*`, `tag_history`.
 - User‑scoped tables (`profiles`, `orders`, `order_items`, `carts`, `cart_items`, `shipping_addresses`): `user_id = auth.uid()` for select/insert/update; admins unrestricted.
 - Ensure all policies compile and include `using`/`with check` clauses as appropriate.
 
 Admin Authorization Helper
+
 - Create a SECURITY DEFINER, STABLE function `is_admin()` that returns true if the current `auth.uid()` maps to a `profiles.role` of `ADMIN` or `SUPER_ADMIN`.
 - Use `is_admin()` inside RLS policies for admin tables and admin write access, so API routes can continue using the anon key with a session (no service key in routes).
   - Example: `create policy admin_write on books for all using (is_admin()) with check (is_admin());`
 
 Indexes, Triggers, and RPCs
+
 - Books
   - English FTS: GIN index on `search_tsv_en`; trigger maintains `search_tsv_en` from English fields (`title_en`, `author_en`, optionally `description_en`) with weights.
   - Chinese search: trigram GIN indexes on `title_zh`, `author_zh` (and `description_zh` if needed) using `gin_trgm_ops`.
@@ -137,6 +153,7 @@ Indexes, Triggers, and RPCs
   - Use RPCs where PostgREST relation selects become cumbersome or to centralize search/ranking and transactional logic.
 
 Access Layer (Server‑Side Only)
+
 - Location: `src/lib/db/**`.
 - Conventions: small functions, return exactly what API routes need, reuse enums and generated types.
 - Modules
@@ -158,6 +175,7 @@ Access Layer (Server‑Side Only)
     - `saveAdminSession(data)` / `getAdminSession(id)`.
 
 Refactor Map (Prisma → Supabase)
+
 - Replace direct Prisma imports and calls:
   - `src/app/api/orders/user/route.ts:2` → use `getUserOrders(user.id)`.
   - `src/lib/admin/function-handlers.ts:1-2` and all `prisma.*` calls → use `db/books.ts`, `db/orders.ts`, `db/admin.ts`.
@@ -165,10 +183,11 @@ Refactor Map (Prisma → Supabase)
     - `src/lib/admin/types.ts:6`
     - `src/lib/admin/function-definitions.ts:2`
     - `src/components/super-admin/super-admin-panel.tsx:19`
-    → import from `@/lib/db/enums`.
+      → import from `@/lib/db/enums`.
 - Remove manual Supabase types stub: `src/types/supabase.ts:92`. Replace with imports from `src/types/supabase.generated.ts`.
 
 Data Migration (If Needed)
+
 - Users → Profiles: map by email to `auth.users` id; backfill `profiles.role` from `user_metadata.role` where available.
 - Books: arrays → normalized tables
   - `search_tags`/`pending_tags`/`rejected_tags` → `tags` + `book_tags` + status tracked in `tag_history`.
@@ -177,6 +196,7 @@ Data Migration (If Needed)
 - Embeddings: re‑embed missing rows and build vector index afterward.
 
 Performance Playbook
+
 - Query shaping: only select needed columns; no `select *` in hot paths.
 - Pagination: prefer keyset for long lists; keep page caps.
 - FTS: English FTS weights + zh trigram similarity; store `search_tsv_en`; analyze with `EXPLAIN` and adjust indexes.
@@ -185,6 +205,7 @@ Performance Playbook
 - Denormalization: keep `orders.total_items`; consider materialized views for top books/facets with scheduled refresh.
 
 Security Verification
+
 - Manual probes with user JWTs:
   - Cross‑user reads/updates on `orders`, `carts` denied.
   - Admin‑only tables deny non‑admins.
@@ -193,63 +214,76 @@ Security Verification
 
 Step‑By‑Step Execution Plan
 Phase 0 — Confirm guardrails
-1) Confirm `profiles.role` as source of truth.
-2) Confirm embedding model + dimension (e.g., 1536) and cosine metric.
-3) Set performance budgets and pagination defaults.
+
+1. Confirm `profiles.role` as source of truth.
+2. Confirm embedding model + dimension (e.g., 1536) and cosine metric.
+3. Set performance budgets and pagination defaults.
 
 Phase 1 — Supabase project & extensions
-1) Create dev project; enable `pgvector`, `pg_trgm` (optional), `pgcrypto`/`uuid-ossp`.
-2) Configure `.env.local` with Supabase URL and anon key.
+
+1. Create dev project; enable `pgvector`, `pg_trgm` (optional), `pgcrypto`/`uuid-ossp`.
+2. Configure `.env.local` with Supabase URL and anon key.
 
 Phase 2 — Author SQL migrations
-1) Create `supabase/migrations/0001_init.sql` with tables, FKs, indexes, triggers.
-2) Create `supabase/migrations/0002_rls.sql` with RLS policies per table and `is_admin()` SECURITY DEFINER function.
-3) Create `supabase/migrations/0003_rpcs.sql` with needed RPCs (search blend, vector NN, place_order, can_place_order).
-4) Apply migrations to dev; verify `EXPLAIN` for hot queries uses indexes.
+
+1. Create `supabase/migrations/0001_init.sql` with tables, FKs, indexes, triggers.
+2. Create `supabase/migrations/0002_rls.sql` with RLS policies per table and `is_admin()` SECURITY DEFINER function.
+3. Create `supabase/migrations/0003_rpcs.sql` with needed RPCs (search blend, vector NN, place_order, can_place_order).
+4. Apply migrations to dev; verify `EXPLAIN` for hot queries uses indexes.
 
 Phase 3 — Types & enums
-1) Generate types: `supabase gen types typescript --project-id <dev-id> --schema public > src/types/supabase.generated.ts`.
-2) Add `src/lib/db/enums.ts` with `Role`, `OrderStatus`, `CategoryType` unions.
-3) Update imports in `src/lib/admin/types.ts:6`, `src/lib/admin/function-definitions.ts:2`, `src/components/super-admin/super-admin-panel.tsx:19`.
+
+1. Generate types: `supabase gen types typescript --project-id <dev-id> --schema public > src/types/supabase.generated.ts`.
+2. Add `src/lib/db/enums.ts` with `Role`, `OrderStatus`, `CategoryType` unions.
+3. Update imports in `src/lib/admin/types.ts:6`, `src/lib/admin/function-definitions.ts:2`, `src/components/super-admin/super-admin-panel.tsx:19`.
 
 Phase 4 — DB access layer
-1) Add `src/lib/db/client.ts` (server supabase client accessor).
-2) Add `src/lib/db/{books.ts,orders.ts,admin.ts}` minimal functions used by current routes.
-3) Manual smoke calls in a script or API route to validate connectivity and projections.
+
+1. Add `src/lib/db/client.ts` (server supabase client accessor).
+2. Add `src/lib/db/{books.ts,orders.ts,admin.ts}` minimal functions used by current routes.
+3. Manual smoke calls in a script or API route to validate connectivity and projections.
 
 Phase 5 — Prove path in one route
-1) Refactor `src/app/api/orders/user/route.ts:2` to use `getUserOrders`.
-2) Validate response shape parity; measure latency; adjust indexes if needed.
+
+1. Refactor `src/app/api/orders/user/route.ts:2` to use `getUserOrders`.
+2. Validate response shape parity; measure latency; adjust indexes if needed.
 
 Phase 6 — Port admin handlers
-1) Replace all `prisma.*` in `src/lib/admin/function-handlers.ts` with db helpers.
-2) Use FTS + tag join in search; add vector NN fallback when embeddings available.
-3) Add RPCs for any query that’s awkward with relation selects.
+
+1. Replace all `prisma.*` in `src/lib/admin/function-handlers.ts` with db helpers.
+2. Use FTS + tag join in search; add vector NN fallback when embeddings available.
+3. Add RPCs for any query that’s awkward with relation selects.
 
 Phase 7 — Seed and cleanup
-1) Replace Prisma seed with SQL upserts for `categories`, `system_settings`, `system_prompts`.
-2) Remove `src/lib/prisma.ts`, `prisma/**`.
-3) Remove Prisma deps in `package.json`; drop `db:seed` script; add optional `db:types` script.
+
+1. Replace Prisma seed with SQL upserts for `categories`, `system_settings`, `system_prompts`.
+2. Remove `src/lib/prisma.ts`, `prisma/**`.
+3. Remove Prisma deps in `package.json`; drop `db:seed` script; add optional `db:types` script.
 
 Phase 8 — Data migration (optional)
-1) Export data from old DB; transform to normalized structure.
-2) Import into Supabase (service role; admin workstation).
-3) Rebuild vector index after embeddings present.
+
+1. Export data from old DB; transform to normalized structure.
+2. Import into Supabase (service role; admin workstation).
+3. Rebuild vector index after embeddings present.
 
 Phase 9 — Tests & security checks
-1) Add a few Vitest unit tests for `db` helpers.
-2) Manual RLS probes; document results.
+
+1. Add a few Vitest unit tests for `db` helpers.
+2. Manual RLS probes; document results.
 
 Phase 10 — CI/CD & docs
-1) CI: lint/build; optional migration syntax check. Since `src/types/supabase.generated.ts` is committed, add a guard to fail PRs when schema changes without regenerated types (compare freshly generated types vs committed file in CI).
-2) Docs: update runbook and schema overview.
+
+1. CI: lint/build; optional migration syntax check. Since `src/types/supabase.generated.ts` is committed, add a guard to fail PRs when schema changes without regenerated types (compare freshly generated types vs committed file in CI).
+2. Docs: update runbook and schema overview.
 
 Phase 11 — Performance tuning
-1) `EXPLAIN ANALYZE` on search and listing routes; adjust indexes.
-2) Introduce keyset pagination in hot endpoints.
-3) Add short TTL caches to public lists.
+
+1. `EXPLAIN ANALYZE` on search and listing routes; adjust indexes.
+2. Introduce keyset pagination in hot endpoints.
+3. Add short TTL caches to public lists.
 
 Refactor Checklists (Repo‑Specific)
+
 - Remove Prisma
   - Delete: `src/lib/prisma.ts`.
   - Delete: `prisma/**` (schema, migrations, seed) once the Supabase path is confirmed.
@@ -262,21 +296,24 @@ Refactor Checklists (Repo‑Specific)
   - Replace `src/types/supabase.ts:92` manual stub with `src/types/supabase.generated.ts`.
 
 Operational Runbook (Dev)
-1) Create/point to Supabase dev project; set `.env.local`.
-2) Apply migrations to dev.
-3) Run type generation to `src/types/supabase.generated.ts`.
-4) Implement `src/lib/db/**` helpers.
-5) Refactor the orders route; validate.
-6) Port admin handlers; validate via Admin UI and AI chat.
-7) Remove Prisma; prune deps; `npm run lint && npm run build`.
+
+1. Create/point to Supabase dev project; set `.env.local`.
+2. Apply migrations to dev.
+3. Run type generation to `src/types/supabase.generated.ts`.
+4. Implement `src/lib/db/**` helpers.
+5. Refactor the orders route; validate.
+6. Port admin handlers; validate via Admin UI and AI chat.
+7. Remove Prisma; prune deps; `npm run lint && npm run build`.
 
 Risk Register & Mitigations
+
 - Complex joins with PostgREST can be awkward → write RPCs for combined FTS + tag + pagination and for composite result shapes.
 - RLS misconfiguration → keep policies minimal; add manual probes and (optionally) policy tests.
 - Data migration fidelity (arrays → normalized) → idempotent scripts; pre/post counts and referential checks; spot‑checks.
 - Vendor coupling → keep `src/lib/db/**` as the abstraction; if needed later, port to Drizzle/Kysely by re‑implementing these modules.
 
 Completion Definition
+
 - Codebase has no Prisma files or imports.
 - Supabase schema, RLS, and indexes are applied in dev; types generated and imported.
 - API routes and admin handlers operate via `src/lib/db/**`, pass build and manual smoke tests.

@@ -1,6 +1,7 @@
 Supabase DB Redesign — Progress Tracker
 
 Meta
+
 - Overall Status: In Progress (3/12 phases complete)
 - Current Phase: Phase 3 — Types & enums
 - Owners: Junpeng
@@ -8,6 +9,7 @@ Meta
 - Plan: doc/db-redesign/README.md
 
 Phase Checklist
+
 - [x] Phase 0 — Confirm guardrails (doc/db-redesign/README.md:188)
 - [x] Phase 1 — Supabase project & extensions (doc/db-redesign/README.md:193)
 - [x] Phase 2 — Author SQL migrations (doc/db-redesign/README.md:197)
@@ -22,6 +24,7 @@ Phase Checklist
 - [ ] Phase 11 — Performance tuning (doc/db-redesign/README.md:240)
 
 Phase 0 — Confirm guardrails (doc/db-redesign/README.md:188)
+
 - Goal: Lock core decisions (roles source, embedding model/dimension, pagination defaults, performance budgets).
 - Tasks
   - [x] Decide `profiles.role` as source of truth.
@@ -41,6 +44,7 @@ Phase 0 — Confirm guardrails (doc/db-redesign/README.md:188)
   - Status: Completed. Decisions documented; evidence linked; proceed to Phase 1.
 
 Phase 2 — Author SQL migrations (doc/db-redesign/README.md:197)
+
 - Goal: Create tables, FKs, indexes, triggers; add RLS and admin helper; add RPCs.
 - Tasks
   - [x] 0001_init.sql — schema, foreign keys (with ON DELETE), indexes, triggers (`search_tsv_en`, updated_at).
@@ -55,6 +59,7 @@ Phase 2 — Author SQL migrations (doc/db-redesign/README.md:197)
   - Status: Completed. Migrations applied successfully; RLS and RPCs created. `EXPLAIN` checks deferred until queries are exercised in Phase 5.
 
 Running Log
+
 - 2025-10-13: Created progress tracker. Initialized meta and checklist.
 - 2025-10-13: Completed Phase 0 guardrails (roles, embeddings, pagination, budgets).
 - 2025-10-13: Completed Phase 1 (linked project, created extensions migration, pushed).
@@ -62,4 +67,5 @@ Running Log
 - 2025-10-13: Refactored auth callback to Supabase profiles + metadata; added `src/lib/db/books.ts`; switched admin books GET to use Supabase; middleware admin gating now checks DB role via `is_admin()` and profiles.
 
 Open Questions / Blockers
+
 - None.

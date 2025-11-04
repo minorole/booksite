@@ -7,6 +7,7 @@ Update (2025-10-30): Vision flow is now one‑shot structured analysis (no initi
 
 Context
 The admin AI accumulated complexity across multiple layers:
+
 - Brittle JSON handling in the vision flow, scraping JSON out of free‑text and retrying on failure (legacy; now replaced by strict JSON schemas).
 - Partial usage of the OpenAI Responses API only for safe, non‑tool, non‑streaming cases (see `src/lib/openai/chat.ts:32`), leaving tools and vision on Chat Completions without structured outputs.
 - Duplicated API paths for chat: a legacy non‑stream route and a streaming orchestration route; the UI uses the streaming path only.
@@ -15,29 +16,31 @@ The admin AI accumulated complexity across multiple layers:
 Research inputs are captured in `doc/admin-ai/llm-comparison.md`, which recommends GPT‑5‑mini + Responses API with structured outputs, OpenAI Agents primitives when helpful, and image embeddings as a later optimization. The same brief advises against relying on Gemini for this project.
 
 Decision
-1) Use OpenAI Responses API with structured outputs for all vision JSON returns.
+
+1. Use OpenAI Responses API with structured outputs for all vision JSON returns.
    - Replace free‑text → JSON scraping in `analyzeBookCover` (structured stage) with response_format JSON schema.
    - Replace regex parsing in `analyzeVisualSimilarity` with a small JSON schema `{ layout_similarity, content_similarity, confidence }`.
    - Keep Chat Completions for vision specifically (to preserve image inputs) with `response_format: { type: 'json_schema', strict: true }`.
 
-2) Consolidate to the streaming orchestrator path and remove dead code.
+2. Consolidate to the streaming orchestrator path and remove dead code.
    - Keep `src/app/api/admin/ai-chat/stream/orchestrated/route.ts` (server‑orchestrated streaming with tool execution via SSE events) using AgentKit.
    - Remove the legacy non‑stream route and its orchestrator (deleted).
 
-3) Remain OpenAI‑only; no Gemini fallback.
+3. Remain OpenAI‑only; no Gemini fallback.
    - All chat/vision stays on OpenAI (GPT‑5‑mini by default); improve OCR reliability with structured outputs and precise prompts instead of vendor fallback.
 
-4) Keep duplicate detection simple for now; pgvector optional later.
+4. Keep duplicate detection simple for now; pgvector optional later.
    - Maintain Supabase text search in `src/lib/db/admin/duplicates.ts` and a single vision comparison (`src/lib/admin/services/vision/similarity.ts`).
    - Revisit pgvector for text/image embeddings only if recall/precision issues emerge at scale.
 
-5) Add minimal, high‑value unit tests under `test/` to pin contracts.
+5. Add minimal, high‑value unit tests under `test/` to pin contracts.
    - Vision structured stage returns typed JSON with `cover_url`.
    - Vision similarity parses numeric scores via strict JSON.
    - Orchestrated streaming executes tool calls and emits lifecycle events + handoffs.
    - Model selection defaults to GPT‑5‑mini when env overrides are absent.
 
 Changes (Refreshed)
+
 - Code removal (completed):
   - Deleted legacy non‑stream chat route: `src/app/api/admin/ai-chat/route.ts`.
   - Deleted non‑stream orchestrator: `src/lib/admin/chat/orchestrator.ts`.
@@ -66,15 +69,18 @@ Changes (Refreshed)
   - Removed legacy system prompt file referencing GPT‑4o; agent instructions reside alongside agent definitions.
 
 Out of Scope (for this ADR)
+
 - Introducing pgvector and embeddings in the initial simplification. This remains a future optimization once we see real duplicate‑detection pain.
 - Adding Gemini or other model vendors as fallbacks.
 
 Alternatives Considered
+
 - Keep Chat Completions + manual JSON parsing: rejected due to brittleness and higher maintenance cost versus structured outputs.
 - Adopt pgvector now: deferred; current admin‑in‑the‑loop plus one vision comparison is sufficient at present scale.
 - Multi‑vendor stack with Gemini for OCR: rejected per project directive to stay OpenAI‑only and the added operational complexity.
 
 Consequences
+
 - Pros:
   - Simpler, more reliable vision pipelines with structured outputs; no ad‑hoc JSON scraping or retry scaffolding.
   - Single, server‑orchestrated streaming path reduces duplication and improves testability.
@@ -84,10 +90,12 @@ Consequences
   - Embedding‑based duplicate detection remains deferred; text search + one vision compare may miss some near‑duplicates at larger scale.
 
 Security / Auth
+
 - The orchestrated streaming route is admin‑gated via `assertAdmin()` (`src/app/api/admin/ai-chat/stream/orchestrated/route.ts:21`).
 - Rate limiting policies still include the legacy path (`src/lib/security/limits.ts:20`), which should be updated to point at `/api/admin/ai-chat/stream/orchestrated`.
 
 Verification
+
 - Build: `npm run build` compiles successfully (Next.js output includes `/api/admin/ai-chat/stream/orchestrated`).
 - Tests: `npm run test -- test/admin-ai --run` passes. Unit tests mock OpenAI and DB calls to avoid network/DB flakiness.
 
@@ -123,20 +131,22 @@ Implementation Notes (Oct 16, 2025)
   - ADR 0002 introduced a custom streaming orchestrator. This ADR supersedes that part by adopting AgentKit as the orchestrator while keeping the streaming SSE contract compatible for the UI.
 
 Follow‑ups
-1) Rate limit + concurrency parity for the streaming route
+
+1. Rate limit + concurrency parity for the streaming route
    - Add a policy for `/api/admin/ai-chat/stream/orchestrated` in `src/lib/security/limits.ts:20`.
    - In `src/app/api/admin/ai-chat/stream/orchestrated/route.ts:17`, mirror rate limit + concurrency acquisition/release used previously on the deleted route.
 
-2) Responses API structured outputs
+2. Responses API structured outputs
    - Done: strict JSON schemas applied to initial, structured, and similarity; brittle helpers removed.
 
-3) Prompt wording cleanup
+3. Prompt wording cleanup
    - Update `src/lib/admin/system-prompts.ts:1` to remove GPT‑4o wording and keep model references neutral.
 
-4) (Optional, later) Embedding‑based duplicate detection
+4. (Optional, later) Embedding‑based duplicate detection
    - Add pgvector indexes and text embeddings first; consider image embeddings later if needed.
 
 References
+
 - Research brief: `doc/admin-ai/llm-comparison.md`
 - Prior work: ADR 0002 (server‑orchestrated chat + streaming) `doc/adr/0002-server-orchestrated-ai-chat-ui-refactor-streaming-and-gpt5-mini.md`
 - Evidence in code:
@@ -144,11 +154,12 @@ References
   - Partial Responses usage: `src/lib/openai/chat.ts:32`
   - Default model selection: `src/lib/openai/models.ts:3`
 - Streaming orchestrator function: `src/lib/admin/chat/orchestrator-agentkit.ts`
-  - Tool lifecycle events (AgentKit): Emitted by `src/lib/admin/chat/orchestrator-agentkit.ts` (handoff, assistant_delta, tool_*).
+  - Tool lifecycle events (AgentKit): Emitted by `src/lib/admin/chat/orchestrator-agentkit.ts` (handoff, assistant*delta, tool*\*).
   - Prompt wording: legacy file removed; see agents in `src/lib/admin/agents/**`.
   - Rate limits now point to the streaming route: `src/lib/security/limits.ts`.
 
 Known Gaps / Not Done Yet
+
 - Rich UI for tool results: duplicate/search results and create/update outputs are not rendered with dedicated components in chat; they appear as raw tool JSON (see `src/components/admin/ai-chat/MessageContent.tsx`).
 - Inventory niceties: no explicit increase/decrease quantity tool; no automatic low‑stock warnings surfaced by the agent.
 - Orders assistance: no stock‑shortage warning during shipping; `update_order` tool does not expose `admin_notes` or `override_monthly` although the service supports them.

@@ -1,10 +1,12 @@
 # Vision Modules — Structure and Contracts
 
 Purpose
+
 - Document how vision flows are organized after the structured-outputs refactor.
 - Provide a reference for adding or extending vision functionality without reintroducing brittle parsing.
 
 Overview (files)
+
 - `src/lib/admin/services/vision/index.ts`
   - Public re-exports for all vision functions and helpers used across the app and tests.
 
@@ -31,13 +33,16 @@ Overview (files)
   - `validateAnalysisResult(result)` — guards to verify a `VisionAnalysisResult` object.
 
 Key Contracts & Invariants
+
 - Always use strict JSON schemas (`response_format: { type: 'json_schema', strict: true }`) for vision outputs.
 - Use Chat Completions for vision (images) and Responses/AgentKit for text orchestration.
 - Include `cover_url` in structured cover/item results for downstream usage.
 - Prefer `nullable` fields over `optional` in tool schemas (see AgentKit notes); prune `null` to `undefined` before service calls when needed.
 
 Usage Examples
+
 - Structured cover analysis:
+
 ```
 const structured = await callVisionJSON('VisionAnalysisResult', structuredVisionAnalysisSchema, [
   { role: 'user', content: [
@@ -48,14 +53,16 @@ const structured = await callVisionJSON('VisionAnalysisResult', structuredVision
 ```
 
 Adding a New Vision Flow
-1) Define a schema constant in `schemas.ts` (use `nullable` for optional fields).
-2) Implement a function in a new file under `vision/` (or extend an existing one):
+
+1. Define a schema constant in `schemas.ts` (use `nullable` for optional fields).
+2. Implement a function in a new file under `vision/` (or extend an existing one):
    - Standardize URLs, call `callVisionJSON`, build the `AdminOperationResult`, and log via `logAnalysisOperation`.
-3) If agent-triggered, add a matching tool in `src/lib/admin/agents/tools.ts`.
-4) Update UI rendering in `src/components/admin/ai-chat/MessageContent.tsx` if new structured blocks are introduced.
-5) Add unit tests under `test/admin-ai/` mocking `createVisionChatCompletion` to return JSON payloads.
+3. If agent-triggered, add a matching tool in `src/lib/admin/agents/tools.ts`.
+4. Update UI rendering in `src/components/admin/ai-chat/MessageContent.tsx` if new structured blocks are introduced.
+5. Add unit tests under `test/admin-ai/` mocking `createVisionChatCompletion` to return JSON payloads.
 
 References
+
 - Orchestrated route: `src/app/api/admin/ai-chat/stream/orchestrated/route.ts`
 - Orchestrator (AgentKit): `src/lib/admin/chat/orchestrator-agentkit.ts`
 - Agents/Tools: `src/lib/admin/agents/**`

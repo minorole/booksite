@@ -16,6 +16,9 @@ All notable changes to this project will be documented in this file.
 - Apply Prettier write to code paths only (`src/**`, `scripts/**`); no functional changes.
 - Tailwind utilities are auto-sorted via `prettier-plugin-tailwindcss`.
 
+### Docs — Apply Prettier formatting (Markdown)
+- Format docs and emails markdown (`doc/**`, `emails/**/*.md`) with Prettier. No content changes.
+
 ### Admin AI — Structured‑Only Vision, Deterministic Duplicates, Orchestrator Observability
 - Vision flows simplified to one-shot structured analysis; removed the legacy “initial” stage. Adds `cover_url` to structured results. Files: `src/lib/admin/services/vision/cover-analysis.ts`, `src/lib/admin/services/vision/schemas.ts`.
 - Duplicates: embeddings-first shortlist with fused scoring (0.6 text + 0.4 image). Select top‑3 candidates: 1 from image-KNN (best) + 2 from text-KNN (best excluding image-top). Confidence gate: skip visual comparison if best fused < 0.6; otherwise visually compare only selected candidates. Files: `src/lib/admin/services/duplicates.ts`.

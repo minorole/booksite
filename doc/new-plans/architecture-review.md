@@ -93,73 +93,85 @@ Sources: instruction/AMTBCF-website-prd.md:1, doc/new-plans/rewrite-roadmap.md:1
 
 ### Gaps and Risks
 
-1) Tool message role mapping bug (blocks tool‑calling follow‑ups)
+1. Tool message role mapping bug (blocks tool‑calling follow‑ups)
+
 - Issue: Tool messages are converted to `role: 'assistant'` instead of `role: 'tool'` in the AI chat route, and tool messages sent back to OpenAI should remain `role: 'tool'` with `tool_call_id` for correct chaining.
   - Evidence: src/app/api/admin/ai-chat/route.ts:25, src/app/api/admin/ai-chat/route.ts:52
 - Impact: The model may ignore tool outputs or fail to proceed correctly with subsequent reasoning.
 - Fix: Map tool results as `{ role: 'tool', content, tool_call_id, name? }` only when sending back; never coerce to `assistant`.
 
-2) Route‑specific rate limiting not guaranteed (shared limiter instance)
+2. Route‑specific rate limiting not guaranteed (shared limiter instance)
+
 - Issue: A single global `limiter` is reused for all routes; limiter settings are built only once, so later calls with different policies reuse the first limiter configuration.
   - Evidence: src/lib/security/ratelimit.ts:24–31
 - Impact: Per‑route windows/limits/concurrency policies may not be enforced as intended.
 - Fix: Keep a `Map<string, Ratelimit>` keyed by route/policy; construct per route and cache.
 
-3) Navbar and middleware reference non‑existent pages
+3. Navbar and middleware reference non‑existent pages
+
 - Issue: Links to `/products`, `/orders`, `/profile` exist, but only `/users/orders` is implemented. Middleware protects `/orders` and `/profile`, which are missing pages.
   - Evidence: src/components/layout/navbar.tsx:20, :23, :24 and src/middleware.ts:52; orders page exists at src/app/users/orders/page.tsx:1
 - Impact: Broken navigation; unexpected redirects.
 - Fix: Point to existing routes (e.g., `/users/orders`) or add the missing pages and align middleware.
 
-4) Super Admin API endpoints are missing
+4. Super Admin API endpoints are missing
+
 - Issue: UI calls `/api/users` and `/api/users/role` endpoints that don’t exist.
   - Evidence: src/components/super-admin/super-admin-panel.tsx:59
 - Impact: Super Admin UI will fail to load/update users.
 - Fix: Implement these routes with admin guard + Prisma queries.
 
-5) Placeholders and TODOs (violates “zero tolerance” guideline)
+5. Placeholders and TODOs (violates “zero tolerance” guideline)
+
 - Issue: Analysis extract helpers return placeholders; Chat UI includes a TODO for edit UI.
   - Evidence: src/lib/admin/function-handlers.ts:348–380, src/components/admin/ai-chat/chat-interface.tsx:538
 - Impact: Initial analysis confirmations surface undefined fields; weak UX and brittle flows.
 - Fix: Remove placeholders; either depend solely on structured stage or implement minimal extraction or explicit “not available” messaging. Remove TODOs by implementing or deleting feature entry points.
 
-6) Unit test drift
+6. Unit test drift
+
 - Issue: Rate limit test imports a non‑existent export (`rateLimit`) instead of the current `checkRateLimit`.
   - Evidence: tests/unit/ratelimit.test.ts:2 vs src/lib/security/ratelimit.ts:49
 - Impact: Test suite will fail or mislead.
 - Fix: Update tests to the current API.
 
-7) Postgres full‑text search mismatch
+7. Postgres full‑text search mismatch
+
 - Issue: Prisma schema declares `@@fulltext`, but the migration does not add a tsvector/generated column or GIN index.
   - Evidence: prisma/schema.prisma:64; prisma/migrations/20241123033651_init/migration.sql lacks FTS DDL.
 - Impact: Search performance and duplicate checks rely on simple `contains` filters.
 - Fix: Add a migration for a generated tsvector and GIN index per rewrite roadmap.
 
-8) Unused/legacy dependencies and config
+8. Unused/legacy dependencies and config
+
 - Issue: `next-auth` and `@auth/prisma-adapter` are installed but unused; Sentry is installed but not initialized; a stray Next images remote pattern.
   - Evidence: package.json:1; no references in `src/` to next-auth/Sentry; next.config.js:20
 - Impact: Larger surface area; confusion for contributors.
 - Fix: Remove unused deps or wire them up; prune unused remote pattern.
 
-9) Observability gaps
+9. Observability gaps
+
 - Issue: Logging relies on console; @sentry/nextjs is not configured.
   - Evidence: No Sentry usage found in src.
 - Impact: Limited production visibility; harder incident response.
 - Fix: Initialize Sentry, add request IDs + structured logs in API routes.
 
-10) Upload path is server‑heavy
+10. Upload path is server‑heavy
+
 - Issue: Server processes base64 and uploads to Cloudinary; fine for small images but not optimal at scale.
   - Evidence: src/lib/admin/image-upload.ts:160
 - Impact: Higher server CPU/memory; potential timeouts.
 - Fix: Introduce signed direct uploads + a webhook route for post‑processing.
 
-11) AI API and streaming
+11. AI API and streaming
+
 - Issue: Using Chat Completions; streaming helper exists but UI doesn’t use streaming; Responses API would simplify future work.
   - Evidence: src/lib/openai.ts:108 (iteratorToStream) and `createChatCompletion` used non‑stream; Chat UI uses fetch JSON.
 - Impact: Slower perceived latency; more glue for tool calling.
 - Fix: Add SSE streaming endpoint/UI; evaluate moving to Responses API.
 
-12) Vector embeddings unused
+12. Vector embeddings unused
+
 - Issue: `Book.embedding` exists but not populated/queried; duplicate checks use text + ad‑hoc vision comparison prompts.
 - Impact: Missed performance/recall benefits for similarity search.
 - Fix: Add embedding pipeline (write path + search path) and appropriate index.
@@ -169,6 +181,7 @@ Sources: instruction/AMTBCF-website-prd.md:1, doc/new-plans/rewrite-roadmap.md:1
 Yes, keep the core stack. It aligns to goals and is already well‑organized. Incrementally harden and modernize where it adds clear value.
 
 Trade‑offs:
+
 - Responses API vs Chat Completions: +future‑proof tools/streaming; −migration effort. Given centralization in `src/lib/openai.ts`, the switch is contained.
 - Signed uploads + webhook: +offload compute; −adds endpoints/webhooks.
 - Zod validation at API edges: +safety; −boilerplate. Worth it for function‑call args.
@@ -178,6 +191,7 @@ Trade‑offs:
 ## Recommendations and Phasing
 
 Phase 1 — Correctness and UX polish (small PRs)
+
 - Fix tool message mapping in `ai-chat` route to preserve `role: 'tool'` and `tool_call_id`.
 - Make rate limiter instance per route/policy (cache by route).
 - Align Navbar links or add `/orders` and `/profile` pages; adjust middleware protected paths accordingly.
@@ -186,20 +200,25 @@ Phase 1 — Correctness and UX polish (small PRs)
 - Update unit test to use `checkRateLimit`.
 
 Phase 2 — Observability and validation
+
 - Initialize @sentry/nextjs on server and client. Add request IDs and a lightweight structured logger in API routes.
 - Introduce zod validation for tool call request bodies in `src/app/api/admin/function-call/route.ts`.
 
 Phase 3 — Streaming and AI API
+
 - Add SSE streaming path to `/api/admin/ai-chat`; hook ChatInterface to display streaming tokens.
 - Consider migrating to Responses API for tools/streaming parity.
 
 Phase 4 — Uploads
+
 - Add `/api/upload/sign` and Cloudinary webhook route; migrate client to signed direct uploads.
 
 Phase 5 — Search & similarity
+
 - Add FTS migration (generated tsvector + GIN) and use in search. Add vector index and an embeddings write/search path for duplicates.
 
 Phase 6 — Cleanup
+
 - Remove unused `next-auth` and `@auth/prisma-adapter` deps (or wire them intentionally). Prune unused Next images remote pattern.
 
 ## Acceptance Checks

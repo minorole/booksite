@@ -22,11 +22,9 @@ Now I'll compile the comprehensive research brief based on all the gathered info
 - **Assistants API deprecated** (sunset August 26, 2026); migration to Responses API required but well-documented[16][17][18]
 - **Vendor lock-in moderate:** Responses API is proprietary but AgentKit components (Agents SDK, ChatKit) use standard patterns; pgvector embeddings portable[5]
 
-***
+---
 
 ### Side-by-Side Comparison Matrix
-
-
 
 **Additional Context:**
 
@@ -34,7 +32,7 @@ Now I'll compile the comprehensive research brief based on all the gathered info
 - **Gemini 2.5 Flash caveats:** Excellent general capabilities (1.048M context, $0.30 input / $2.50 output) but **reports of struggles with Chinese-English translation and OCR accuracy vs. Gemini 2.0 Flash**[19][20][11]
 - **Rate limits:** OpenAI GPT-5-mini Tier 1 = 500K TPM; Gemini 2.5 Flash Tier 1 (free) = lower, Tier 3 ($1K spend) = 8M TPM[21][22]
 
-***
+---
 
 ### Detailed Evidence & Links
 
@@ -85,11 +83,11 @@ Now I'll compile the comprehensive research brief based on all the gathered info
 
 [10][3][2]
 
-| Model | Input | Cached Input | Output | Batch Input | Batch Output |
-|-------|-------|--------------|--------|-------------|--------------|
-| gpt-5 | $1.25 | $0.125 | $10.00 | $0.625 | $5.00 |
-| gpt-5-mini | $0.25 | $0.025 | $2.00 | $0.125 | $1.00 |
-| text-embedding-3-large | $0.065 | - | - | $0.00013 | - |
+| Model                  | Input  | Cached Input | Output | Batch Input | Batch Output |
+| ---------------------- | ------ | ------------ | ------ | ----------- | ------------ |
+| gpt-5                  | $1.25  | $0.125       | $10.00 | $0.625      | $5.00        |
+| gpt-5-mini             | $0.25  | $0.025       | $2.00  | $0.125      | $1.00        |
+| text-embedding-3-large | $0.065 | -            | -      | $0.00013    | -            |
 
 - **Built-in tools:** Web search $10/1K, file search $2.50/2K calls, code interpreter $0.03/container.[10]
 
@@ -107,14 +105,14 @@ Now I'll compile the comprehensive research brief based on all the gathered info
 
 **Verified:** Oct 15, 2025 (platform.openai.com/docs, openai.com/index)
 
-***
+---
 
 #### **Google Gemini 2.5 Flash (Vertex AI)**
 
 **Model Capabilities:**
 
 - **Vision:** Excellent general performance; **BUT empirical reports (Reddit r/GeminiAI, July 2025) show Gemini 2.0 Flash consistently outperforms 2.5 Flash on multilingual OCR, especially Chinese/English mixed text**. Developer tested subtitle OCR: "2.0 models seem consistently superior" for accuracy.[12][11]
-- **Bilingual CN/EN:** 
+- **Bilingual CN/EN:**
   - **Translation issues:** Gemini 2.5 Flash "cannot reliably complete Chinese-English translation tasks" per dev reports (April 2025). Sometimes outputs original Chinese, sometimes mixed CN+EN, unstable.[19]
   - **OCR:** Better suited for general OCR than translation; use explicit prompts to distinguish text-in-image vs. description.[42]
 - **Structured Outputs:** Supported; JSON schema validation; automatic function calling with schema.[43][44][45]
@@ -141,7 +139,7 @@ Now I'll compile the comprehensive research brief based on all the gathered info
 - **Evaluation:** Built-in trace grading, dataset management.[53]
 
 - **Sub-agent orchestration:** Multi-agent via ADK; hierarchical agents, task delegation, parallel tool calls supported.[56][53]
-- **State/memory:** 
+- **State/memory:**
   - **Sessions:** Short-term (current conversation).[58][57]
   - **Memory Bank:** Long-term user-level facts; `create_memory()` or `generate_memories()` from conversation; semantic search via embeddings.[55][57]
   - **Persistence:** Memory Bank managed by Agent Engine; auto-consolidation.[55]
@@ -160,11 +158,11 @@ Now I'll compile the comprehensive research brief based on all the gathered info
 
 [66][67][52]
 
-| Model | Input (text/image/video) | Audio Input | Output | Batch Input | Batch Output |
-|-------|--------------------------|-------------|--------|-------------|--------------|
-| Gemini 2.5 Flash | $0.30/1M tok | $1.00/1M tok | $2.50/1M tok | $0.15 | $1.25 |
-| Gemini 2.5 Flash-Lite | $0.10/1M tok | $0.30/1M tok | $0.40/1M tok | $0.05 | $0.20 |
-| Multimodal embedding | $0.0002/1K chars (text) | - | - | $0.0001/image | - |
+| Model                 | Input (text/image/video) | Audio Input  | Output       | Batch Input   | Batch Output |
+| --------------------- | ------------------------ | ------------ | ------------ | ------------- | ------------ |
+| Gemini 2.5 Flash      | $0.30/1M tok             | $1.00/1M tok | $2.50/1M tok | $0.15         | $1.25        |
+| Gemini 2.5 Flash-Lite | $0.10/1M tok             | $0.30/1M tok | $0.40/1M tok | $0.05         | $0.20        |
+| Multimodal embedding  | $0.0002/1K chars (text)  | -            | -            | $0.0001/image | -            |
 
 - **Grounding with Google Search:** 1,500 free/day, then $35/1K.[52]
 - **Context caching:** $0.030/1M tok/hr (Flash), $1.00/1M tok/hr storage.[52]
@@ -185,7 +183,7 @@ Now I'll compile the comprehensive research brief based on all the gathered info
 
 **Verified:** Oct 15, 2025 (cloud.google.com/vertex-ai, ai.google.dev)
 
-***
+---
 
 ### Recommended Stacks
 
@@ -267,7 +265,7 @@ Now I'll compile the comprehensive research brief based on all the gathered info
 - **Agents SDK:** Try/except in tool functions; fallback to manual entry if vision extraction fails[7]
 - **Confidence thresholds:** If vision confidence < 0.7, prompt admin to manually verify fields
 
-***
+---
 
 #### **Alternative: Google Vertex AI Stack**
 
@@ -302,13 +300,14 @@ Now I'll compile the comprehensive research brief based on all the gathered info
 - **❌ Smaller community/examples** for ADK vs. OpenAI Agents SDK
 - **❌ Vendor lock-in:** Vertex AI Agent Engine proprietary; harder to migrate than OpenAI Responses API
 
-***
+---
 
 ### Cost/Latency Estimates
 
 #### **Scenario 1: Photo-to-listing (1-2 images)**
 
 **OpenAI (gpt-5-mini):**
+
 - Vision input: ~1,000 tokens/image × 2 images = 2,000 tokens × $0.25/1M = $0.0005
 - Output (structured JSON): ~500 tokens × $2.00/1M = $0.001
 - Text embedding (title+author+desc, ~200 tokens): 200 × $0.065/1M = $0.000013
@@ -316,6 +315,7 @@ Now I'll compile the comprehensive research brief based on all the gathered info
 - **Total: ~$0.0027 per photo-to-listing**
 
 **Google Vertex AI (gemini-2.0-flash):**
+
 - Vision input: ~1,000 tokens/image × 2 = 2,000 × $0.15/1M = $0.0003
 - Output: 500 × $0.60/1M = $0.0003
 - Text embedding (Gemini, free): $0
@@ -329,38 +329,43 @@ Now I'll compile the comprehensive research brief based on all the gathered info
 #### **Scenario 2: Duplicate check (text+image embeddings + k=20 search)**
 
 **OpenAI:**
+
 - Text embedding (already generated): $0
 - Image embedding (already generated): $0
 - pgvector k-NN search: Negligible compute (2-10ms with HNSW)[71]
 - **Total: ~$0 (embeddings cached)**
 
 **Google Vertex AI:**
+
 - Same; embeddings cached
 - **Total: ~$0**
 
 **Winner:** Tie
 
-***
+---
 
 #### **Scenario 3: Typical admin edit session (10 turns, 5K in + 500 out per turn)**
 
 **OpenAI (gpt-5-mini):**
+
 - Input: 10 turns × 5,000 tokens × $0.25/1M = $0.0125
 - Output: 10 turns × 500 tokens × $2.00/1M = $0.01
 - **Total: ~$0.0225 per session**
 
 **Google Vertex AI (gemini-2.5-flash):**
+
 - Input: 10 × 5,000 × $0.30/1M = $0.015
 - Output: 10 × 500 × $2.50/1M = $0.0125
 - **Total: ~$0.0275 per session**
 
 **Winner:** OpenAI (18% cheaper for chat)
 
-***
+---
 
 #### **Daily volumes (example: 50 photo-to-listing, 200 duplicate checks, 20 edit sessions)**
 
 **OpenAI:**
+
 - Photo-to-listing: 50 × $0.0027 = $0.135
 - Duplicate checks: ~$0 (cached embeddings)
 - Edit sessions: 20 × $0.0225 = $0.45
@@ -368,6 +373,7 @@ Now I'll compile the comprehensive research brief based on all the gathered info
 - **Monthly (30 days): ~$17.70**
 
 **Google Vertex AI:**
+
 - Photo-to-listing: 50 × $0.0008 = $0.04
 - Duplicate checks: ~$0
 - Edit sessions: 20 × $0.0275 = $0.55
@@ -376,7 +382,7 @@ Now I'll compile the comprehensive research brief based on all the gathered info
 
 **Verdict:** Effectively tied at scale due to Google's lower photo cost offsetting slightly higher chat cost.
 
-***
+---
 
 **Latency (typical):**
 
@@ -391,7 +397,7 @@ Now I'll compile the comprehensive research brief based on all the gathered info
 - **Google:** Context caching for Flash ($0.030/1M tok cached vs. $0.30 regular; $1/1M tok/hr storage)[52]
 - **Both:** Batch API for 50% discount on non-time-sensitive tasks[10][52]
 
-***
+---
 
 ### Risks and Mitigations
 
@@ -400,6 +406,7 @@ Now I'll compile the comprehensive research brief based on all the gathered info
 **Risk:** Vision extraction hallucinations (wrong title, author, ISBN)
 
 **Mitigation:**
+
 - Set confidence thresholds: If model returns low confidence fields, flag for manual review
 - Show extracted fields to admin for confirmation before creating listing
 - Use structured outputs to enforce schema (e.g., ISBN must be 10 or 13 digits)[1][5]
@@ -407,6 +414,7 @@ Now I'll compile the comprehensive research brief based on all the gathered info
 **Risk:** Bilingual OCR errors (Chinese/English mixed text)
 
 **Mitigation:**
+
 - **If using OpenAI:** Prompt explicitly: "Extract text as-is, preserving Chinese characters. Do not translate."
 - **If using Google Gemini 2.5 Flash:** Switch to **Gemini 2.0 Flash** for OCR tasks based on empirical reports[12][11]
 - Fallback: If OCR confidence < 0.7, prompt admin to manually type or use Google Cloud Vision API (older OCR-specific model)[75]
@@ -414,6 +422,7 @@ Now I'll compile the comprehensive research brief based on all the gathered info
 **Risk:** Duplicate detection false positives/negatives
 
 **Mitigation:**
+
 - Tune k-NN thresholds on labeled sample data (e.g., 50 known duplicates, 50 known non-duplicates)
 - Use **hybrid scoring** (text + image fusion) to reduce reliance on one modality
 - Present top-k candidates (k=5-10) to admin with similarity scores; let admin decide
@@ -422,6 +431,7 @@ Now I'll compile the comprehensive research brief based on all the gathered info
 **Risk:** Agent loops (infinite retries, stuck handoffs)
 
 **Mitigation:**
+
 - Implement max retries (3-5) in tool functions[7]
 - Set timeouts for long-running tasks (e.g., 30s for vision extraction)[5]
 - Use **background mode** for o3/o1-pro if complex reasoning needed; poll status[31][4]
@@ -430,38 +440,44 @@ Now I'll compile the comprehensive research brief based on all the gathered info
 **Risk:** Inventory alerts not triggered (missed low-stock notifications)
 
 **Mitigation:**
+
 - Separate cron job (daily) to check inventory levels independently of agent
 - Agent logs all inventory updates to audit table; reconcile daily
 - Use Supabase real-time subscriptions to trigger alerts on stock changes[5]
 
-***
+---
 
 #### **Fallback Strategies**
 
 **Low confidence vision extraction:**
+
 - Display extracted fields with confidence scores
 - Highlight low-confidence fields in yellow; admin must manually verify
 - Offer "Manual entry" button if vision fails entirely
 
 **Duplicate check uncertainty (score 0.75-0.85, gray area):**
+
 - Present candidates as "Possible duplicates" with side-by-side comparison (image + text)
 - Admin chooses: "Merge", "Create new", or "Not a duplicate (train model)"
 - Log decision → improve thresholds over time
 
 **Function call errors (DB timeout, Cloudinary upload fails):**
+
 - Retry with exponential backoff (1s, 2s, 4s)[40]
 - If all retries fail, agent returns: "❌ Failed to create listing. Please try again or contact admin."
 - Log error + stack trace to monitoring (e.g., Sentry, Datadog)
 
 **Agent handoff failures (sub-agent unreachable):**
+
 - Timeout after 10s; fall back to main agent or prompt admin: "Duplicate check unavailable. Proceed without checking?"
 - Log incident → debug offline
 
-***
+---
 
 #### **Vendor Lock-in Mitigations**
 
 **OpenAI:**
+
 - **Responses API proprietary**, but core patterns (stateful conversations, tool calls) are standard
 - **Agents SDK (AgentKit)** uses Pythonic patterns (Agent class, handoffs, sessions); migratable to LangChain/LangGraph with effort[30][7]
 - **Embeddings portable:** text-embedding-3-large outputs standard 3072D vectors; pgvector storage is vendor-agnostic[9][73]
@@ -469,32 +485,37 @@ Now I'll compile the comprehensive research brief based on all the gathered info
 - **Rollback path:** Keep Chat Completions API as fallback (not deprecated, just less featured)[5]
 
 **Google Vertex AI:**
+
 - **Agent Engine more proprietary**; ADK is open-source but tightly coupled to Vertex AI[49][53]
 - **Embeddings portable:** Gemini Embedding + Multimodal Embedding outputs are standard vectors; pgvector-compatible[52][42]
 - **LangChain/CrewAI interop:** ADK supports these, so partial migration path exists[53]
 - **Rollback path:** Use Gemini API (AI Studio) instead of Vertex AI for lower lock-in (but loses Agent Engine features)[46][66]
 
 **General best practices:**
+
 - **Abstract LLM calls** behind service layer (e.g., `LLMService.generate(prompt, model)` → switch providers via config)
 - **Store embeddings in pgvector** (not provider-specific vector DBs)
 - **Keep business logic server-side** (Next.js API routes) so LLM layer is swappable
 - **Audit logs independent of LLM:** Store all actions in Supabase; rebuild agent workflows if needed
 
-***
+---
 
 #### **Observability**
 
 **OpenAI (AgentKit):**
+
 - **Built-in tracing** in Agents SDK: Visualize agent runs, tool calls, handoffs[6][7]
 - **Evals platform:** Trace grading, automated scoring, dataset management[6]
 - **Custom logging:** Integrate with Datadog, New Relic, or Sentry for production monitoring[33]
 
 **Google Vertex AI:**
+
 - **Agent Engine evaluation:** Built-in metrics, trace visualization[49][53]
 - **Cloud Logging:** Standard GCP logging; query via Log Explorer[53]
 - **Custom dashboards:** Export to BigQuery → Looker Studio for cost/usage dashboards[52]
 
 **Recommended setup (both vendors):**
+
 - **Log all tool calls** (timestamp, input, output, latency, error) to Supabase audit table
 - **Dashboard:** Grafana or Looker with panels for:
   - Daily photo-to-listing count
@@ -504,7 +525,7 @@ Now I'll compile the comprehensive research brief based on all the gathered info
 - **Alerts:** Slack/email if error rate > 5% or latency > 5s sustained
 - **Weekly review:** Check audit logs for patterns; adjust prompts/thresholds
 
-***
+---
 
 ### Acceptance Criteria Checklist
 
@@ -534,7 +555,7 @@ Now I'll compile the comprehensive research brief based on all the gathered info
 3. Admin edit session (10 turns, 5K in, 500 out): OpenAI ~$0.0225, Google ~$0.0275
 4. Daily volumes (50 photo, 200 dup-check, 20 sessions): Both ~$0.59/day, ~$17.70/month
 
-***
+---
 
 ### Final Recommendation
 
@@ -545,6 +566,7 @@ Now I'll compile the comprehensive research brief based on all the gathered info
 **If bilingual OCR quality proves insufficient with GPT-5-mini**, pivot to **Google Gemini 2.0 Flash** (NOT 2.5) for vision tasks based on strong empirical evidence from developer communities. You can still use OpenAI for chat/reasoning and Google for OCR in a hybrid setup.[12][11]
 
 **Avoid vendor lock-in** by:
+
 - Abstracting LLM calls behind a service layer
 - Storing embeddings in pgvector (not provider-specific vector DBs)
 - Keeping business logic server-side in Next.js API routes
@@ -554,7 +576,7 @@ Now I'll compile the comprehensive research brief based on all the gathered info
 
 **This approach balances cost, performance, maintainability, and rollback options while leveraging best-in-class native agent capabilities from either vendor.**
 
-***
+---
 
 [1](https://openai.com/index/introducing-structured-outputs-in-the-api/)
 [2](https://the-rogue-marketing.github.io/openai-api-pricing-comparison-october-2025/)

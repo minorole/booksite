@@ -1,15 +1,17 @@
 You are given a task to integrate an existing React component in the codebase
 
 The codebase should support:
-- shadcn project structure  
+
+- shadcn project structure
 - Tailwind CSS
 - Typescript
 
 If it doesn't, provide instructions on how to setup project via shadcn CLI, install Tailwind or Typescript.
 
-Determine the default path for components and styles. 
+Determine the default path for components and styles.
 If default path for components is not /components/ui, provide instructions on why it's important to create this folder
 Copy-paste this component to /components/ui folder:
+
 ```tsx
 switch.tsx
 import React, { createContext, useContext, useEffect, useState } from "react";
@@ -127,26 +129,27 @@ export default function DefaultDemo() {
 ```
 
 Copy-paste these files for dependencies:
+
 ```tsx
-shugar/tooltip-1
-import React, { useMemo } from "react";
-import { PlacesType, Tooltip as ReactTooltip } from "react-tooltip";
-import clsx from "clsx";
+shugar / tooltip - 1;
+import React, { useMemo } from 'react';
+import { PlacesType, Tooltip as ReactTooltip } from 'react-tooltip';
+import clsx from 'clsx';
 
 const types = {
-  success: "!bg-success !text-white",
-  warning: "!bg-warning !text-black",
-  error: "!bg-error !text-white",
-  violet: "!bg-violet !text-white",
-  default: "!bg-geist-foreground !text-background-100"
+  success: '!bg-success !text-white',
+  warning: '!bg-warning !text-black',
+  error: '!bg-error !text-white',
+  violet: '!bg-violet !text-white',
+  default: '!bg-geist-foreground !text-background-100',
 };
 
 interface TooltipProps {
   children: React.ReactNode;
   text: React.ReactNode;
-  position?: "top" | "bottom" | "left" | "right";
+  position?: 'top' | 'bottom' | 'left' | 'right';
   delay?: boolean;
-  boxAlign?: "left" | "right" | "center";
+  boxAlign?: 'left' | 'right' | 'center';
   type?: keyof typeof types;
   tip?: boolean;
   center?: boolean;
@@ -156,34 +159,38 @@ interface TooltipProps {
 export const Tooltip = ({
   children,
   text,
-  position = "top",
+  position = 'top',
   delay = true,
-  boxAlign = "center",
-  type = "default",
+  boxAlign = 'center',
+  type = 'default',
   tip = true,
   center = true,
-  className
+  className,
 }: TooltipProps) => {
   const id = useMemo(() => {
-    const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join(
+      '',
+    );
   }, []);
 
   return (
     <div>
-      <div id={id} className={clsx("font-sans", className)}>
+      <div id={id} className={clsx('font-sans', className)}>
         {children}
       </div>
       <ReactTooltip
         anchorSelect={`#${id}`}
-        place={`${position}${{ left: "-start", right: "-end", center: "" }[boxAlign]}` as PlacesType}
+        place={
+          `${position}${{ left: '-start', right: '-end', center: '' }[boxAlign]}` as PlacesType
+        }
         delayShow={delay ? 500 : 0}
         opacity={1}
         noArrow={!tip}
         className={clsx(
-          "!font-sans !text-[13px] !max-w-52 !rounded-lg",
+          '!max-w-52 !rounded-lg !font-sans !text-[13px]',
           types[type],
-          center ? " text-center" : " text-start"
+          center ? 'text-center' : 'text-start',
         )}
       >
         {text}
@@ -194,14 +201,16 @@ export const Tooltip = ({
 ```
 
 Install NPM dependencies:
+
 ```bash
 clsx, tailwind-merge, react-tooltip
 ```
 
 Extend existing Tailwind 4 index.css with this code (or if project uses Tailwind 3, extend tailwind.config.js or globals.css):
+
 ```css
-@import "tailwindcss";
-@import "tw-animate-css";
+@import 'tailwindcss';
+@import 'tw-animate-css';
 
 @theme inline {
   --color-context-card-border: var(--context-card-border);
@@ -249,22 +258,23 @@ Extend existing Tailwind 4 index.css with this code (or if project uses Tailwind
   --geist-error: #ff0000;
   --geist-foreground: #fff;
 }
-
 ```
 
 Implementation Guidelines
- 1. Analyze the component structure and identify all required dependencies
- 2. Review the component's argumens and state
- 3. Identify any required context providers or hooks and install them
- 4. Questions to Ask
- - What data/props will be passed to this component?
- - Are there any specific state management requirements?
- - Are there any required assets (images, icons, etc.)?
- - What is the expected responsive behavior?
- - What is the best place to use this component in the app?
 
-Steps to integrate
- 0. Copy paste all the code above in the correct directories
- 1. Install external dependencies
- 2. Fill image assets with Unsplash stock images you know exist
- 3. Use lucide-react icons for svgs or logos if component requires them
+1.  Analyze the component structure and identify all required dependencies
+2.  Review the component's argumens and state
+3.  Identify any required context providers or hooks and install them
+4.  Questions to Ask
+
+- What data/props will be passed to this component?
+- Are there any specific state management requirements?
+- Are there any required assets (images, icons, etc.)?
+- What is the expected responsive behavior?
+- What is the best place to use this component in the app?
+
+Steps to integrate 0. Copy paste all the code above in the correct directories
+
+1.  Install external dependencies
+2.  Fill image assets with Unsplash stock images you know exist
+3.  Use lucide-react icons for svgs or logos if component requires them

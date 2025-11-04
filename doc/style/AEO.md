@@ -49,16 +49,16 @@ Example FAQPage JSON‑LD:
 
 json
 {
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  "mainEntity": [{
-    "@type": "Question",
-    "name": "What is AEO?",
-    "acceptedAnswer": {
-      "@type": "Answer",
-      "text": "AEO (Answer/AI Engine Optimization) is the practice of structuring content so AI assistants can cite and link it in direct answers."
-    }
-  }]
+"@context": "https://schema.org",
+"@type": "FAQPage",
+"mainEntity": [{
+"@type": "Question",
+"name": "What is AEO?",
+"acceptedAnswer": {
+"@type": "Answer",
+"text": "AEO (Answer/AI Engine Optimization) is the practice of structuring content so AI assistants can cite and link it in direct answers."
+}
+}]
 }
 
 This example reflects Google’s FAQPage guidance and schema.org’s required fields to help assistants and search understand Q&A content.
@@ -104,11 +104,11 @@ White‑hat linking tactics aligned to AEO
     Publish research‑backed explainers, checklists, templates, and data notes tied to targeted questions, because these assets naturally attract citations from journalists and creators who need authoritative references. Promote via communities and earned channels rather than manipulative schemes, keeping the focus on making the page that users would honestly prefer over current results.
 
 SEO vs AEO quick comparison
-Aspect	SEO focus	AEO focus
-Primary surface	Rank on “10 blue links”	Earn inclusion/citations in AI answers and Overviews
-Content shape	Comprehensive pages by topic	Chunked Q&A sections that answer sub‑questions directly
-Technical signals	Crawlability, speed, structured data	Crawlability, Q&A markup, entity clarity, source trust
-Distribution	SERP CTR	Assistant citations and linked references
+Aspect SEO focus AEO focus
+Primary surface Rank on “10 blue links” Earn inclusion/citations in AI answers and Overviews
+Content shape Comprehensive pages by topic Chunked Q&A sections that answer sub‑questions directly
+Technical signals Crawlability, speed, structured data Crawlability, Q&A markup, entity clarity, source trust
+Distribution SERP CTR Assistant citations and linked references
 
 Each SEO practice still matters, but content must be packaged and marked up so assistants can quote and cite it in answer contexts.
 What to do this week

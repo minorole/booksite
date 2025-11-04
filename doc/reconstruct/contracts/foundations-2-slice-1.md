@@ -1,6 +1,7 @@
 Contracts: Foundations-2 Slice 1
 
 OpenAI Client Refactor
+
 - Goal: remove eager failure and global client; use a lazy, role-aware client per call.
 - Remove throw (import-time): src/lib/openai.ts:73
 - Remove module-time client creation: src/lib/openai.ts:76-81
@@ -12,6 +13,7 @@ OpenAI Client Refactor
   - createChatCompletion and createVisionChatCompletion call getOpenAIClient('ADMIN') internally for now.
 
 Rate Limit Wrapper
+
 - Goal: basic per-user rate limit for heavy endpoints.
 - Module: src/lib/security/ratelimit.ts (new)
 - Usage points (wrap at top of handler):
@@ -23,6 +25,7 @@ Rate Limit Wrapper
   - 429 payload: { error: "Rate limit exceeded" }
 
 Central Guards
+
 - Goal: replace copy-paste Supabase checks with helpers.
 - Module: src/lib/security/guards.ts (new)
 - Functions:
@@ -35,34 +38,35 @@ Central Guards
   - src/app/api/admin/manual/books/route.ts:12-21
 
 Orders API (/api/orders/user)
+
 - Method: GET
 - Auth: required (assertUser)
 - Response shape expected by src/app/users/orders/page.tsx:33
   {
-    orders: [
-      {
-        id: string,
-        status: string,
-        total_items: number,
-        created_at: string,
-        shipping_address: string,
-        order_items: [
-          {
-            book: { title_en: string, title_zh: string },
-            quantity: number
-          }
-        ]
-      }
-    ]
+  orders: [
+  {
+  id: string,
+  status: string,
+  total_items: number,
+  created_at: string,
+  shipping_address: string,
+  order_items: [
+  {
+  book: { title_en: string, title_zh: string },
+  quantity: number
+  }
+  ]
+  }
+  ]
   }
 - Error codes: 401 unauthorized; 500 server error
 - Notes: include minimal joins for titles and quantities; format address as a simple string.
 
 Env Typing
+
 - Module: src/lib/config/env.ts (new)
 - Must expose typed getters for required vars:
   - DATABASE_URL, DIRECT_URL, OPENAI_API_KEY, OPENAI_API_KEY_USER,
     NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY,
     NEXT_PUBLIC_SUPER_ADMIN_EMAIL, CLOUDINARY_URL
 - Behavior: parsing module should not throw on import; getters must validate and throw with a clear error message.
-

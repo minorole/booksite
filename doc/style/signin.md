@@ -1,15 +1,17 @@
 You are given a task to integrate an existing React component in the codebase
 
 The codebase should support:
-- shadcn project structure  
+
+- shadcn project structure
 - Tailwind CSS
 - Typescript
 
 If it doesn't, provide instructions on how to setup project via shadcn CLI, install Tailwind or Typescript.
 
-Determine the default path for components and styles. 
+Determine the default path for components and styles.
 If default path for components is not /components/ui, provide instructions on why it's important to create this folder
 Copy-paste this component to /components/ui folder:
+
 ```tsx
 sign-in-flow-1.tsx
 "use client";
@@ -43,7 +45,7 @@ interface ShaderProps {
 interface SignInPageProps {
   className?: string;
 }
-      
+
 export const CanvasRevealEffect = ({
   animationSpeed = 10,
   opacities = [0.3, 0.3, 0.3, 0.5, 0.5, 0.5, 0.8, 0.8, 0.8, 1],
@@ -87,7 +89,7 @@ export const CanvasRevealEffect = ({
   );
 };
 
-    
+
 interface DotMatrixProps {
   colors?: number[][];
   opacities?: number[];
@@ -534,24 +536,24 @@ export const SignInPage = ({ className }: SignInPageProps) => {
       const newCode = [...code];
       newCode[index] = value;
       setCode(newCode);
-      
+
       // Focus next input if value is entered
       if (value && index < 5) {
         codeInputRefs.current[index + 1]?.focus();
       }
-      
+
       // Check if code is complete
       if (index === 5 && value) {
         const isComplete = newCode.every(digit => digit.length === 1);
         if (isComplete) {
           // First show the new reverse canvas
           setReverseCanvasVisible(true);
-          
+
           // Then hide the original canvas after a small delay
           setTimeout(() => {
             setInitialCanvasVisible(false);
           }, 50);
-          
+
           // Transition to success screen after animation
           setTimeout(() => {
             setStep("success");
@@ -593,7 +595,7 @@ export const SignInPage = ({ className }: SignInPageProps) => {
             />
           </div>
         )}
-        
+
         {/* Reverse canvas (appears when code is complete) */}
         {reverseCanvasVisible && (
           <div className="absolute inset-0">
@@ -609,11 +611,11 @@ export const SignInPage = ({ className }: SignInPageProps) => {
             />
           </div>
         )}
-        
+
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(0,0,0,1)_0%,_transparent_100%)]" />
         <div className="absolute top-0 left-0 right-0 h-1/3 bg-gradient-to-b from-black to-transparent" />
       </div>
-      
+
       {/* Content Layer */}
       <div className="relative z-10 flex flex-col flex-1">
         {/* Top navigation */}
@@ -626,7 +628,7 @@ export const SignInPage = ({ className }: SignInPageProps) => {
             <div className="w-full mt-[150px] max-w-sm">
               <AnimatePresence mode="wait">
                 {step === "email" ? (
-                  <motion.div 
+                  <motion.div
                     key="email-step"
                     initial={{ opacity: 0, x: -100 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -638,31 +640,31 @@ export const SignInPage = ({ className }: SignInPageProps) => {
                       <h1 className="text-[2.5rem] font-bold leading-[1.1] tracking-tight text-white">Welcome Developer</h1>
                       <p className="text-[1.8rem] text-white/70 font-light">Your sign in component</p>
                     </div>
-                    
-                    
+
+
                     <div className="space-y-4">
                       <button className="backdrop-blur-[2px] w-full flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-full py-3 px-4 transition-colors">
                         <span className="text-lg">G</span>
                         <span>Sign in with Google</span>
                       </button>
-                      
+
                       <div className="flex items-center gap-4">
                         <div className="h-px bg-white/10 flex-1" />
                         <span className="text-white/40 text-sm">or</span>
                         <div className="h-px bg-white/10 flex-1" />
                       </div>
-                      
+
                       <form onSubmit={handleEmailSubmit}>
                         <div className="relative">
-                          <input 
-                            type="email" 
+                          <input
+                            type="email"
                             placeholder="info@gmail.com"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             className="w-full backdrop-blur-[1px] text-white border-1 border-white/10 rounded-full py-3 px-4 focus:outline-none focus:border focus:border-white/30 text-center"
                             required
                           />
-                          <button 
+                          <button
                             type="submit"
                             className="absolute right-1.5 top-1.5 text-white w-9 h-9 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors group overflow-hidden"
                           >
@@ -678,13 +680,13 @@ export const SignInPage = ({ className }: SignInPageProps) => {
                         </div>
                       </form>
                     </div>
-                    
+
                     <p className="text-xs text-white/40 pt-10">
                       By signing up, you agree to the <Link href="#" className="underline text-white/40 hover:text-white/60 transition-colors">MSA</Link>, <Link href="#" className="underline text-white/40 hover:text-white/60 transition-colors">Product Terms</Link>, <Link href="#" className="underline text-white/40 hover:text-white/60 transition-colors">Policies</Link>, <Link href="#" className="underline text-white/40 hover:text-white/60 transition-colors">Privacy Notice</Link>, and <Link href="#" className="underline text-white/40 hover:text-white/60 transition-colors">Cookie Notice</Link>.
                     </p>
                   </motion.div>
                 ) : step === "code" ? (
-                  <motion.div 
+                  <motion.div
                     key="code-step"
                     initial={{ opacity: 0, x: 100 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -696,7 +698,7 @@ export const SignInPage = ({ className }: SignInPageProps) => {
                       <h1 className="text-[2.5rem] font-bold leading-[1.1] tracking-tight text-white">We sent you a code</h1>
                       <p className="text-[1.25rem] text-white/50 font-light">Please enter it</p>
                     </div>
-                    
+
                     <div className="w-full">
                       <div className="relative rounded-full py-4 px-5 border border-white/10 bg-transparent">
                         <div className="flex items-center justify-center">
@@ -729,9 +731,9 @@ export const SignInPage = ({ className }: SignInPageProps) => {
                         </div>
                       </div>
                     </div>
-                    
+
                     <div>
-                      <motion.p 
+                      <motion.p
                         className="text-white/50 hover:text-white/70 transition-colors cursor-pointer text-sm"
                         whileHover={{ scale: 1.02 }}
                         transition={{ duration: 0.2 }}
@@ -739,9 +741,9 @@ export const SignInPage = ({ className }: SignInPageProps) => {
                         Resend code
                       </motion.p>
                     </div>
-                    
+
                     <div className="flex w-full gap-3">
-                      <motion.button 
+                      <motion.button
                         onClick={handleBackClick}
                         className="rounded-full bg-white text-black font-medium px-8 py-3 hover:bg-white/90 transition-colors w-[30%]"
                         whileHover={{ scale: 1.02 }}
@@ -750,10 +752,10 @@ export const SignInPage = ({ className }: SignInPageProps) => {
                       >
                         Back
                       </motion.button>
-                      <motion.button 
+                      <motion.button
                         className={`flex-1 rounded-full font-medium py-3 border transition-all duration-300 ${
-                          code.every(d => d !== "") 
-                          ? "bg-white text-black border-transparent hover:bg-white/90 cursor-pointer" 
+                          code.every(d => d !== "")
+                          ? "bg-white text-black border-transparent hover:bg-white/90 cursor-pointer"
                           : "bg-[#111] text-white/50 border-white/10 cursor-not-allowed"
                         }`}
                         disabled={!code.every(d => d !== "")}
@@ -761,7 +763,7 @@ export const SignInPage = ({ className }: SignInPageProps) => {
                         Continue
                       </motion.button>
                     </div>
-                    
+
                     <div className="pt-16">
                       <p className="text-xs text-white/40">
                         By signing up, you agree to the <Link href="#" className="underline text-white/40 hover:text-white/60 transition-colors">MSA</Link>, <Link href="#" className="underline text-white/40 hover:text-white/60 transition-colors">Product Terms</Link>, <Link href="#" className="underline text-white/40 hover:text-white/60 transition-colors">Policies</Link>, <Link href="#" className="underline text-white/40 hover:text-white/60 transition-colors">Privacy Notice</Link>, and <Link href="#" className="underline text-white/40 hover:text-white/60 transition-colors">Cookie Notice</Link>.
@@ -769,7 +771,7 @@ export const SignInPage = ({ className }: SignInPageProps) => {
                     </div>
                   </motion.div>
                 ) : (
-                  <motion.div 
+                  <motion.div
                     key="success-step"
                     initial={{ opacity: 0, y: 50 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -780,8 +782,8 @@ export const SignInPage = ({ className }: SignInPageProps) => {
                       <h1 className="text-[2.5rem] font-bold leading-[1.1] tracking-tight text-white">You're in!</h1>
                       <p className="text-[1.25rem] text-white/50 font-light">Welcome</p>
                     </div>
-                    
-                    <motion.div 
+
+                    <motion.div
                       initial={{ scale: 0.8, opacity: 0 }}
                       animate={{ scale: 1, opacity: 1 }}
                       transition={{ duration: 0.5, delay: 0.5 }}
@@ -793,8 +795,8 @@ export const SignInPage = ({ className }: SignInPageProps) => {
                         </svg>
                       </div>
                     </motion.div>
-                    
-                    <motion.button 
+
+                    <motion.button
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       transition={{ delay: 1 }}
@@ -807,7 +809,7 @@ export const SignInPage = ({ className }: SignInPageProps) => {
               </AnimatePresence>
             </div>
           </div>
-          
+
         </div>
       </div>
     </div>
@@ -832,23 +834,26 @@ export { DemoOne };
 ```
 
 Install NPM dependencies:
+
 ```bash
 next, three, framer-motion, @react-three/fiber
 ```
 
 Implementation Guidelines
- 1. Analyze the component structure and identify all required dependencies
- 2. Review the component's argumens and state
- 3. Identify any required context providers or hooks and install them
- 4. Questions to Ask
- - What data/props will be passed to this component?
- - Are there any specific state management requirements?
- - Are there any required assets (images, icons, etc.)?
- - What is the expected responsive behavior?
- - What is the best place to use this component in the app?
 
-Steps to integrate
- 0. Copy paste all the code above in the correct directories
- 1. Install external dependencies
- 2. Fill image assets with Unsplash stock images you know exist
- 3. Use lucide-react icons for svgs or logos if component requires them
+1.  Analyze the component structure and identify all required dependencies
+2.  Review the component's argumens and state
+3.  Identify any required context providers or hooks and install them
+4.  Questions to Ask
+
+- What data/props will be passed to this component?
+- Are there any specific state management requirements?
+- Are there any required assets (images, icons, etc.)?
+- What is the expected responsive behavior?
+- What is the best place to use this component in the app?
+
+Steps to integrate 0. Copy paste all the code above in the correct directories
+
+1.  Install external dependencies
+2.  Fill image assets with Unsplash stock images you know exist
+3.  Use lucide-react icons for svgs or logos if component requires them

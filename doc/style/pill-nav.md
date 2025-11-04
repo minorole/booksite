@@ -6,58 +6,58 @@ import PillNav from './PillNav';
 import logo from '/path/to/logo.svg';
 
 <PillNav
-  logo={logo}
-  logoAlt="Company Logo"
-  items={[
-    { label: 'Home', href: '/' },
-    { label: 'About', href: '/about' },
-    { label: 'Services', href: '/services' },
-    { label: 'Contact', href: '/contact' }
-  ]}
-  activeHref="/"
-  className="custom-nav"
-  ease="power2.easeOut"
-  baseColor="#000000"
-  pillColor="#ffffff"
-  hoveredPillTextColor="#ffffff"
-  pillTextColor="#000000"
+logo={logo}
+logoAlt="Company Logo"
+items={[
+{ label: 'Home', href: '/' },
+{ label: 'About', href: '/about' },
+{ label: 'Services', href: '/services' },
+{ label: 'Contact', href: '/contact' }
+]}
+activeHref="/"
+className="custom-nav"
+ease="power2.easeOut"
+baseColor="#000000"
+pillColor="#ffffff"
+hoveredPillTextColor="#ffffff"
+pillTextColor="#000000"
 />
 
-code: 
+code:
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { gsap } from 'gsap';
 
 const PillNav = ({
-  logo,
-  logoAlt = 'Logo',
-  items,
-  activeHref,
-  className = '',
-  ease = 'power3.easeOut',
-  baseColor = '#fff',
-  pillColor = '#060010',
-  hoveredPillTextColor = '#060010',
-  pillTextColor,
-  onMobileMenuClick,
-  initialLoadAnimation = true
+logo,
+logoAlt = 'Logo',
+items,
+activeHref,
+className = '',
+ease = 'power3.easeOut',
+baseColor = '#fff',
+pillColor = '#060010',
+hoveredPillTextColor = '#060010',
+pillTextColor,
+onMobileMenuClick,
+initialLoadAnimation = true
 }) => {
-  const resolvedPillTextColor = pillTextColor ?? baseColor;
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const circleRefs = useRef([]);
-  const tlRefs = useRef([]);
-  const activeTweenRefs = useRef([]);
-  const logoImgRef = useRef(null);
-  const logoTweenRef = useRef(null);
-  const hamburgerRef = useRef(null);
-  const mobileMenuRef = useRef(null);
-  const navItemsRef = useRef(null);
-  const logoRef = useRef(null);
+const resolvedPillTextColor = pillTextColor ?? baseColor;
+const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+const circleRefs = useRef([]);
+const tlRefs = useRef([]);
+const activeTweenRefs = useRef([]);
+const logoImgRef = useRef(null);
+const logoTweenRef = useRef(null);
+const hamburgerRef = useRef(null);
+const mobileMenuRef = useRef(null);
+const navItemsRef = useRef(null);
+const logoRef = useRef(null);
 
-  useEffect(() => {
-    const layout = () => {
-      circleRefs.current.forEach(circle => {
-        if (!circle?.parentElement) return;
+useEffect(() => {
+const layout = () => {
+circleRefs.current.forEach(circle => {
+if (!circle?.parentElement) return;
 
         const pill = circle.parentElement;
         const rect = pill.getBoundingClientRect();
@@ -142,46 +142,47 @@ const PillNav = ({
     }
 
     return () => window.removeEventListener('resize', onResize);
-  }, [items, ease, initialLoadAnimation]);
 
-  const handleEnter = i => {
-    const tl = tlRefs.current[i];
-    if (!tl) return;
-    activeTweenRefs.current[i]?.kill();
-    activeTweenRefs.current[i] = tl.tweenTo(tl.duration(), {
-      duration: 0.3,
-      ease,
-      overwrite: 'auto'
-    });
-  };
+}, [items, ease, initialLoadAnimation]);
 
-  const handleLeave = i => {
-    const tl = tlRefs.current[i];
-    if (!tl) return;
-    activeTweenRefs.current[i]?.kill();
-    activeTweenRefs.current[i] = tl.tweenTo(0, {
-      duration: 0.2,
-      ease,
-      overwrite: 'auto'
-    });
-  };
+const handleEnter = i => {
+const tl = tlRefs.current[i];
+if (!tl) return;
+activeTweenRefs.current[i]?.kill();
+activeTweenRefs.current[i] = tl.tweenTo(tl.duration(), {
+duration: 0.3,
+ease,
+overwrite: 'auto'
+});
+};
 
-  const handleLogoEnter = () => {
-    const img = logoImgRef.current;
-    if (!img) return;
-    logoTweenRef.current?.kill();
-    gsap.set(img, { rotate: 0 });
-    logoTweenRef.current = gsap.to(img, {
-      rotate: 360,
-      duration: 0.2,
-      ease,
-      overwrite: 'auto'
-    });
-  };
+const handleLeave = i => {
+const tl = tlRefs.current[i];
+if (!tl) return;
+activeTweenRefs.current[i]?.kill();
+activeTweenRefs.current[i] = tl.tweenTo(0, {
+duration: 0.2,
+ease,
+overwrite: 'auto'
+});
+};
 
-  const toggleMobileMenu = () => {
-    const newState = !isMobileMenuOpen;
-    setIsMobileMenuOpen(newState);
+const handleLogoEnter = () => {
+const img = logoImgRef.current;
+if (!img) return;
+logoTweenRef.current?.kill();
+gsap.set(img, { rotate: 0 });
+logoTweenRef.current = gsap.to(img, {
+rotate: 360,
+duration: 0.2,
+ease,
+overwrite: 'auto'
+});
+};
+
+const toggleMobileMenu = () => {
+const newState = !isMobileMenuOpen;
+setIsMobileMenuOpen(newState);
 
     const hamburger = hamburgerRef.current;
     const menu = mobileMenuRef.current;
@@ -228,72 +229,70 @@ const PillNav = ({
     }
 
     onMobileMenuClick?.();
-  };
 
-  const isExternalLink = href =>
-    href.startsWith('http://') ||
-    href.startsWith('https://') ||
-    href.startsWith('//') ||
-    href.startsWith('mailto:') ||
-    href.startsWith('tel:') ||
-    href.startsWith('#');
+};
 
-  const isRouterLink = href => href && !isExternalLink(href);
+const isExternalLink = href =>
+href.startsWith('http://') ||
+href.startsWith('https://') ||
+href.startsWith('//') ||
+href.startsWith('mailto:') ||
+href.startsWith('tel:') ||
+href.startsWith('#');
 
-  const cssVars = {
-    ['--base']: baseColor,
-    ['--pill-bg']: pillColor,
-    ['--hover-text']: hoveredPillTextColor,
-    ['--pill-text']: resolvedPillTextColor,
-    ['--nav-h']: '42px',
-    ['--logo']: '36px',
-    ['--pill-pad-x']: '18px',
-    ['--pill-gap']: '3px'
-  };
+const isRouterLink = href => href && !isExternalLink(href);
 
-  return (
-    <div className="absolute top-[1em] z-[1000] w-full left-0 md:w-auto md:left-auto">
-      <nav
-        className={`w-full md:w-max flex items-center justify-between md:justify-start box-border px-4 md:px-0 ${className}`}
-        aria-label="Primary"
-        style={cssVars}
-      >
-        {isRouterLink(items?.[0]?.href) ? (
-          <Link
-            to={items[0].href}
-            aria-label="Home"
-            onMouseEnter={handleLogoEnter}
-            role="menuitem"
-            ref={el => {
-              logoRef.current = el;
-            }}
-            className="rounded-full p-2 inline-flex items-center justify-center overflow-hidden"
-            style={{
+const cssVars = {
+['--base']: baseColor,
+['--pill-bg']: pillColor,
+['--hover-text']: hoveredPillTextColor,
+['--pill-text']: resolvedPillTextColor,
+['--nav-h']: '42px',
+['--logo']: '36px',
+['--pill-pad-x']: '18px',
+['--pill-gap']: '3px'
+};
+
+return (
+<div className="absolute top-[1em] z-[1000] w-full left-0 md:w-auto md:left-auto">
+<nav
+className={`w-full md:w-max flex items-center justify-between md:justify-start box-border px-4 md:px-0 ${className}`}
+aria-label="Primary"
+style={cssVars} >
+{isRouterLink(items?.[0]?.href) ? (
+<Link
+to={items[0].href}
+aria-label="Home"
+onMouseEnter={handleLogoEnter}
+role="menuitem"
+ref={el => {
+logoRef.current = el;
+}}
+className="rounded-full p-2 inline-flex items-center justify-center overflow-hidden"
+style={{
               width: 'var(--nav-h)',
               height: 'var(--nav-h)',
               background: 'var(--base, #000)'
-            }}
-          >
-            <img src={logo} alt={logoAlt} ref={logoImgRef} className="w-full h-full object-cover block" />
-          </Link>
-        ) : (
-          <a
-            href={items?.[0]?.href || '#'}
-            aria-label="Home"
-            onMouseEnter={handleLogoEnter}
-            ref={el => {
-              logoRef.current = el;
-            }}
-            className="rounded-full p-2 inline-flex items-center justify-center overflow-hidden"
-            style={{
+            }} >
+<img src={logo} alt={logoAlt} ref={logoImgRef} className="w-full h-full object-cover block" />
+</Link>
+) : (
+<a
+href={items?.[0]?.href || '#'}
+aria-label="Home"
+onMouseEnter={handleLogoEnter}
+ref={el => {
+logoRef.current = el;
+}}
+className="rounded-full p-2 inline-flex items-center justify-center overflow-hidden"
+style={{
               width: 'var(--nav-h)',
               height: 'var(--nav-h)',
               background: 'var(--base, #000)'
-            }}
-          >
-            <img src={logo} alt={logoAlt} ref={logoImgRef} className="w-full h-full object-cover block" />
-          </a>
-        )}
+            }} >
+<img src={logo} alt={logoAlt} ref={logoImgRef} className="w-full h-full object-cover block" />
+</a>
+)}
 
         <div
           ref={navItemsRef}
@@ -475,7 +474,8 @@ const PillNav = ({
         </ul>
       </div>
     </div>
-  );
+
+);
 };
 
 export default PillNav;

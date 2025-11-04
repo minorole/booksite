@@ -1,19 +1,19 @@
 npm install gsap
 
-useage: 
+useage:
 import StaggeredMenu from './StaggeredMenu';
 
 const menuItems = [
-  { label: 'Home', ariaLabel: 'Go to home page', link: '/' },
-  { label: 'About', ariaLabel: 'Learn about us', link: '/about' },
-  { label: 'Services', ariaLabel: 'View our services', link: '/services' },
-  { label: 'Contact', ariaLabel: 'Get in touch', link: '/contact' }
+{ label: 'Home', ariaLabel: 'Go to home page', link: '/' },
+{ label: 'About', ariaLabel: 'Learn about us', link: '/about' },
+{ label: 'Services', ariaLabel: 'View our services', link: '/services' },
+{ label: 'Contact', ariaLabel: 'Get in touch', link: '/contact' }
 ];
 
 const socialItems = [
-  { label: 'Twitter', link: 'https://twitter.com' },
-  { label: 'GitHub', link: 'https://github.com' },
-  { label: 'LinkedIn', link: 'https://linkedin.com' }
+{ label: 'Twitter', link: 'https://twitter.com' },
+{ label: 'GitHub', link: 'https://github.com' },
+{ label: 'LinkedIn', link: 'https://linkedin.com' }
 ];
 
 <div style={{ height: '100vh', background: '#1a1a1a' }}>
@@ -38,52 +38,52 @@ code: import React, { useCallback, useLayoutEffect, useRef, useState } from 'rea
 import { gsap } from 'gsap';
 
 export const StaggeredMenu = ({
-  position = 'right',
-  colors = ['#B19EEF', '#5227FF'],
-  items = [],
-  socialItems = [],
-  displaySocials = true,
-  displayItemNumbering = true,
-  className,
-  logoUrl = '/src/assets/logos/reactbits-gh-white.svg',
-  menuButtonColor = '#fff',
-  openMenuButtonColor = '#fff',
-  changeMenuColorOnOpen = true,
-  isFixed = false,
-  accentColor = '#5227FF',
-  onMenuOpen,
-  onMenuClose
+position = 'right',
+colors = ['#B19EEF', '#5227FF'],
+items = [],
+socialItems = [],
+displaySocials = true,
+displayItemNumbering = true,
+className,
+logoUrl = '/src/assets/logos/reactbits-gh-white.svg',
+menuButtonColor = '#fff',
+openMenuButtonColor = '#fff',
+changeMenuColorOnOpen = true,
+isFixed = false,
+accentColor = '#5227FF',
+onMenuOpen,
+onMenuClose
 }) => {
-  const [open, setOpen] = useState(false);
-  const openRef = useRef(false);
+const [open, setOpen] = useState(false);
+const openRef = useRef(false);
 
-  const panelRef = useRef(null);
-  const preLayersRef = useRef(null);
-  const preLayerElsRef = useRef([]);
+const panelRef = useRef(null);
+const preLayersRef = useRef(null);
+const preLayerElsRef = useRef([]);
 
-  const plusHRef = useRef(null);
-  const plusVRef = useRef(null);
-  const iconRef = useRef(null);
+const plusHRef = useRef(null);
+const plusVRef = useRef(null);
+const iconRef = useRef(null);
 
-  const textInnerRef = useRef(null);
-  const textWrapRef = useRef(null);
-  const [textLines, setTextLines] = useState(['Menu', 'Close']);
+const textInnerRef = useRef(null);
+const textWrapRef = useRef(null);
+const [textLines, setTextLines] = useState(['Menu', 'Close']);
 
-  const openTlRef = useRef(null);
-  const closeTweenRef = useRef(null);
-  const spinTweenRef = useRef(null);
-  const textCycleAnimRef = useRef(null);
-  const colorTweenRef = useRef(null);
+const openTlRef = useRef(null);
+const closeTweenRef = useRef(null);
+const spinTweenRef = useRef(null);
+const textCycleAnimRef = useRef(null);
+const colorTweenRef = useRef(null);
 
-  const toggleBtnRef = useRef(null);
-  const busyRef = useRef(false);
+const toggleBtnRef = useRef(null);
+const busyRef = useRef(false);
 
-  const itemEntranceTweenRef = useRef(null);
+const itemEntranceTweenRef = useRef(null);
 
-  useLayoutEffect(() => {
-    const ctx = gsap.context(() => {
-      const panel = panelRef.current;
-      const preContainer = preLayersRef.current;
+useLayoutEffect(() => {
+const ctx = gsap.context(() => {
+const panel = panelRef.current;
+const preContainer = preLayersRef.current;
 
       const plusH = plusHRef.current;
       const plusV = plusVRef.current;
@@ -110,12 +110,13 @@ export const StaggeredMenu = ({
       if (toggleBtnRef.current) gsap.set(toggleBtnRef.current, { color: menuButtonColor });
     });
     return () => ctx.revert();
-  }, [menuButtonColor, position]);
 
-  const buildOpenTimeline = useCallback(() => {
-    const panel = panelRef.current;
-    const layers = preLayerElsRef.current;
-    if (!panel) return null;
+}, [menuButtonColor, position]);
+
+const buildOpenTimeline = useCallback(() => {
+const panel = panelRef.current;
+const layers = preLayerElsRef.current;
+if (!panel) return null;
 
     openTlRef.current?.kill();
     if (closeTweenRef.current) {
@@ -195,26 +196,27 @@ export const StaggeredMenu = ({
 
     openTlRef.current = tl;
     return tl;
-  }, []);
 
-  const playOpen = useCallback(() => {
-    if (busyRef.current) return;
-    busyRef.current = true;
-    const tl = buildOpenTimeline();
-    if (tl) {
-      tl.eventCallback('onComplete', () => {
-        busyRef.current = false;
-      });
-      tl.play(0);
-    } else {
-      busyRef.current = false;
-    }
-  }, [buildOpenTimeline]);
+}, []);
 
-  const playClose = useCallback(() => {
-    openTlRef.current?.kill();
-    openTlRef.current = null;
-    itemEntranceTweenRef.current?.kill();
+const playOpen = useCallback(() => {
+if (busyRef.current) return;
+busyRef.current = true;
+const tl = buildOpenTimeline();
+if (tl) {
+tl.eventCallback('onComplete', () => {
+busyRef.current = false;
+});
+tl.play(0);
+} else {
+busyRef.current = false;
+}
+}, [buildOpenTimeline]);
+
+const playClose = useCallback(() => {
+openTlRef.current?.kill();
+openTlRef.current = null;
+itemEntranceTweenRef.current?.kill();
 
     const panel = panelRef.current;
     const layers = preLayerElsRef.current;
@@ -245,13 +247,14 @@ export const StaggeredMenu = ({
         busyRef.current = false;
       }
     });
-  }, [position]);
 
-  const animateIcon = useCallback(opening => {
-    const icon = iconRef.current;
-    const h = plusHRef.current;
-    const v = plusVRef.current;
-    if (!icon || !h || !v) return;
+}, [position]);
+
+const animateIcon = useCallback(opening => {
+const icon = iconRef.current;
+const h = plusHRef.current;
+const v = plusVRef.current;
+if (!icon || !h || !v) return;
 
     spinTweenRef.current?.kill();
 
@@ -268,37 +271,38 @@ export const StaggeredMenu = ({
         .to(v, { rotate: 90, duration: 0.35 }, 0)
         .to(icon, { rotate: 0, duration: 0.001 }, 0);
     }
-  }, []);
 
-  const animateColor = useCallback(
-    opening => {
-      const btn = toggleBtnRef.current;
-      if (!btn) return;
-      colorTweenRef.current?.kill();
-      if (changeMenuColorOnOpen) {
-        const targetColor = opening ? openMenuButtonColor : menuButtonColor;
-        colorTweenRef.current = gsap.to(btn, { color: targetColor, delay: 0.18, duration: 0.3, ease: 'power2.out' });
-      } else {
-        gsap.set(btn, { color: menuButtonColor });
-      }
-    },
-    [openMenuButtonColor, menuButtonColor, changeMenuColorOnOpen]
-  );
+}, []);
 
-  React.useEffect(() => {
-    if (toggleBtnRef.current) {
-      if (changeMenuColorOnOpen) {
-        const targetColor = openRef.current ? openMenuButtonColor : menuButtonColor;
-        gsap.set(toggleBtnRef.current, { color: targetColor });
-      } else {
-        gsap.set(toggleBtnRef.current, { color: menuButtonColor });
-      }
-    }
-  }, [changeMenuColorOnOpen, menuButtonColor, openMenuButtonColor]);
+const animateColor = useCallback(
+opening => {
+const btn = toggleBtnRef.current;
+if (!btn) return;
+colorTweenRef.current?.kill();
+if (changeMenuColorOnOpen) {
+const targetColor = opening ? openMenuButtonColor : menuButtonColor;
+colorTweenRef.current = gsap.to(btn, { color: targetColor, delay: 0.18, duration: 0.3, ease: 'power2.out' });
+} else {
+gsap.set(btn, { color: menuButtonColor });
+}
+},
+[openMenuButtonColor, menuButtonColor, changeMenuColorOnOpen]
+);
 
-  const animateText = useCallback(opening => {
-    const inner = textInnerRef.current;
-    if (!inner) return;
+React.useEffect(() => {
+if (toggleBtnRef.current) {
+if (changeMenuColorOnOpen) {
+const targetColor = openRef.current ? openMenuButtonColor : menuButtonColor;
+gsap.set(toggleBtnRef.current, { color: targetColor });
+} else {
+gsap.set(toggleBtnRef.current, { color: menuButtonColor });
+}
+}
+}, [changeMenuColorOnOpen, menuButtonColor, openMenuButtonColor]);
+
+const animateText = useCallback(opening => {
+const inner = textInnerRef.current;
+if (!inner) return;
 
     textCycleAnimRef.current?.kill();
 
@@ -326,12 +330,13 @@ export const StaggeredMenu = ({
       duration: 0.5 + lineCount * 0.07,
       ease: 'power4.out'
     });
-  }, []);
 
-  const toggleMenu = useCallback(() => {
-    const target = !openRef.current;
-    openRef.current = target;
-    setOpen(target);
+}, []);
+
+const toggleMenu = useCallback(() => {
+const target = !openRef.current;
+openRef.current = target;
+setOpen(target);
 
     if (target) {
       onMenuOpen?.();
@@ -344,39 +349,38 @@ export const StaggeredMenu = ({
     animateIcon(target);
     animateColor(target);
     animateText(target);
-  }, [playOpen, playClose, animateIcon, animateColor, animateText, onMenuOpen, onMenuClose]);
 
-  return (
-    <div
-      className={`sm-scope z-40 ${isFixed ? 'fixed top-0 left-0 w-screen h-screen overflow-hidden' : 'w-full h-full'}`}
-    >
-      <div
-        className={(className ? className + ' ' : '') + 'staggered-menu-wrapper relative w-full h-full'}
-        style={accentColor ? { ['--sm-accent']: accentColor } : undefined}
-        data-position={position}
-        data-open={open || undefined}
-      >
-        <div
+}, [playOpen, playClose, animateIcon, animateColor, animateText, onMenuOpen, onMenuClose]);
+
+return (
+<div
+className={`sm-scope z-40 ${isFixed ? 'fixed top-0 left-0 w-screen h-screen overflow-hidden' : 'w-full h-full'}`} >
+<div
+className={(className ? className + ' ' : '') + 'staggered-menu-wrapper relative w-full h-full'}
+style={accentColor ? { ['--sm-accent']: accentColor } : undefined}
+data-position={position}
+data-open={open || undefined} >
+<div
           ref={preLayersRef}
           className="sm-prelayers absolute top-0 right-0 bottom-0 pointer-events-none z-[5]"
           aria-hidden="true"
         >
-          {(() => {
-            const raw = colors && colors.length ? colors.slice(0, 4) : ['#1e1e22', '#35353c'];
-            let arr = [...raw];
-            if (arr.length >= 3) {
-              const mid = Math.floor(arr.length / 2);
-              arr.splice(mid, 1);
-            }
-            return arr.map((c, i) => (
-              <div
-                key={i}
-                className="sm-prelayer absolute top-0 right-0 h-full w-full translate-x-0"
-                style={{ background: c }}
-              />
-            ));
-          })()}
-        </div>
+{(() => {
+const raw = colors && colors.length ? colors.slice(0, 4) : ['#1e1e22', '#35353c'];
+let arr = [...raw];
+if (arr.length >= 3) {
+const mid = Math.floor(arr.length / 2);
+arr.splice(mid, 1);
+}
+return arr.map((c, i) => (
+<div
+key={i}
+className="sm-prelayer absolute top-0 right-0 h-full w-full translate-x-0"
+style={{ background: c }}
+/>
+));
+})()}
+</div>
 
         <header
           className="staggered-menu-header absolute top-0 left-0 w-full flex items-center justify-between p-[2em] bg-transparent pointer-events-none z-20"
@@ -499,9 +503,10 @@ export const StaggeredMenu = ({
       </div>
 
       <style>{`
+
 .sm-scope .staggered-menu-wrapper { position: relative; width: 100%; height: 100%; z-index: 40; }
 .sm-scope .staggered-menu-header { position: absolute; top: 0; left: 0; width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 2em; background: transparent; pointer-events: none; z-index: 20; }
-.sm-scope .staggered-menu-header > * { pointer-events: auto; }
+.sm-scope .staggered-menu-header > \* { pointer-events: auto; }
 .sm-scope .sm-logo { display: flex; align-items: center; user-select: none; }
 .sm-scope .sm-logo-img { display: block; height: 32px; width: auto; object-fit: contain; }
 .sm-scope .sm-toggle { position: relative; display: inline-flex; align-items: center; gap: 0.3rem; background: transparent; border: none; cursor: pointer; color: #e9e9ef; font-weight: 500; line-height: 1; overflow: visible; }
@@ -541,9 +546,9 @@ sition: absolute; top: 0; right: 0; width: clamp(260px, 38vw, 420px); height: 10
 .sm-scope .sm-panel-list[data-numbering] .sm-panel-item::after { counter-increment: smItem; content: counter(smItem, decimal-leading-zero); position: absolute; top: 0.1em; right: 3.2em; font-size: 18px; font-weight: 400; color: var(--sm-accent, #ff0000); letter-spacing: 0; pointer-events: none; user-select: none; opacity: var(--sm-num-opacity, 0); }
 @media (max-width: 1024px) { .sm-scope .staggered-menu-panel { width: 100%; left: 0; right: 0; } .sm-scope .staggered-menu-wrapper[data-open] .sm-logo-img { filter: invert(100%); } }
 @media (max-width: 640px) { .sm-scope .staggered-menu-panel { width: 100%; left: 0; right: 0; } .sm-scope .staggered-menu-wrapper[data-open] .sm-logo-img { filter: invert(100%); } }
-      `}</style>
-    </div>
-  );
+`}</style>
+</div>
+);
 };
 
 export default StaggeredMenu;

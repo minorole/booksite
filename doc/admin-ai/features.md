@@ -1,10 +1,12 @@
 # Admin AI — Features (Books & Items)
 
 ## Scope
+
 - Assist admins in managing both books and non‑book items (e.g., Dharma items, Buddha statues) via chat and photos.
 - Keep logic server‑side, behind admin auth. Confirmation is enforced server‑side (no visible UI modal) for mutating actions.
 
 ## Features
+
 - Bilingual chat helper
   - Understands and replies in Chinese or English.
   - Explains intended actions and asks for confirmation in chat on important steps (no UI modal).
@@ -47,6 +49,7 @@
   - One‑shot structured analysis → propose actions → execute only after explicit chat confirmation (server‑enforced).
 
 ## Agent behavior and prompts
+
 - Router (silent routing)
   - Routes without narration; hands off image/vision tasks to Vision; hands off creating/updating/searching books or items to Inventory; hands off orders to Orders.
 - Vision (tool‑first execution)
@@ -61,13 +64,15 @@
   - No rerun fallback: single pass with guardrails.
 
 ## Supported fields (create/update listings)
+
 - Allowed fields for listings: `title_zh`, `title_en`, `description_zh`, `description_en`, `category_type`, `quantity`, `tags`, `cover_image`, `author_zh`, `author_en`, `publisher_zh`, `publisher_en`.
 - Unsupported examples: price/定价, ISBN, publication year/出版年份, condition/保存状态, shelf location/货架位置, barcode/条码.
 - Note: Analysis outputs for items may include `material`, `finish`, `size`, `dimensions`, and quality notes; these guide creation but are not persisted as listing fields unless mapped.
 
 ## Configuration
+
 - Inventory web search toggle (default OFF): set `ADMIN_AI_INVENTORY_WEB_SEARCH=1` (or `true`) to enable web search in the Inventory agent; otherwise it is disabled to avoid out‑of‑scope costs.
- - Image embeddings: `CLIP_EMBEDDINGS_URL` is required. If unavailable, image flows fail fast (no fallback).
+- Image embeddings: `CLIP_EMBEDDINGS_URL` is required. If unavailable, image flows fail fast (no fallback).
 
 - Safety and access
   - Admin‑only access via Supabase auth.
