@@ -51,7 +51,7 @@ function shouldSkip(scope: string, event: string, requestId?: string): boolean {
 }
 
 export async function maybeSendAlert(
-  scope: 'admin_ai_route' | 'openai',
+  scope: 'admin_ai_route' | 'openai' | 'admin_ai_health',
   event: string,
   fields?: Record<string, unknown>
 ): Promise<void> {
@@ -64,7 +64,8 @@ export async function maybeSendAlert(
     const ev = event.toLowerCase()
     const isErrorEvent =
       (scope === 'admin_ai_route' && (ev === 'orchestrator_error' || ev === 'route_error')) ||
-      (scope === 'openai' && (ev === 'error' || ev === 'vision_error'))
+      (scope === 'openai' && (ev === 'error' || ev === 'vision_error')) ||
+      (scope === 'admin_ai_health' && ev === 'degraded')
     if (!isErrorEvent) return
 
     const rid = (fields?.request_id as string | undefined) || getRequestId()

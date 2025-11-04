@@ -24,6 +24,13 @@ All notable changes to this project will be documented in this file.
   - OpenAI wrappers: `error`, `vision_error` — file: `src/lib/openai/logging.ts`.
 - Env examples updated with `LOG_ALERTS_ENABLED` and `OPS_SLACK_WEBHOOK_URL` (commented).
 
+### Observability — Health Check (Phase 4)
+- Add admin health endpoint. File: `src/app/api/admin/health/route.ts`.
+  - Guarded by `ADMIN_TASK_TOKEN` (query param `?token=`).
+  - Pings OpenAI Responses API with a minimal call (`max_output_tokens=1`).
+  - Logs `admin_ai_health:ok` on success with `latency_ms`; logs `admin_ai_health:degraded` on failure and sends Slack alert.
+- Env examples updated: `.env.example` adds `ADMIN_TASK_TOKEN` (commented).
+
 ### Tooling — Prettier & ESLint integration
 - Add Prettier config with long-term defaults and Tailwind class sorting. Files: `.prettierrc`.
   - singleQuote=true, semi=true, trailingComma=all, printWidth=100, endOfLine=lf.
