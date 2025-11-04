@@ -11,6 +11,7 @@ import {
 } from '@/lib/security/ratelimit';
 import { adminAiLogsEnabled, debugLogsEnabled } from '@/lib/observability/toggle';
 import { log } from '@/lib/logging';
+import { maybeSendAlert } from '@/lib/alerts';
 import { ADMIN_AGENT_MAX_TURNS_DEFAULT } from '@/lib/admin/constants';
 
 export async function POST(request: Request) {
@@ -164,7 +165,7 @@ export async function POST(request: Request) {
               const envMax = raw ? Number.parseInt(raw, 10) : NaN;
               const maxTurns =
                 Number.isFinite(envMax) && envMax > 0 ? envMax : ADMIN_AGENT_MAX_TURNS_DEFAULT;
-              log.error('admin_ai_route', 'orchestrator_error', {
+              const alertFields = {
                 request_id: requestId,
                 message: msg,
                 tool,
@@ -173,7 +174,9 @@ export async function POST(request: Request) {
                 status: e?.status,
                 metrics,
                 maxTurns,
-              });
+              } as Record<string, unknown>;
+              log.error('admin_ai_route', 'orchestrator_error', alertFields);
+              void maybeSendAlert('admin_ai_route', 'orchestrator_error', alertFields);
             } catch {}
             const payload = {
               version: '1',
@@ -204,9 +207,11 @@ export async function POST(request: Request) {
     if (adminAiLogsEnabled()) {
       try {
         const err = error as any;
-        log.error('admin_ai_route', 'route_error', err instanceof Error
+        const routeErrorFields = (err instanceof Error)
           ? { message: err.message, stack: err.stack }
-          : { error: String(err) })
+          : { error: String(err) };
+        log.error('admin_ai_route', 'route_error', routeErrorFields);
+        void maybeSendAlert('admin_ai_route', 'route_error', routeErrorFields);
       } catch {}
     }
     return new NextResponse('Stream error', { status: 500 });

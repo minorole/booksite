@@ -14,6 +14,16 @@ All notable changes to this project will be documented in this file.
 - Env examples updated: `.env.example` adds `LOG_LEVEL` and `LOG_FORMAT` (commented).
 - Note: No adoption yet; existing `console.*` logs remain. Adoption to Admin AI route, orchestrator, and OpenAI wrappers will follow.
 
+### Observability — Alerts (Phase 3)
+- Add Slack alerts module. File: `src/lib/alerts.ts`.
+  - Enabled with `LOG_ALERTS_ENABLED=1|true` and `OPS_SLACK_WEBHOOK_URL`.
+  - Dedupe per `(scope,event,request_id)` for ~60s to avoid spam.
+  - Redacts sensitive keys with the same policy as logger.
+- Wire alerts to critical errors:
+  - Admin AI route: `orchestrator_error`, `route_error` — file: `src/app/api/admin/ai-chat/stream/orchestrated/route.ts`.
+  - OpenAI wrappers: `error`, `vision_error` — file: `src/lib/openai/logging.ts`.
+- Env examples updated with `LOG_ALERTS_ENABLED` and `OPS_SLACK_WEBHOOK_URL` (commented).
+
 ### Tooling — Prettier & ESLint integration
 - Add Prettier config with long-term defaults and Tailwind class sorting. Files: `.prettierrc`.
   - singleQuote=true, semi=true, trailingComma=all, printWidth=100, endOfLine=lf.
