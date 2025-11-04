@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+### Observability — Central Logger (Phase 1)
+- Add central structured logger. File: `src/lib/logging.ts`.
+  - JSON lines by default; pretty in dev via `LOG_FORMAT=pretty`.
+  - Auto fields: `timestamp`, `level`, `scope`, `event`, `env`, and `request_id` (from request context).
+  - Redacts sensitive keys recursively (`apiKey`, `authorization`, `password`, `token`, `secret`, `key`).
+  - Honors `LOG_LEVEL` (prod `info`, dev `debug`) and `DEBUG_LOGS` (for debug suppression).
+  - Installs process-level handlers for `unhandledRejection`/`uncaughtException`.
+- Env examples updated: `.env.example` adds `LOG_LEVEL` and `LOG_FORMAT` (commented).
+- Note: No adoption yet; existing `console.*` logs remain. Adoption to Admin AI route, orchestrator, and OpenAI wrappers will follow.
+
 ### Tooling — Prettier & ESLint integration
 - Add Prettier config with long-term defaults and Tailwind class sorting. Files: `.prettierrc`.
   - singleQuote=true, semi=true, trailingComma=all, printWidth=100, endOfLine=lf.
