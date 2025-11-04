@@ -209,3 +209,9 @@ Risks & Mitigations:
 - Vercel Pro log retention ≈ 7 days (check your project’s settings for exact value).
 - Slack Incoming Webhooks have no extra Slack fee; subject to Slack rate limits and your workspace plan’s message retention.
 - No paid services required for this plan; log drains can be added later if you need longer retention.
+
+---
+
+## Session Reports
+
+- 2025‑11‑04 — Observability Session Report (Logger, Alerts, Health): see `doc/observability/2025-11-04-observability-session-report.md`.
