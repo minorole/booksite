@@ -218,7 +218,10 @@ export async function runChatWithAgentsStream(params: {
                 metadata: { name: ne.name, args: ne.args, call_id: ne.id },
               });
             } catch (e) {
-              console.error('logAdminAction failed (FUNCTION_CALL)', e);
+              log.warn('admin_ai_orchestrator', 'log_admin_action_failed', {
+                phase: 'FUNCTION_CALL',
+                error: (e as Error)?.message || String(e),
+              })
             }
           } else if (ne.type === 'tool_result') {
             ranDomainTool = true;
@@ -239,7 +242,10 @@ export async function runChatWithAgentsStream(params: {
                 },
               });
             } catch (e) {
-              console.error('logAdminAction failed (FUNCTION_SUCCESS)', e);
+              log.warn('admin_ai_orchestrator', 'log_admin_action_failed', {
+                phase: 'FUNCTION_SUCCESS',
+                error: (e as Error)?.message || String(e),
+              })
             }
           } else if (ne.type === 'assistant_delta') {
             if (adminAiLogsEnabled()) {
