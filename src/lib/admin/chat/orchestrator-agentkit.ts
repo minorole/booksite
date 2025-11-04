@@ -17,6 +17,7 @@ import {
   adminAiSensitiveEnabled,
   debugLogsEnabled,
 } from '@/lib/observability/toggle';
+import { log } from '@/lib/logging';
 import { getAdminClient } from '@/lib/openai/client';
 import { toAgentInput } from '@/lib/admin/chat/to-agent-input';
 import { logRawModelEventCompact, type RawModelLogState } from '@/lib/admin/chat/logging';
@@ -126,12 +127,7 @@ export async function runChatWithAgentsStream(params: {
       const e = evt as { type?: string; agent?: { name?: string } };
       if (e.type === 'agent_updated_stream_event') {
         if (adminAiLogsEnabled()) {
-          try {
-            console.log('[AdminAI orchestrator] agent_updated', {
-              to: e.agent?.name,
-              req: params.requestId?.slice(0, 8),
-            });
-          } catch {}
+          try { log.info('admin_ai_orchestrator', 'agent_updated', { to: e.agent?.name }) } catch {}
         }
         const current = e.agent?.name;
         // Deduplicate: skip emitting a handoff if the target agent did not change
@@ -156,12 +152,7 @@ export async function runChatWithAgentsStream(params: {
         const item = ev.item;
         const raw = (item as { rawItem?: unknown } | undefined)?.rawItem;
         if (adminAiLogsEnabled()) {
-          try {
-            console.log('[AdminAI orchestrator] run_item', {
-              name,
-              req: params.requestId?.slice(0, 8),
-            });
-          } catch {}
+          try { log.info('admin_ai_orchestrator', 'run_item', { name }) } catch {}
         }
         const events = normalizeRunItemToSSEEvents({ name, raw });
         // Optional diagnostics: if the SDK reports a message_* event but
@@ -184,7 +175,6 @@ export async function runChatWithAgentsStream(params: {
                   typeof v === 'object' ? (Array.isArray(v) ? 'array' : 'object') : typeof v;
                 types[k] = vt;
               }
-              // Surface nested `.type` fields one level deep for hints
               const nestedTypes: Array<string> = [];
               for (const k of keys.slice(0, 10)) {
                 const v = o[k] as any;
@@ -195,10 +185,9 @@ export async function runChatWithAgentsStream(params: {
               }
               return { keys: keys.slice(0, 10), types, nestedTypes };
             };
-            console.log('[AdminAI orchestrator] no_text_after_message_event', {
+            log.debug('admin_ai_orchestrator', 'no_text_after_message_event', {
               name,
               shape: summarize(raw),
-              req: params.requestId?.slice(0, 8),
             });
           } catch {}
         }
@@ -220,14 +209,7 @@ export async function runChatWithAgentsStream(params: {
               toolStartAt.set(ne.id, Date.now());
             } catch {}
             if (adminAiLogsEnabled()) {
-              try {
-                console.log('[AdminAI orchestrator] tool_start', {
-                  req: params.requestId?.slice(0, 8),
-                  name: ne.name,
-                  id: ne.id,
-                  argsBytes,
-                });
-              } catch {}
+              try { log.info('admin_ai_orchestrator', 'tool_start', { name: ne.name, id: ne.id, argsBytes }) } catch {}
             }
             try {
               await logAdminAction({
@@ -244,15 +226,7 @@ export async function runChatWithAgentsStream(params: {
             const durationMs =
               typeof started === 'number' ? Math.max(0, Date.now() - started) : undefined;
             if (adminAiLogsEnabled()) {
-              try {
-                console.log('[AdminAI orchestrator] tool_result', {
-                  req: params.requestId?.slice(0, 8),
-                  name: ne.name,
-                  id: ne.id,
-                  success: ne.success,
-                  durationMs,
-                });
-              } catch {}
+              try { log.info('admin_ai_orchestrator', 'tool_result', { name: ne.name, id: ne.id, success: ne.success, durationMs }) } catch {}
             }
             try {
               await logAdminAction({
@@ -274,11 +248,7 @@ export async function runChatWithAgentsStream(params: {
                 // Aggregate chars and log a single early preview
                 if (!assistantLoggedFirstPreview && txt) {
                   assistantFirstPreview = txt.slice(0, 80);
-                  console.log('[AdminAI orchestrator] assistant_preview', {
-                    req: params.requestId?.slice(0, 8),
-                    len: txt.length,
-                    preview: assistantFirstPreview,
-                  });
+                  log.info('admin_ai_orchestrator', 'assistant_preview', { len: txt.length, preview: assistantFirstPreview });
                   assistantLoggedFirstPreview = true;
                 }
                 assistantChars += txt.length;
@@ -294,10 +264,7 @@ export async function runChatWithAgentsStream(params: {
           logRawModelEventCompact(evt, params.requestId, rawState);
         } else if (adminAiLogsEnabled()) {
           const t = (e?.type as string | undefined) || '(unknown)';
-          console.log('[AdminAI orchestrator] event', {
-            req: params.requestId?.slice(0, 8),
-            type: t,
-          });
+          log.debug('admin_ai_orchestrator', 'event', { type: t });
         }
       }
     }
@@ -305,8 +272,7 @@ export async function runChatWithAgentsStream(params: {
     if (adminAiLogsEnabled()) {
       try {
         if (assistantChars > 0) {
-          console.log('[AdminAI orchestrator] assistant_text_collected', {
-            req: params.requestId?.slice(0, 8),
+          log.info('admin_ai_orchestrator', 'assistant_text_collected', {
             totalChars: assistantChars,
             preview: assistantFirstPreview,
           });

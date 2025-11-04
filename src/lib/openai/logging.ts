@@ -1,9 +1,8 @@
-import { debugLogsEnabled } from '@/lib/observability/toggle';
+import { log } from '@/lib/logging';
 
 export function logOperation(operation: string, details: Record<string, unknown>, error?: Error) {
-  const logEntry = {
+  const entry = {
     operation,
-    timestamp: new Date().toISOString(),
     ...details,
     ...(error && {
       error: {
@@ -13,12 +12,11 @@ export function logOperation(operation: string, details: Record<string, unknown>
       },
     }),
   };
-  const shouldLog = debugLogsEnabled();
-  const isError = operation.toUpperCase().includes('ERROR') || !!error;
-  if (isError) {
-    console.error(`[OpenAI ${operation}]`, logEntry);
-  } else if (shouldLog) {
-    console.log(`[OpenAI ${operation}]`, logEntry);
+  const evt = operation.toLowerCase();
+  if (operation.toUpperCase().includes('ERROR') || !!error) {
+    log.error('openai', evt, entry);
+  } else {
+    log.info('openai', evt, entry);
   }
-  return logEntry;
+  return entry;
 }

@@ -1,8 +1,6 @@
-export type RawModelLogState = {
-  argBytes: Map<string, number>;
-  seen: Set<string>;
-  toolNames: Map<string, string>;
-};
+import { log } from '@/lib/logging'
+
+export type RawModelLogState = { argBytes: Map<string, number>; seen: Set<string>; toolNames: Map<string, string> }
 
 export function logRawModelEventCompact(evt: unknown, reqId?: string, state?: RawModelLogState) {
   const req = (reqId as any)?.slice?.(0, 8);
@@ -13,7 +11,7 @@ export function logRawModelEventCompact(evt: unknown, reqId?: string, state?: Ra
       const key = `${data.type}:${rid}`;
       if (state?.seen?.has(key)) return;
       state?.seen?.add(key);
-      console.log(`[AdminAI orchestrator] model_${data.type}`, { req, id: rid });
+      log.debug('admin_ai_orchestrator', `model_${data.type}`, { id: rid, ...(req ? { req } : {}) });
       return;
     }
 
@@ -35,8 +33,8 @@ export function logRawModelEventCompact(evt: unknown, reqId?: string, state?: Ra
         const total = state?.argBytes?.get(itemId) ?? 0;
         state?.argBytes?.delete(itemId);
         const toolName = state?.toolNames?.get(itemId);
-        console.log('[AdminAI orchestrator] function_args_collected', {
-          req,
+        log.info('admin_ai_orchestrator', 'function_args_collected', {
+          ...(req ? { req } : {}),
           item_id: itemId,
           name: toolName,
           bytes: total,
@@ -56,8 +54,8 @@ export function logRawModelEventCompact(evt: unknown, reqId?: string, state?: Ra
             if (itemId && name && state?.toolNames)
               state.toolNames.set(String(itemId), String(name));
           } catch {}
-          console.log(`[AdminAI orchestrator] model_${t}`, {
-            req,
+          log.debug('admin_ai_orchestrator', `model_${t}`, {
+            ...(req ? { req } : {}),
             output_index: ev?.output_index,
             seq: ev?.sequence_number,
           });
@@ -70,19 +68,16 @@ export function logRawModelEventCompact(evt: unknown, reqId?: string, state?: Ra
         const key = `${t}:${rid}`;
         if (state?.seen?.has(key)) return;
         state?.seen?.add(key);
-        console.log(`[AdminAI orchestrator] model_${t}`, { req, id: rid });
+        log.debug('admin_ai_orchestrator', `model_${t}`, { ...(req ? { req } : {}), id: rid });
         return;
       }
     }
 
     const t = data?.type ?? (evt as any)?.type ?? '(unknown)';
-    console.log('[AdminAI orchestrator] event', { req, type: t });
+    log.debug('admin_ai_orchestrator', 'event', { ...(req ? { req } : {}), type: t });
   } catch {
     try {
-      console.log('[AdminAI orchestrator] event', {
-        req: (reqId as any)?.slice?.(0, 8),
-        type: (evt as any)?.type ?? '(unknown)',
-      });
+      log.debug('admin_ai_orchestrator', 'event', { req: (reqId as any)?.slice?.(0, 8), type: (evt as any)?.type ?? '(unknown)' });
     } catch {}
   }
 }

@@ -10,6 +10,7 @@ import {
   releaseConcurrency,
 } from '@/lib/security/ratelimit';
 import { adminAiLogsEnabled, debugLogsEnabled } from '@/lib/observability/toggle';
+import { log } from '@/lib/logging';
 import { ADMIN_AGENT_MAX_TURNS_DEFAULT } from '@/lib/admin/constants';
 
 export async function POST(request: Request) {
@@ -37,8 +38,8 @@ export async function POST(request: Request) {
     // Request start log
     if (adminAiLogsEnabled()) {
       try {
-        console.log('[AdminAI route] request_start', {
-          requestId,
+        log.info('admin_ai_route', 'request_start', {
+          request_id: requestId,
           route: routeKey,
           userEmail: user.email,
           uiLanguage: uiLanguage || 'en',
@@ -58,8 +59,8 @@ export async function POST(request: Request) {
 
     if (adminAiLogsEnabled()) {
       try {
-        console.log('[AdminAI route] ratelimit', {
-          requestId,
+        log.info('admin_ai_route', 'ratelimit', {
+          request_id: requestId,
           enabled: rl.enabled,
           allowed: rl.allowed,
           remaining: rl.remaining,
@@ -77,8 +78,8 @@ export async function POST(request: Request) {
     }
     if (adminAiLogsEnabled()) {
       try {
-        console.log('[AdminAI route] concurrency', {
-          requestId,
+        log.info('admin_ai_route', 'concurrency', {
+          request_id: requestId,
           enabled: sem.enabled,
           acquired: sem.acquired,
           current: sem.current,
@@ -96,8 +97,7 @@ export async function POST(request: Request) {
           if (adminAiLogsEnabled() && debugLogsEnabled()) {
             try {
               const t = (event as any)?.type;
-              if (t !== 'assistant_delta')
-                console.log('[AdminAI route] sse_out', { requestId, type: t });
+              if (t !== 'assistant_delta') log.debug('admin_ai_route', 'sse_out', { type: t });
             } catch {}
           }
           controller.enqueue(encoder.encode(`data: ${JSON.stringify(enriched)}\n\n`));
@@ -120,11 +120,14 @@ export async function POST(request: Request) {
             try {
               await releaseConcurrency({ route: routeKey, userId: user.id, ttlSeconds: 120 });
             } catch (e) {
-              console.error('releaseConcurrency failed', e);
+              log.warn('admin_ai_route', 'release_concurrency_failed', {
+                request_id: requestId,
+                error: (e as Error)?.message || String(e),
+              });
             }
             if (adminAiLogsEnabled()) {
               try {
-                console.log('[AdminAI route] stream_complete', { requestId });
+                log.info('admin_ai_route', 'stream_complete', { request_id: requestId });
               } catch {}
             }
             controller.close();
@@ -161,8 +164,8 @@ export async function POST(request: Request) {
               const envMax = raw ? Number.parseInt(raw, 10) : NaN;
               const maxTurns =
                 Number.isFinite(envMax) && envMax > 0 ? envMax : ADMIN_AGENT_MAX_TURNS_DEFAULT;
-              console.error('[AdminAI route] orchestrator_error', {
-                requestId,
+              log.error('admin_ai_route', 'orchestrator_error', {
+                request_id: requestId,
                 message: msg,
                 tool,
                 path: contextPath,
@@ -200,7 +203,10 @@ export async function POST(request: Request) {
   } catch (error) {
     if (adminAiLogsEnabled()) {
       try {
-        console.error('[AdminAI route] route_error', error);
+        const err = error as any;
+        log.error('admin_ai_route', 'route_error', err instanceof Error
+          ? { message: err.message, stack: err.stack }
+          : { error: String(err) })
       } catch {}
     }
     return new NextResponse('Stream error', { status: 500 });
