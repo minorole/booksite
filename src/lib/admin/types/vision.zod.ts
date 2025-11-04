@@ -1,5 +1,5 @@
-import { z } from 'zod'
-import { HttpUrl } from '@/lib/schema/http-url'
+import { z } from 'zod';
+import { HttpUrl } from '@/lib/schema/http-url';
 
 export const VisionAnalysisResultZ = z.object({
   confidence_scores: z.object({
@@ -37,6 +37,6 @@ export const VisionAnalysisResultZ = z.object({
     notable_elements: z.array(z.string()),
   }),
   cover_url: HttpUrl.nullable(),
-})
+});
 
-export type VisionAnalysisResultInput = z.infer<typeof VisionAnalysisResultZ>
+export type VisionAnalysisResultInput = z.infer<typeof VisionAnalysisResultZ>;

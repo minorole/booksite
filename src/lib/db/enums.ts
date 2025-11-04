@@ -1,7 +1,7 @@
 // String union enums used across the Supabase-native data layer
 // Keep in sync with SQL checks and application guardrails
 
-export type Role = 'USER' | 'ADMIN' | 'SUPER_ADMIN'
+export type Role = 'USER' | 'ADMIN' | 'SUPER_ADMIN';
 
 export type OrderStatus =
   | 'PENDING'
@@ -9,7 +9,7 @@ export type OrderStatus =
   | 'PROCESSING'
   | 'SHIPPED'
   | 'COMPLETED'
-  | 'CANCELLED'
+  | 'CANCELLED';
 
 // Category types used by the application (tuple for ergonomic zod enums)
 export const CATEGORY_TYPES = [
@@ -17,10 +17,10 @@ export const CATEGORY_TYPES = [
   'OTHER_BOOKS',
   'DHARMA_ITEMS',
   'BUDDHA_STATUES',
-] as const
-export type CategoryType = typeof CATEGORY_TYPES[number]
+] as const;
+export type CategoryType = (typeof CATEGORY_TYPES)[number];
 
-export const ROLES: Role[] = ['USER', 'ADMIN', 'SUPER_ADMIN']
+export const ROLES: Role[] = ['USER', 'ADMIN', 'SUPER_ADMIN'];
 
 // Admin action types mirrored from SQL CHECK constraint on public.admin_logs.action
 export type AdminAction =
@@ -49,6 +49,6 @@ export type AdminAction =
   | 'CONFIDENCE_CHECK_FAILED'
   | 'CHAT_COMPLETE'
   | 'LLM_RETRY'
-  | 'UPDATE_USER_ROLE'
+  | 'UPDATE_USER_ROLE';
 
 // Removed unused ADMIN_ACTIONS array to avoid drift; use AdminAction union type instead

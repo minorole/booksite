@@ -1,20 +1,20 @@
 export type RateLimitPolicy = {
   // Window in seconds
-  window: number
+  window: number;
   // Max requests allowed per window
-  limit: number
+  limit: number;
   // Cost per request (for weighted endpoints)
-  weight: number
+  weight: number;
   // Max concurrent operations per user/IP for the route
-  concurrency: number
-}
+  concurrency: number;
+};
 
 const DEFAULT_POLICY: RateLimitPolicy = {
   window: 60,
   limit: 60,
   weight: 1,
   concurrency: 4,
-}
+};
 
 const ROUTE_POLICIES: Record<string, Partial<RateLimitPolicy>> = {
   '/api/admin/ai-chat/stream/orchestrated': {
@@ -47,12 +47,12 @@ const ROUTE_POLICIES: Record<string, Partial<RateLimitPolicy>> = {
     weight: 1,
     concurrency: 1,
   },
-}
+};
 
 export function getPolicy(route: string): RateLimitPolicy {
-  const override = ROUTE_POLICIES[route] || {}
+  const override = ROUTE_POLICIES[route] || {};
   return {
     ...DEFAULT_POLICY,
     ...override,
-  }
+  };
 }

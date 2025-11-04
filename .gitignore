@@ -27,3 +27,37 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+#
+# editors & OS
+.vscode/
+.idea/
+.fleet/
+.history/
+*.swp
+*.swo
+.eslintcache
+.direnv/
+.envrc
+.cursor/
+Thumbs.db
+
+# node package managers & logs
+pnpm-debug.log*
+.pnpm-store
+.npm/
+bun.lockb
+# lockfiles for other managers (repo uses npm)
+yarn.lock
+pnpm-lock.yaml
+
+# next/turbopack/swc caches
+.turbo/
+.swc/
+
+# testing artifacts
+.vitest/
+playwright-report/
+test-results/
+
+# local databases
+*.sqlite

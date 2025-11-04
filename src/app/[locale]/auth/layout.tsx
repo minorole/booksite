@@ -1,13 +1,9 @@
-import { CanvasRevealEffect } from "@/components/ui/canvas-reveal-effect"
-import { LanguageSwitch } from "@/components/layout/LanguageSwitch"
+import { CanvasRevealEffect } from '@/components/ui/canvas-reveal-effect';
+import { LanguageSwitch } from '@/components/layout/LanguageSwitch';
 
-export default function AuthLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <main className="relative min-h-screen flex items-center justify-center dark bg-background text-foreground">
+    <main className="dark bg-background text-foreground relative flex min-h-screen items-center justify-center">
       <div className="absolute top-4 right-4 z-20">
         <LanguageSwitch />
       </div>
@@ -15,18 +11,19 @@ export default function AuthLayout({
         <CanvasRevealEffect
           animationSpeed={3}
           containerClassName="w-full h-full bg-black"
-          colors={[[255, 255, 255], [255, 255, 255]]}
+          colors={[
+            [255, 255, 255],
+            [255, 255, 255],
+          ]}
           opacities={[0.3, 0.3, 0.3, 0.5, 0.5, 0.5, 0.8, 0.8, 0.8, 1]}
           dotSize={6.6}
           totalSize={22}
           showGradient={false}
         />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(0,0,0,1)_0%,_transparent_100%)]" />
-        <div className="absolute top-0 left-0 right-0 h-1/3 bg-gradient-to-b from-black to-transparent" />
+        <div className="absolute top-0 right-0 left-0 h-1/3 bg-gradient-to-b from-black to-transparent" />
       </div>
-      <div className="relative z-10 w-full max-w-md p-4">
-        {children}
-      </div>
+      <div className="relative z-10 w-full max-w-md p-4">{children}</div>
     </main>
-  )
+  );
 }

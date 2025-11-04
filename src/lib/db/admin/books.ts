@@ -1,81 +1,78 @@
-import { getServerDb } from '@/lib/db/client'
-import type { BookSearch, BookBase, BookCreate, BookUpdate } from '@/lib/admin/types'
-import type { CategoryType } from '@/lib/db/enums'
-import { resolveCategoryId } from './utils'
-import type { TagJoinRow, SearchBooksRow } from '@/lib/db/types'
-import type { Tables, TablesUpdate } from '@/types/supabase.generated'
+import { getServerDb } from '@/lib/db/client';
+import type { BookSearch, BookBase, BookCreate, BookUpdate } from '@/lib/admin/types';
+import type { CategoryType } from '@/lib/db/enums';
+import { resolveCategoryId } from './utils';
+import type { TagJoinRow, SearchBooksRow } from '@/lib/db/types';
+import type { Tables, TablesUpdate } from '@/types/supabase.generated';
 
 // Fetch minimal book info for operational needs (e.g., quantity adjustments)
 export async function getBookDb(id: string): Promise<{ id: string; quantity: number } | null> {
-  const db = await getServerDb()
-  const { data, error } = await db.from('books').select('id, quantity').eq('id', id).single()
-  if (error || !data) return null
-  return { id: data.id as string, quantity: data.quantity as number }
+  const db = await getServerDb();
+  const { data, error } = await db.from('books').select('id, quantity').eq('id', id).single();
+  if (error || !data) return null;
+  return { id: data.id as string, quantity: data.quantity as number };
 }
 
 export async function searchBooksDb(args: BookSearch): Promise<BookBase[]> {
-  const db = await getServerDb()
+  const db = await getServerDb();
 
   // Prepare RPC args
-  const q = args.title && args.title.trim().length > 0 ? args.title.trim() : null
-  const requiredTags = Array.isArray(args.tags) ? args.tags.filter(Boolean) : []
-  const tag_names = requiredTags.length > 0 ? requiredTags : null
-  const category_type = args.category_type ?? null
+  const q = args.title && args.title.trim().length > 0 ? args.title.trim() : null;
+  const requiredTags = Array.isArray(args.tags) ? args.tags.filter(Boolean) : [];
+  const tag_names = requiredTags.length > 0 ? requiredTags : null;
+  const category_type = args.category_type ?? null;
 
   const { data: rows, error } = await db.rpc('search_books', {
     q: q ?? undefined,
     tag_names: tag_names ?? undefined,
     category_type: category_type ?? undefined,
     page_limit: 50,
-  })
+  });
   if (error) {
-    throw new Error(`Failed to search books: ${error.message}`)
+    throw new Error(`Failed to search books: ${error.message}`);
   }
 
-  const list = (rows ?? []) as SearchBooksRow[]
-  if (list.length === 0) return []
+  const list = (rows ?? []) as SearchBooksRow[];
+  if (list.length === 0) return [];
 
-  const bookIds = list.map((b) => b.id as string)
-  const categoryIds = Array.from(new Set(list.map((b) => b.category_id as string)))
+  const bookIds = list.map((b) => b.id as string);
+  const categoryIds = Array.from(new Set(list.map((b) => b.category_id as string)));
 
   // Fetch category types for the matched books
-  const catTypeById = new Map<string, CategoryType>()
+  const catTypeById = new Map<string, CategoryType>();
   if (categoryIds.length > 0) {
-    const { data: cats } = await db
-      .from('categories')
-      .select('id, type')
-      .in('id', categoryIds)
+    const { data: cats } = await db.from('categories').select('id, type').in('id', categoryIds);
     for (const c of cats ?? []) {
-      catTypeById.set(c.id as string, c.type as CategoryType)
+      catTypeById.set(c.id as string, c.type as CategoryType);
     }
   }
 
   // Fetch tags for matched books
-  const tagsByBook = new Map<string, string[]>()
+  const tagsByBook = new Map<string, string[]>();
   if (bookIds.length > 0) {
     const { data: tagRows, error: tagsErr } = await db
       .from('book_tags')
       .select('book_id, tags:tags ( name )')
-      .in('book_id', bookIds)
+      .in('book_id', bookIds);
     if (tagsErr) {
-      throw new Error(`Failed to fetch book tags: ${tagsErr.message}`)
+      throw new Error(`Failed to fetch book tags: ${tagsErr.message}`);
     }
     for (const row of (tagRows ?? []) as TagJoinRow[]) {
-      const name = row.tags?.name ?? undefined
-      if (!name) continue
-      const arr = tagsByBook.get(row.book_id) ?? []
-      arr.push(name)
-      tagsByBook.set(row.book_id, arr)
+      const name = row.tags?.name ?? undefined;
+      if (!name) continue;
+      const arr = tagsByBook.get(row.book_id) ?? [];
+      arr.push(name);
+      tagsByBook.set(row.book_id, arr);
     }
   }
 
-  const results: BookBase[] = []
+  const results: BookBase[] = [];
   for (const b of list) {
-    const names = tagsByBook.get(b.id as string) ?? []
-    const catType = catTypeById.get(b.category_id as string) ?? ('OTHER_BOOKS' as CategoryType)
+    const names = tagsByBook.get(b.id as string) ?? [];
+    const catType = catTypeById.get(b.category_id as string) ?? ('OTHER_BOOKS' as CategoryType);
     // Apply quantity filters client-side if provided
-    if (typeof args.min_quantity === 'number' && b.quantity < args.min_quantity) continue
-    if (typeof args.max_quantity === 'number' && b.quantity > args.max_quantity) continue
+    if (typeof args.min_quantity === 'number' && b.quantity < args.min_quantity) continue;
+    if (typeof args.max_quantity === 'number' && b.quantity > args.max_quantity) continue;
     results.push({
       id: b.id as string,
       title_zh: b.title_zh,
@@ -85,17 +82,17 @@ export async function searchBooksDb(args: BookSearch): Promise<BookBase[]> {
       category_type: catType,
       quantity: b.quantity,
       tags: names,
-      cover_image: b.cover_image
-    })
+      cover_image: b.cover_image,
+    });
   }
-  return results
+  return results;
 }
 
 // Create a book with normalized tags
 export async function createBookDb(input: BookCreate): Promise<BookBase & { id: string }> {
-  const db = await getServerDb()
-  const categoryId = await resolveCategoryId(input.category_type)
-  if (!categoryId) throw new Error('Invalid category_type')
+  const db = await getServerDb();
+  const categoryId = await resolveCategoryId(input.category_type);
+  if (!categoryId) throw new Error('Invalid category_type');
 
   const insert = {
     title_zh: input.title_zh,
@@ -111,41 +108,49 @@ export async function createBookDb(input: BookCreate): Promise<BookBase & { id: 
     author_en: input.author_en ?? null,
     publisher_zh: input.publisher_zh ?? null,
     publisher_en: input.publisher_en ?? null,
-    image_analysis_data: (input.analysis_result as unknown as import('@/types/supabase.generated').Json) ?? null,
-  }
+    image_analysis_data:
+      (input.analysis_result as unknown as import('@/types/supabase.generated').Json) ?? null,
+  };
 
   const { data: created, error: insErr } = await db
     .from('books')
     .insert(insert)
     .select('id, category_id')
-    .single()
-  if (insErr || !created) throw new Error(`Failed to create book: ${insErr?.message}`)
-  const bookId = created.id as string
+    .single();
+  if (insErr || !created) throw new Error(`Failed to create book: ${insErr?.message}`);
+  const bookId = created.id as string;
 
   // Upsert tags and link
-  const tagNames = Array.isArray(input.tags) ? input.tags.filter(Boolean) : []
-  let finalTags: string[] = []
+  const tagNames = Array.isArray(input.tags) ? input.tags.filter(Boolean) : [];
+  let finalTags: string[] = [];
   if (tagNames.length > 0) {
     const { data: upserted, error: tagErr } = await db
       .from('tags')
-      .upsert(tagNames.map((n) => ({ name: n })), { onConflict: 'name' })
-      .select('id, name')
-    if (tagErr) throw new Error(`Failed to upsert tags: ${tagErr.message}`)
+      .upsert(
+        tagNames.map((n) => ({ name: n })),
+        { onConflict: 'name' },
+      )
+      .select('id, name');
+    if (tagErr) throw new Error(`Failed to upsert tags: ${tagErr.message}`);
     if (upserted) {
-      const cast = upserted as Array<Pick<Tables<'tags'>, 'id' | 'name'>>
-      finalTags = cast.map((t) => t.name as string)
-      const linkRows = cast.map((t) => ({ book_id: bookId, tag_id: t.id as string }))
+      const cast = upserted as Array<Pick<Tables<'tags'>, 'id' | 'name'>>;
+      finalTags = cast.map((t) => t.name as string);
+      const linkRows = cast.map((t) => ({ book_id: bookId, tag_id: t.id as string }));
       if (linkRows.length > 0) {
-        await db.from('book_tags').upsert(linkRows, { onConflict: 'book_id,tag_id' })
+        await db.from('book_tags').upsert(linkRows, { onConflict: 'book_id,tag_id' });
       }
     }
   }
 
   // Build projection
   const catType = await (async () => {
-    const { data } = await db.from('categories').select('type').eq('id', created.category_id as string).single()
-    return ((data?.type as CategoryType) ?? 'OTHER_BOOKS') as CategoryType
-  })()
+    const { data } = await db
+      .from('categories')
+      .select('type')
+      .eq('id', created.category_id as string)
+      .single();
+    return ((data?.type as CategoryType) ?? 'OTHER_BOOKS') as CategoryType;
+  })();
 
   return {
     id: bookId,
@@ -156,117 +161,130 @@ export async function createBookDb(input: BookCreate): Promise<BookBase & { id: 
     category_type: catType,
     quantity: insert.quantity,
     tags: finalTags,
-    cover_image: insert.cover_image ?? null
-  }
+    cover_image: insert.cover_image ?? null,
+  };
 }
 
 // Update a book and its tags (replace semantics)
-export async function updateBookDb(id: string, patch: Omit<BookUpdate, 'book_id'>): Promise<BookBase> {
-  const db = await getServerDb()
+export async function updateBookDb(
+  id: string,
+  patch: Omit<BookUpdate, 'book_id'>,
+): Promise<BookBase> {
+  const db = await getServerDb();
 
   // Resolve new category if provided
-  let category_id: string | undefined
+  let category_id: string | undefined;
   if (patch.category_type) {
-    const cid = await resolveCategoryId(patch.category_type)
-    if (!cid) throw new Error('Invalid category_type')
-    category_id = cid
+    const cid = await resolveCategoryId(patch.category_type);
+    if (!cid) throw new Error('Invalid category_type');
+    category_id = cid;
   }
 
   // Build update object
-  const update: TablesUpdate<'books'> = {}
-  if (typeof patch.title_zh === 'string') update.title_zh = patch.title_zh
-  if (patch.title_en !== undefined) update.title_en = patch.title_en
-  if (typeof patch.description_zh === 'string') update.description_zh = patch.description_zh
-  if (patch.description_en !== undefined) update.description_en = patch.description_en
-  if (typeof patch.quantity === 'number') update.quantity = patch.quantity
-  if (patch.cover_image !== undefined) update.cover_image = patch.cover_image
-  if (patch.author_zh !== undefined) update.author_zh = patch.author_zh as any
-  if (patch.author_en !== undefined) update.author_en = patch.author_en as any
-  if (patch.publisher_zh !== undefined) update.publisher_zh = patch.publisher_zh as any
-  if (patch.publisher_en !== undefined) update.publisher_en = patch.publisher_en as any
-  if (category_id) update.category_id = category_id
+  const update: TablesUpdate<'books'> = {};
+  if (typeof patch.title_zh === 'string') update.title_zh = patch.title_zh;
+  if (patch.title_en !== undefined) update.title_en = patch.title_en;
+  if (typeof patch.description_zh === 'string') update.description_zh = patch.description_zh;
+  if (patch.description_en !== undefined) update.description_en = patch.description_en;
+  if (typeof patch.quantity === 'number') update.quantity = patch.quantity;
+  if (patch.cover_image !== undefined) update.cover_image = patch.cover_image;
+  if (patch.author_zh !== undefined) update.author_zh = patch.author_zh as any;
+  if (patch.author_en !== undefined) update.author_en = patch.author_en as any;
+  if (patch.publisher_zh !== undefined) update.publisher_zh = patch.publisher_zh as any;
+  if (patch.publisher_en !== undefined) update.publisher_en = patch.publisher_en as any;
+  if (category_id) update.category_id = category_id;
   if (patch.analysis_result !== undefined) {
-    update.image_analysis_data = patch.analysis_result as unknown as import('@/types/supabase.generated').Json
+    update.image_analysis_data =
+      patch.analysis_result as unknown as import('@/types/supabase.generated').Json;
   }
 
   if (Object.keys(update).length > 0) {
-    const { error: updErr } = await db.from('books').update(update).eq('id', id)
-    if (updErr) throw new Error(`Failed to update book: ${updErr.message}`)
+    const { error: updErr } = await db.from('books').update(update).eq('id', id);
+    if (updErr) throw new Error(`Failed to update book: ${updErr.message}`);
   }
 
   // Replace tags if provided
-  let finalTags: string[] | undefined
+  let finalTags: string[] | undefined;
   if (patch.tags) {
-    const tagNames = patch.tags.filter(Boolean)
-    finalTags = []
+    const tagNames = patch.tags.filter(Boolean);
+    finalTags = [];
     // Upsert names
     const { data: upserted, error: tagErr } = await db
       .from('tags')
-      .upsert(tagNames.map((n) => ({ name: n })), { onConflict: 'name' })
-      .select('id, name')
-    if (tagErr) throw new Error(`Failed to upsert tags: ${tagErr.message}`)
+      .upsert(
+        tagNames.map((n) => ({ name: n })),
+        { onConflict: 'name' },
+      )
+      .select('id, name');
+    if (tagErr) throw new Error(`Failed to upsert tags: ${tagErr.message}`);
 
     // Fetch current links
     const { data: currentLinks } = await db
       .from('book_tags')
       .select('book_id, tag_id, tags:tags(name)')
-      .eq('book_id', id)
+      .eq('book_id', id);
 
-    type LinkRow = { book_id: string; tag_id: string; tags: { name: string | null } | null }
-    const upRows = (upserted ?? []) as Array<Pick<Tables<'tags'>, 'id' | 'name'>>
-    const desiredIds = new Set<string>(upRows.map((t) => t.id as string))
-    const currentIds = new Set<string>(((currentLinks ?? []) as LinkRow[]).map((l) => l.tag_id as string))
+    type LinkRow = { book_id: string; tag_id: string; tags: { name: string | null } | null };
+    const upRows = (upserted ?? []) as Array<Pick<Tables<'tags'>, 'id' | 'name'>>;
+    const desiredIds = new Set<string>(upRows.map((t) => t.id as string));
+    const currentIds = new Set<string>(
+      ((currentLinks ?? []) as LinkRow[]).map((l) => l.tag_id as string),
+    );
 
     // Add missing links
-    const toAdd = [...desiredIds].filter((x) => !currentIds.has(x)).map((tag_id) => ({ book_id: id, tag_id }))
-    if (toAdd.length > 0) await db.from('book_tags').insert(toAdd)
+    const toAdd = [...desiredIds]
+      .filter((x) => !currentIds.has(x))
+      .map((tag_id) => ({ book_id: id, tag_id }));
+    if (toAdd.length > 0) await db.from('book_tags').insert(toAdd);
 
     // Remove stale links
-    const toRemove = [...currentIds].filter((x) => !desiredIds.has(x))
+    const toRemove = [...currentIds].filter((x) => !desiredIds.has(x));
     for (const tag_id of toRemove) {
-      await db.from('book_tags').delete().eq('book_id', id).eq('tag_id', tag_id)
+      await db.from('book_tags').delete().eq('book_id', id).eq('tag_id', tag_id);
     }
 
-    finalTags = upRows.map((t) => t.name as string)
+    finalTags = upRows.map((t) => t.name as string);
   }
 
   // Build projection
   const { data: book, error: selErr } = await db
     .from('books')
-    .select('id, title_zh, title_en, description_zh, description_en, quantity, cover_image, category_id')
+    .select(
+      'id, title_zh, title_en, description_zh, description_en, quantity, cover_image, category_id',
+    )
     .eq('id', id)
-    .single()
-  if (selErr || !book) throw new Error(`Failed to fetch updated book: ${selErr?.message}`)
+    .single();
+  if (selErr || !book) throw new Error(`Failed to fetch updated book: ${selErr?.message}`);
 
   const { data: cat } = await db
     .from('categories')
     .select('type')
     .eq('id', (book as { category_id: string }).category_id)
-    .single()
-  const category_type = ((cat?.type as CategoryType) ?? 'OTHER_BOOKS') as CategoryType
+    .single();
+  const category_type = ((cat?.type as CategoryType) ?? 'OTHER_BOOKS') as CategoryType;
 
   // If tags not provided, fetch names
-  let tags: string[]
+  let tags: string[];
   if (finalTags) {
-    tags = finalTags
+    tags = finalTags;
   } else {
     const { data: tagRows } = await db
       .from('book_tags')
       .select('tags:tags(name)')
-      .eq('book_id', id)
+      .eq('book_id', id);
     tags = ((tagRows ?? []) as Array<{ tags: { name: string | null } | null }>)
       .map((r) => r.tags?.name ?? undefined)
-      .filter((n): n is string => !!n)
+      .filter((n): n is string => !!n);
   }
 
   const br = book as {
-    title_zh: string
-    title_en: string | null
-    description_zh: string
-    description_en: string | null
-    quantity: number
-    cover_image: string | null
-  }
+    title_zh: string;
+    title_en: string | null;
+    description_zh: string;
+    description_en: string | null;
+    quantity: number;
+    cover_image: string | null;
+  };
   return {
     title_zh: br.title_zh,
     title_en: br.title_en ?? null,
@@ -275,6 +293,6 @@ export async function updateBookDb(id: string, patch: Omit<BookUpdate, 'book_id'
     category_type,
     quantity: br.quantity,
     tags,
-    cover_image: br.cover_image
-  }
+    cover_image: br.cover_image,
+  };
 }

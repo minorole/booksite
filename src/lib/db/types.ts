@@ -1,11 +1,11 @@
-import type { Tables } from '@/types/supabase.generated'
+import type { Tables } from '@/types/supabase.generated';
 
 // Narrow, app-facing projections for DB selects and RPCs
 
 export type CategoryProjection = Pick<
   Tables<'categories'>,
   'id' | 'type' | 'name_zh' | 'name_en' | 'description_zh' | 'description_en'
->
+>;
 
 export type BookProjection = Pick<
   Tables<'books'>,
@@ -25,13 +25,19 @@ export type BookProjection = Pick<
   | 'author_en'
   | 'publisher_zh'
   | 'publisher_en'
-> & { category: CategoryProjection }
+> & { category: CategoryProjection };
 
-export type TagJoinRow = { book_id: string; tags: { name: string | null } | null }
+export type TagJoinRow = { book_id: string; tags: { name: string | null } | null };
 
 // Shape returned via search_books RPC used by admin search
 export type SearchBooksRow = Pick<
   Tables<'books'>,
-  'id' | 'category_id' | 'title_zh' | 'title_en' | 'description_zh' | 'description_en' | 'quantity' | 'cover_image'
->
-
+  | 'id'
+  | 'category_id'
+  | 'title_zh'
+  | 'title_en'
+  | 'description_zh'
+  | 'description_en'
+  | 'quantity'
+  | 'cover_image'
+>;

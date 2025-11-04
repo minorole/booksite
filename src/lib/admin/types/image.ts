@@ -11,25 +11,25 @@ export type AllowedMimeType =
   | 'image/heif-sequence'
   | 'image/jpg'
   | 'image/pjpeg'
-  | 'image/x-png'
+  | 'image/x-png';
 
 export interface ImageConfig {
-  readonly MAX_SIZE: number
-  readonly ALLOWED_TYPES: readonly AllowedMimeType[]
-  readonly ACCEPT_STRING: string
+  readonly MAX_SIZE: number;
+  readonly ALLOWED_TYPES: readonly AllowedMimeType[];
+  readonly ACCEPT_STRING: string;
 }
 
 export interface CloudinaryConfig {
-  readonly FOLDER: string
+  readonly FOLDER: string;
   readonly TRANSFORMATION: readonly {
-    readonly quality: string
-    readonly fetch_format: string
-  }[]
+    readonly quality: string;
+    readonly fetch_format: string;
+  }[];
 }
 
 export interface ImageUploadResult {
-  secure_url: string
-  public_id: string
-  format: string
-  bytes: number
+  secure_url: string;
+  public_id: string;
+  format: string;
+  bytes: number;
 }

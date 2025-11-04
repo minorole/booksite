@@ -1,7 +1,7 @@
 export function LoadingSpinner() {
   return (
     <div className="flex items-center justify-center">
-      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
+      <div className="border-primary h-5 w-5 animate-spin rounded-full border-b-2"></div>
     </div>
-  )
-} 
+  );
+}

@@ -1,25 +1,24 @@
 export type AssistantBuffer = {
-  push: (delta: string) => void
-  value: () => string
-  length: () => number
-  clear: () => void
-}
+  push: (delta: string) => void;
+  value: () => string;
+  length: () => number;
+  clear: () => void;
+};
 
 export function createAssistantBuffer(): AssistantBuffer {
-  let buf = ''
+  let buf = '';
   return {
     push(delta: string) {
-      if (typeof delta === 'string' && delta) buf += delta
+      if (typeof delta === 'string' && delta) buf += delta;
     },
     value() {
-      return buf
+      return buf;
     },
     length() {
-      return buf.length
+      return buf.length;
     },
     clear() {
-      buf = ''
+      buf = '';
     },
-  }
+  };
 }
-

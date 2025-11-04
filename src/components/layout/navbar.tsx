@@ -1,19 +1,19 @@
-"use client"
+'use client';
 
-import { useMemo } from "react"
-import { UserMenu } from "@/components/auth/user-menu"
-import { useAuth } from "@/contexts/AuthContext"
-import { Bilingual } from "@/components/common/bilingual"
-import { useLocale } from "@/contexts/LocaleContext"
-import { PillNav } from "@/components/layout/pill-nav"
-import type { PillNavItem } from "@/components/layout/pill-nav"
-import { usePathname } from "next/navigation"
-import { replaceLeadingLocale } from "@/lib/i18n/paths"
+import { useMemo } from 'react';
+import { UserMenu } from '@/components/auth/user-menu';
+import { useAuth } from '@/contexts/AuthContext';
+import { Bilingual } from '@/components/common/bilingual';
+import { useLocale } from '@/contexts/LocaleContext';
+import { PillNav } from '@/components/layout/pill-nav';
+import type { PillNavItem } from '@/components/layout/pill-nav';
+import { usePathname } from 'next/navigation';
+import { replaceLeadingLocale } from '@/lib/i18n/paths';
 
 export function Navbar() {
-  const { user, isAdmin } = useAuth()
-  const { locale } = useLocale()
-  const pathname = usePathname()
+  const { user, isAdmin } = useAuth();
+  const { locale } = useLocale();
+  const pathname = usePathname();
 
   const items = useMemo(() => {
     const arr: PillNavItem[] = [
@@ -21,42 +21,64 @@ export function Navbar() {
       {
         label: <Bilingual cnText="书籍与法宝" enText="Books & Items" />,
         children: [
-          { href: `/${locale}/books/pure-land`, label: <Bilingual cnText="净土佛书" enText="Pure Land" /> },
-          { href: `/${locale}/books/others`, label: <Bilingual cnText="其他佛书" enText="Other Books" /> },
-          { href: `/${locale}/items/dharma`, label: <Bilingual cnText="法宝" enText="Dharma Items" /> },
-          { href: `/${locale}/items/statues`, label: <Bilingual cnText="佛像" enText="Buddha Statues" /> },
+          {
+            href: `/${locale}/books/pure-land`,
+            label: <Bilingual cnText="净土佛书" enText="Pure Land" />,
+          },
+          {
+            href: `/${locale}/books/others`,
+            label: <Bilingual cnText="其他佛书" enText="Other Books" />,
+          },
+          {
+            href: `/${locale}/items/dharma`,
+            label: <Bilingual cnText="法宝" enText="Dharma Items" />,
+          },
+          {
+            href: `/${locale}/items/statues`,
+            label: <Bilingual cnText="佛像" enText="Buddha Statues" />,
+          },
         ],
       },
-    ]
+    ];
 
-    if (user) arr.push({ href: `/${locale}/users/orders`, label: <Bilingual cnText="订单" enText="Orders" /> })
-    if (isAdmin) arr.push({ href: `/${locale}/admin`, label: <Bilingual cnText="管理" enText="Admin" /> })
+    if (user)
+      arr.push({
+        href: `/${locale}/users/orders`,
+        label: <Bilingual cnText="订单" enText="Orders" />,
+      });
+    if (isAdmin)
+      arr.push({ href: `/${locale}/admin`, label: <Bilingual cnText="管理" enText="Admin" /> });
 
     // Locale switch as pill links
-    const current = pathname || `/${locale}`
-    const zhHref = replaceLeadingLocale(current, 'zh')
-    const enHref = replaceLeadingLocale(current, 'en')
-    arr.push({ href: zhHref, label: '中文' })
-    arr.push({ href: enHref, label: 'English' })
+    const current = pathname || `/${locale}`;
+    const zhHref = replaceLeadingLocale(current, 'zh');
+    const enHref = replaceLeadingLocale(current, 'en');
+    arr.push({ href: zhHref, label: '中文' });
+    arr.push({ href: enHref, label: 'English' });
 
     // Auth control at the end
     if (user) {
-      arr.push({ custom: <UserMenu />, shape: 'circle' })
+      arr.push({ custom: <UserMenu />, shape: 'circle' });
     } else {
-      arr.push({ href: `/${locale}/auth/signin`, label: <Bilingual cnText="登录" enText="Sign In" /> })
+      arr.push({
+        href: `/${locale}/auth/signin`,
+        label: <Bilingual cnText="登录" enText="Sign In" />,
+      });
     }
-    return arr
-  }, [locale, user, isAdmin, pathname])
+    return arr;
+  }, [locale, user, isAdmin, pathname]);
 
   return (
     <nav className="sticky top-0 z-30 bg-transparent">
       <div className="container mx-auto px-4">
-        <div className={[
-          "mt-4 mx-auto",
-          "w-full md:max-w-5xl",
-          "px-2 sm:px-4 py-2",
-          "rounded-full",
-        ].join(" ")}>
+        <div
+          className={[
+            'mx-auto mt-4',
+            'w-full md:max-w-5xl',
+            'px-2 py-2 sm:px-4',
+            'rounded-full',
+          ].join(' ')}
+        >
           <div className="flex items-center justify-between gap-4">
             <PillNav
               logoSrc="/logo.png"
@@ -77,5 +99,5 @@ export function Navbar() {
         </div>
       </div>
     </nav>
-  )
+  );
 }

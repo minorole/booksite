@@ -29,7 +29,7 @@ export const ERROR_MESSAGES = {
     file_too_large: '文件过大。最大限制为10MB。',
     no_file: '未选择文件',
   },
-} as const
+} as const;
 
 export const LOADING_MESSAGES = {
   en: {
@@ -44,14 +44,14 @@ export const LOADING_MESSAGES = {
     processing: '处理中...',
     checking: '正在检查数据库...',
   },
-} as const
+} as const;
 
-export type UILanguage = keyof typeof ERROR_MESSAGES
+export type UILanguage = keyof typeof ERROR_MESSAGES;
 
 export function mapUnknownError(language: UILanguage, err: unknown): string {
-  if (err instanceof Error) return err.message || ERROR_MESSAGES[language].unknown_error
-  if (typeof err === 'string') return err || ERROR_MESSAGES[language].unknown_error
-  return ERROR_MESSAGES[language].unknown_error
+  if (err instanceof Error) return err.message || ERROR_MESSAGES[language].unknown_error;
+  if (typeof err === 'string') return err || ERROR_MESSAGES[language].unknown_error;
+  return ERROR_MESSAGES[language].unknown_error;
 }
 
 // Step labels for the chips shown under the header
@@ -75,8 +75,8 @@ export const STEP_LABELS = {
     search_books: '正在搜索书籍',
     adjust_book_quantity: '正在调整数量',
     update_order: '正在更新订单',
-  }
-} as const
+  },
+} as const;
 
 // General UI strings used across admin AI chat
 export const UI_STRINGS = {
@@ -89,7 +89,7 @@ export const UI_STRINGS = {
     details_show: 'Details',
     details_hide: 'Hide details',
     status: 'Status',
-    no_details: 'No details yet'
+    no_details: 'No details yet',
   },
   zh: {
     input_placeholder: '输入你的消息…',
@@ -100,6 +100,6 @@ export const UI_STRINGS = {
     details_show: '详情',
     details_hide: '收起详情',
     status: '状态',
-    no_details: '暂无详情'
-  }
-} as const
+    no_details: '暂无详情',
+  },
+} as const;

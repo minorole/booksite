@@ -1,1 +1,1 @@
-export { OPENAI_CONFIG } from '../openai'
+export { OPENAI_CONFIG } from '../openai';

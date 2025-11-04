@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 @plugin "tailwindcss-animate";
 
 @layer base {
@@ -30,7 +30,7 @@
     --radius: 0.5rem;
     /* Font variables (Archivo via next/font, MaShanZheng via manual @font-face) */
     --font-archivo: 'Archivo';
-    --font-mashanzheng: "MaShanZhengZh";
+    --font-mashanzheng: 'MaShanZhengZh';
   }
   .dark {
     --background: 222.2 84% 4.9%;
@@ -67,13 +67,13 @@
     --chat-col-width: 65ch;
     /* Accent (Lavender, Latte, softened to a light tint) */
     --accent: 230.9 97.2% 92%;
-    --accent-foreground: 233.8 16.0% 35.5%;
+    --accent-foreground: 233.8 16% 35.5%;
     /* Text tokens (Latte) */
-    --foreground: 233.8 16.0% 35.5%;       /* #4c4f69 */
+    --foreground: 233.8 16% 35.5%; /* #4c4f69 */
     --muted-foreground: 232.8 10.4% 47.3%; /* #6c6f85 */
     /* Status tokens (Catppuccin Latte) */
     --geist-success: #40a02b; /* green */
-    --geist-error: #d20f39;   /* red */
+    --geist-error: #d20f39; /* red */
     --geist-warning: #df8e1d; /* yellow */
 
     /* Catppuccin Latte palette (subset) */
@@ -91,10 +91,10 @@
 @layer base {
   .dark .theme-catppuccin {
     /* Text tokens (Mocha) */
-    --foreground: 226.2 63.9% 88.0%;       /* #cdd6f4 */
+    --foreground: 226.2 63.9% 88%; /* #cdd6f4 */
     --muted-foreground: 227.6 23.6% 71.8%; /* #a6adc8 */
     /* Ensure accent labels remain legible on dark */
-    --accent-foreground: 226.2 63.9% 88.0%;
+    --accent-foreground: 226.2 63.9% 88%;
 
     /* Catppuccin Mocha palette (subset) */
     --ctp-lavender: #b4befe;
@@ -166,7 +166,12 @@
     color: hsl(var(--foreground));
   }
   /* Ensure form controls inherit the same font stack for mixed input */
-  input, textarea, select, button { font: inherit; }
+  input,
+  textarea,
+  select,
+  button {
+    font: inherit;
+  }
 
   /*
     Chinese rendering and weight notes
@@ -195,8 +200,9 @@
 /* Self-hosted Chinese font with unicode-range so it only loads when needed */
 @font-face {
   font-family: 'MaShanZhengZh';
-  src: url('/fonts/ma-shan-zheng/MaShanZheng-Regular.woff2') format('woff2'),
-       url('/fonts/ma-shan-zheng/MaShanZheng-Regular.ttf') format('truetype');
+  src:
+    url('/fonts/ma-shan-zheng/MaShanZheng-Regular.woff2') format('woff2'),
+    url('/fonts/ma-shan-zheng/MaShanZheng-Regular.ttf') format('truetype');
   font-weight: 400;
   font-style: normal;
   font-display: swap;
@@ -207,13 +213,27 @@
 
 @layer utilities {
   /* Catppuccin color utilities (light/dark resolve via variables) */
-  .text-ctp-lavender { color: var(--ctp-lavender); }
-  .text-ctp-mauve { color: var(--ctp-mauve); }
-  .text-ctp-blue { color: var(--ctp-blue); }
-  .text-ctp-green { color: var(--ctp-green); }
-  .text-ctp-yellow { color: var(--ctp-yellow); }
-  .text-ctp-red { color: var(--ctp-red); }
-  .text-ctp-peach { color: var(--ctp-peach); }
+  .text-ctp-lavender {
+    color: var(--ctp-lavender);
+  }
+  .text-ctp-mauve {
+    color: var(--ctp-mauve);
+  }
+  .text-ctp-blue {
+    color: var(--ctp-blue);
+  }
+  .text-ctp-green {
+    color: var(--ctp-green);
+  }
+  .text-ctp-yellow {
+    color: var(--ctp-yellow);
+  }
+  .text-ctp-red {
+    color: var(--ctp-red);
+  }
+  .text-ctp-peach {
+    color: var(--ctp-peach);
+  }
   .animate-delay-0 {
     animation-delay: 0ms;
   }
@@ -223,11 +243,30 @@
 }
 
 /* Custom animations used in app */
-@keyframes blink { 0%, 100% { opacity: 1 } 50% { opacity: 0 } }
-@utility animate-blink { animation: blink 1s ease-in-out infinite; }
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+@utility animate-blink {
+  animation: blink 1s ease-in-out infinite;
+}
 
-@keyframes spin-slow { 0% { transform: rotate(0deg) } 100% { transform: rotate(360deg) } }
-@utility animate-spin-slow { animation: spin-slow 10s linear infinite; }
+@keyframes spin-slow {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+@utility animate-spin-slow {
+  animation: spin-slow 10s linear infinite;
+}
 
 /* Base variables for additional tokens */
 @layer base {

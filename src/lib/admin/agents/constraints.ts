@@ -14,7 +14,7 @@ export const ALLOWED_BOOK_FIELDS = [
   'author_en',
   'publisher_zh',
   'publisher_en',
-] as const
+] as const;
 
 export const UNSUPPORTED_FIELD_EXAMPLES = [
   'price/定价',
@@ -23,5 +23,4 @@ export const UNSUPPORTED_FIELD_EXAMPLES = [
   'condition/保存状态',
   'shelf location/货架位置',
   'barcode/条码',
-] as const
-
+] as const;

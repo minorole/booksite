@@ -1,5 +1,5 @@
-import { SuperAdminPanel } from '@/components/super-admin/super-admin-panel'
+import { SuperAdminPanel } from '@/components/super-admin/super-admin-panel';
 
 export default function SuperAdminPage() {
-  return <SuperAdminPanel />
+  return <SuperAdminPanel />;
 }

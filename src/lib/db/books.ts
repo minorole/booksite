@@ -1,10 +1,10 @@
-import { getServerDb } from '@/lib/db/client'
-import type { BookProjection, TagJoinRow } from '@/lib/db/types'
+import { getServerDb } from '@/lib/db/client';
+import type { BookProjection, TagJoinRow } from '@/lib/db/types';
 
-export type BookWithCategoryAndTags = BookProjection & { search_tags: string[] }
+export type BookWithCategoryAndTags = BookProjection & { search_tags: string[] };
 
 export async function listBooks(): Promise<BookWithCategoryAndTags[]> {
-  const db = await getServerDb()
+  const db = await getServerDb();
 
   // 1) Fetch books with category
   const sel = `
@@ -14,37 +14,37 @@ export async function listBooks(): Promise<BookWithCategoryAndTags[]> {
     category:categories!books_category_id_fkey (
       id, type, name_zh, name_en, description_zh, description_en
     )
-  `
+  `;
 
   const { data: books, error: booksError } = await db
     .from('books')
     .select(sel)
-    .order('updated_at', { ascending: false })
+    .order('updated_at', { ascending: false });
 
   if (booksError) {
-    throw new Error(`Failed to fetch books: ${booksError.message}`)
+    throw new Error(`Failed to fetch books: ${booksError.message}`);
   }
 
-  const bookIds = ((books ?? []) as BookProjection[]).map((b) => b.id)
-  const tagsByBook = new Map<string, string[]>()
+  const bookIds = ((books ?? []) as BookProjection[]).map((b) => b.id);
+  const tagsByBook = new Map<string, string[]>();
 
   if (bookIds.length > 0) {
     // 2) Fetch tags for all books in one go and group
     const { data: tagRows, error: tagsError } = await db
       .from('book_tags')
       .select('book_id, tags:tags ( name )')
-      .in('book_id', bookIds)
+      .in('book_id', bookIds);
 
     if (tagsError) {
-      throw new Error(`Failed to fetch book tags: ${tagsError.message}`)
+      throw new Error(`Failed to fetch book tags: ${tagsError.message}`);
     }
 
     for (const row of (tagRows ?? []) as TagJoinRow[]) {
-      const name = row.tags?.name ?? undefined
-      if (!name) continue
-      const arr = tagsByBook.get(row.book_id) ?? []
-      arr.push(name)
-      tagsByBook.set(row.book_id, arr)
+      const name = row.tags?.name ?? undefined;
+      if (!name) continue;
+      const arr = tagsByBook.get(row.book_id) ?? [];
+      arr.push(name);
+      tagsByBook.set(row.book_id, arr);
     }
   }
 
@@ -67,11 +67,11 @@ export async function listBooks(): Promise<BookWithCategoryAndTags[]> {
     publisher_en: b.publisher_en,
     category: b.category,
     search_tags: tagsByBook.get(b.id) ?? [],
-  }))
+  }));
 }
 
 export async function getBook(id: string): Promise<BookWithCategoryAndTags | null> {
-  const db = await getServerDb()
+  const db = await getServerDb();
 
   const sel = `
     id, title_zh, title_en, description_zh, description_en,
@@ -80,35 +80,31 @@ export async function getBook(id: string): Promise<BookWithCategoryAndTags | nul
     category:categories!books_category_id_fkey (
       id, type, name_zh, name_en, description_zh, description_en
     )
-  `
+  `;
 
-  const { data: b, error } = await db
-    .from('books')
-    .select(sel)
-    .eq('id', id)
-    .maybeSingle()
+  const { data: b, error } = await db.from('books').select(sel).eq('id', id).maybeSingle();
 
   if (error) {
-    throw new Error(`Failed to fetch book: ${error.message}`)
+    throw new Error(`Failed to fetch book: ${error.message}`);
   }
-  if (!b) return null
+  if (!b) return null;
 
   const { data: tagRows, error: tagsError } = await db
     .from('book_tags')
     .select('book_id, tags:tags ( name )')
-    .eq('book_id', id)
+    .eq('book_id', id);
 
   if (tagsError) {
-    throw new Error(`Failed to fetch book tags: ${tagsError.message}`)
+    throw new Error(`Failed to fetch book tags: ${tagsError.message}`);
   }
 
-  const names: string[] = []
+  const names: string[] = [];
   for (const row of (tagRows ?? []) as TagJoinRow[]) {
-    const n = row.tags?.name ?? undefined
-    if (n) names.push(n)
+    const n = row.tags?.name ?? undefined;
+    if (n) names.push(n);
   }
 
-  const book = b as BookProjection
+  const book = b as BookProjection;
   return {
     id: book.id,
     title_zh: book.title_zh,
@@ -128,5 +124,5 @@ export async function getBook(id: string): Promise<BookWithCategoryAndTags | nul
     publisher_en: book.publisher_en,
     category: book.category,
     search_tags: names,
-  }
+  };
 }

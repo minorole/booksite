@@ -1,51 +1,48 @@
-import { NextResponse } from 'next/server'
-import { assertAdmin, UnauthorizedError } from '@/lib/security/guards'
-import { listBooks } from '@/lib/db/books'
-import { CATEGORY_TYPES, type CategoryType } from '@/lib/db/enums'
-import { createBookDb, logAdminAction } from '@/lib/db/admin'
-import { z } from 'zod'
-import { promoteTempAsset } from '@/lib/admin/cloudinary'
-import { HttpUrl } from '@/lib/schema/http-url'
+import { NextResponse } from 'next/server';
+import { assertAdmin, UnauthorizedError } from '@/lib/security/guards';
+import { listBooks } from '@/lib/db/books';
+import { CATEGORY_TYPES, type CategoryType } from '@/lib/db/enums';
+import { createBookDb, logAdminAction } from '@/lib/db/admin';
+import { z } from 'zod';
+import { promoteTempAsset } from '@/lib/admin/cloudinary';
+import { HttpUrl } from '@/lib/schema/http-url';
 
 export async function GET() {
   try {
     // Verify admin access
-    let user
+    let user;
     try {
-      user = await assertAdmin()
+      user = await assertAdmin();
     } catch (e) {
       if (e instanceof UnauthorizedError) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
-      throw e
+      throw e;
     }
 
-    const books = await listBooks()
+    const books = await listBooks();
 
-    return NextResponse.json({ books })
+    return NextResponse.json({ books });
   } catch (error) {
-    console.error('❌ Failed to fetch books:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch books' },
-      { status: 500 }
-    )
+    console.error('❌ Failed to fetch books:', error);
+    return NextResponse.json({ error: 'Failed to fetch books' }, { status: 500 });
   }
 }
 
 export async function POST(request: Request) {
   try {
     // Verify admin access
-    let user
+    let user;
     try {
-      user = await assertAdmin()
+      user = await assertAdmin();
     } catch (e) {
       if (e instanceof UnauthorizedError) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
-      throw e
+      throw e;
     }
 
-    const data = await request.json()
+    const data = await request.json();
 
     const CreateBookSchema = z.object({
       title_zh: z.string().trim().min(1, 'title_zh required'),
@@ -56,31 +53,34 @@ export async function POST(request: Request) {
       quantity: z.number().int().min(0),
       cover_image: HttpUrl.optional(),
       tags: z.union([z.array(z.string()), z.string()]).optional(),
-    })
+    });
 
-    const parsed = CreateBookSchema.safeParse(data)
+    const parsed = CreateBookSchema.safeParse(data);
     if (!parsed.success) {
       return NextResponse.json(
         { error: 'Invalid request', details: parsed.error.flatten() },
-        { status: 400 }
-      )
+        { status: 400 },
+      );
     }
 
     // Normalize tags to string[]
     const tagsArray = Array.isArray(parsed.data.tags)
       ? parsed.data.tags.filter(Boolean)
-      : (typeof parsed.data.tags === 'string'
-          ? parsed.data.tags.split(',').map((t: string) => t.trim()).filter(Boolean)
-          : [])
+      : typeof parsed.data.tags === 'string'
+        ? parsed.data.tags
+            .split(',')
+            .map((t: string) => t.trim())
+            .filter(Boolean)
+        : [];
 
     // Promote temp cover image to permanent location if provided
-    let coverUrl: string | null = parsed.data.cover_image ?? null
+    let coverUrl: string | null = parsed.data.cover_image ?? null;
     if (coverUrl && coverUrl.includes('res.cloudinary.com')) {
       try {
-        const promoted = await promoteTempAsset(coverUrl)
-        coverUrl = promoted.url
+        const promoted = await promoteTempAsset(coverUrl);
+        coverUrl = promoted.url;
       } catch (e) {
-        console.warn('cover promotion skipped:', (e as any)?.message || e)
+        console.warn('cover promotion skipped:', (e as any)?.message || e);
       }
     }
 
@@ -94,7 +94,7 @@ export async function POST(request: Request) {
       quantity: parsed.data.quantity,
       cover_image: coverUrl,
       tags: tagsArray,
-    })
+    });
 
     // Admin log via helper
     await logAdminAction({
@@ -103,17 +103,14 @@ export async function POST(request: Request) {
       book_id: created.id,
       book_title: parsed.data.title_en || parsed.data.title_zh || null,
       metadata: parsed.data,
-    })
+    });
 
-    return NextResponse.json({ book: { id: created.id } })
+    return NextResponse.json({ book: { id: created.id } });
   } catch (error) {
-    console.error('❌ Failed to create book:', error)
-    return NextResponse.json(
-      { error: 'Failed to create book' },
-      { status: 500 }
-    )
+    console.error('❌ Failed to create book:', error);
+    return NextResponse.json({ error: 'Failed to create book' }, { status: 500 });
   }
-} 
-export const dynamic = 'force-dynamic'
-export const runtime = 'nodejs'
-export const revalidate = 0
+}
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+export const revalidate = 0;

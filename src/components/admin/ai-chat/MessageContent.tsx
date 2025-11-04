@@ -1,22 +1,22 @@
-"use client";
+'use client';
 
-import { Expand, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import type { Message, MessageContent as MsgContent } from '@/lib/admin/types'
-import Image from 'next/image'
+import { Expand, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import type { Message, MessageContent as MsgContent } from '@/lib/admin/types';
+import Image from 'next/image';
 // CATEGORY_LABELS import removed: natural_analysis rendering dropped
-import type { DuplicateDetectionResult } from '@/lib/admin/types/results'
-import { DuplicateMatchesCard } from '@/components/admin/ai-chat/cards/DuplicateMatchesCard'
-import { SearchResultsList } from '@/components/admin/ai-chat/cards/SearchResultsList'
-import { BookSummaryCard } from '@/components/admin/ai-chat/cards/BookSummaryCard'
-import { OrderUpdateCard } from '@/components/admin/ai-chat/cards/OrderUpdateCard'
-import { Bilingual } from '@/components/common/bilingual'
-import { ADMIN_AI_RICH_ASSISTANT_TEXT } from '@/lib/admin/constants'
-import { RichTextAuto } from './RichTextAuto'
-import { useLocale } from '@/contexts/LocaleContext'
-import { UI_STRINGS, STEP_LABELS } from '@/lib/admin/i18n'
-import { useMemo, useState } from 'react'
+import type { DuplicateDetectionResult } from '@/lib/admin/types/results';
+import { DuplicateMatchesCard } from '@/components/admin/ai-chat/cards/DuplicateMatchesCard';
+import { SearchResultsList } from '@/components/admin/ai-chat/cards/SearchResultsList';
+import { BookSummaryCard } from '@/components/admin/ai-chat/cards/BookSummaryCard';
+import { OrderUpdateCard } from '@/components/admin/ai-chat/cards/OrderUpdateCard';
+import { Bilingual } from '@/components/common/bilingual';
+import { ADMIN_AI_RICH_ASSISTANT_TEXT } from '@/lib/admin/constants';
+import { RichTextAuto } from './RichTextAuto';
+import { useLocale } from '@/contexts/LocaleContext';
+import { UI_STRINGS, STEP_LABELS } from '@/lib/admin/i18n';
+import { useMemo, useState } from 'react';
 
 export function MessageContent({
   message,
@@ -26,83 +26,173 @@ export function MessageContent({
   currentStepName,
   onSelectImage,
 }: {
-  message: Message
-  loading: boolean
-  thinkingAgent?: string | null
-  inflightTools?: Message[]
-  currentStepName?: string | null
-  onSelectImage: (url: string) => void
+  message: Message;
+  loading: boolean;
+  thinkingAgent?: string | null;
+  inflightTools?: Message[];
+  currentStepName?: string | null;
+  onSelectImage: (url: string) => void;
 }) {
-  const { locale } = useLocale()
-  const [showDetails, setShowDetails] = useState(false)
+  const { locale } = useLocale();
+  const [showDetails, setShowDetails] = useState(false);
   const statusLabel = useMemo(() => {
-    if (!currentStepName) return null
-    const map = STEP_LABELS[locale === 'zh' ? 'zh' : 'en'] as Record<string, string>
-    return map[currentStepName] || currentStepName
-  }, [currentStepName, locale])
+    if (!currentStepName) return null;
+    const map = STEP_LABELS[locale === 'zh' ? 'zh' : 'en'] as Record<string, string>;
+    return map[currentStepName] || currentStepName;
+  }, [currentStepName, locale]);
 
   function renderToolCard(msg: Message) {
     try {
-      if (msg.role !== 'tool') return null
-      const content = msg.content ? JSON.parse(msg.content as string) : null
-      const data = (content?.data || content) as any
-      const vision = data?.vision_analysis
-      const item = data?.item_analysis
-      const name = msg.name
-      const duplicate = data?.duplicate_detection
-      const search = data?.search
-      const createdBook = data?.book
-      const order = data?.order
+      if (msg.role !== 'tool') return null;
+      const content = msg.content ? JSON.parse(msg.content as string) : null;
+      const data = (content?.data || content) as any;
+      const vision = data?.vision_analysis;
+      const item = data?.item_analysis;
+      const name = msg.name;
+      const duplicate = data?.duplicate_detection;
+      const search = data?.search;
+      const createdBook = data?.book;
+      const order = data?.order;
       if (item?.structured_data) {
-        const sd = item.structured_data
+        const sd = item.structured_data;
         return (
           <div className="space-y-2">
-            <p><Bilingual cnText="物品分析完成。结构化信息：" enText="Item analysis complete. Structured details:" /></p>
-            <div className="pl-4 border-l-2 border-primary/20 space-y-1">
-              {sd.name && <p><Bilingual cnText="名称" enText="Name" />: {sd.name}</p>}
-              {sd.type && <p><Bilingual cnText="类型" enText="Type" />: {sd.type}</p>}
-              {sd.material && <p><Bilingual cnText="材质" enText="Material" />: {sd.material}</p>}
-              {sd.finish && <p><Bilingual cnText="表面" enText="Finish" />: {sd.finish}</p>}
-              {sd.size && <p><Bilingual cnText="尺寸" enText="Size" />: {sd.size}</p>}
-              {sd.dimensions && <p><Bilingual cnText="规格" enText="Dimensions" />: {sd.dimensions}</p>}
-            </div>
-          </div>
-        )
-      }
-      if (vision?.structured_data) {
-        const sd = vision.structured_data
-        return (
-          <div className="space-y-2">
-            <p><Bilingual cnText="分析完成！以下是结构化数据：" enText="Analysis complete! Here’s the structured data:" /></p>
-            <div className="pl-4 border-l-2 border-primary/20 space-y-1">
-              <p><Bilingual cnText="置信度" enText="Confidence Score" />: {Math.round(sd.confidence_scores.overall * 100)}%</p>
-              <p><Bilingual cnText="语言" enText="Language" />: {sd.language_detection.primary_language.toUpperCase()}</p>
-              {sd.visual_elements.notable_elements.length > 0 && (
-                <p><Bilingual cnText="重要元素" enText="Notable Elements" />: {sd.visual_elements.notable_elements.join(', ')}</p>
+            <p>
+              <Bilingual
+                cnText="物品分析完成。结构化信息："
+                enText="Item analysis complete. Structured details:"
+              />
+            </p>
+            <div className="border-primary/20 space-y-1 border-l-2 pl-4">
+              {sd.name && (
+                <p>
+                  <Bilingual cnText="名称" enText="Name" />: {sd.name}
+                </p>
+              )}
+              {sd.type && (
+                <p>
+                  <Bilingual cnText="类型" enText="Type" />: {sd.type}
+                </p>
+              )}
+              {sd.material && (
+                <p>
+                  <Bilingual cnText="材质" enText="Material" />: {sd.material}
+                </p>
+              )}
+              {sd.finish && (
+                <p>
+                  <Bilingual cnText="表面" enText="Finish" />: {sd.finish}
+                </p>
+              )}
+              {sd.size && (
+                <p>
+                  <Bilingual cnText="尺寸" enText="Size" />: {sd.size}
+                </p>
+              )}
+              {sd.dimensions && (
+                <p>
+                  <Bilingual cnText="规格" enText="Dimensions" />: {sd.dimensions}
+                </p>
               )}
             </div>
           </div>
-        )
+        );
+      }
+      if (vision?.structured_data) {
+        const sd = vision.structured_data;
+        return (
+          <div className="space-y-2">
+            <p>
+              <Bilingual
+                cnText="分析完成！以下是结构化数据："
+                enText="Analysis complete! Here’s the structured data:"
+              />
+            </p>
+            <div className="border-primary/20 space-y-1 border-l-2 pl-4">
+              <p>
+                <Bilingual cnText="置信度" enText="Confidence Score" />:{' '}
+                {Math.round(sd.confidence_scores.overall * 100)}%
+              </p>
+              <p>
+                <Bilingual cnText="语言" enText="Language" />:{' '}
+                {sd.language_detection.primary_language.toUpperCase()}
+              </p>
+              {sd.visual_elements.notable_elements.length > 0 && (
+                <p>
+                  <Bilingual cnText="重要元素" enText="Notable Elements" />:{' '}
+                  {sd.visual_elements.notable_elements.join(', ')}
+                </p>
+              )}
+            </div>
+          </div>
+        );
       }
       if (duplicate) {
-        type BookItem = { id: string; title_en?: string | null; title_zh?: string | null; quantity?: number; tags?: string[] }
+        type BookItem = {
+          id: string;
+          title_en?: string | null;
+          title_zh?: string | null;
+          quantity?: number;
+          tags?: string[];
+        };
         return (
-          <DuplicateMatchesCard data={data as { duplicate_detection?: DuplicateDetectionResult; search?: { books: BookItem[] } } | null} />
-        )
+          <DuplicateMatchesCard
+            data={
+              data as {
+                duplicate_detection?: DuplicateDetectionResult;
+                search?: { books: BookItem[] };
+              } | null
+            }
+          />
+        );
       }
       if (search?.books) {
-        type BookItem = { id: string; title_en?: string | null; title_zh?: string | null; quantity?: number; tags?: string[] }
-        return <SearchResultsList data={data as { search?: { books: BookItem[] } } | null} />
+        type BookItem = {
+          id: string;
+          title_en?: string | null;
+          title_zh?: string | null;
+          quantity?: number;
+          tags?: string[];
+        };
+        return <SearchResultsList data={data as { search?: { books: BookItem[] } } | null} />;
       }
       if (createdBook && (name === 'create_book' || name === 'update_book')) {
-        return <BookSummaryCard data={data as { book?: { id?: string; title_en?: string | null; title_zh?: string | null; quantity?: number; tags?: string[]; category_type?: string } } | null} mode={name === 'update_book' ? 'updated' : 'created'} />
+        return (
+          <BookSummaryCard
+            data={
+              data as {
+                book?: {
+                  id?: string;
+                  title_en?: string | null;
+                  title_zh?: string | null;
+                  quantity?: number;
+                  tags?: string[];
+                  category_type?: string;
+                };
+              } | null
+            }
+            mode={name === 'update_book' ? 'updated' : 'created'}
+          />
+        );
       }
       if (order && name === 'update_order') {
-        return <OrderUpdateCard data={data as { order?: { order_id: string; status?: string | null; tracking_number?: string | null } } | null} />
+        return (
+          <OrderUpdateCard
+            data={
+              data as {
+                order?: {
+                  order_id: string;
+                  status?: string | null;
+                  tracking_number?: string | null;
+                };
+              } | null
+            }
+          />
+        );
       }
       // natural_analysis branch removed (structured-only analysis)
     } catch {}
-    return <p>{String((msg as any)?.content || '')}</p>
+    return <p>{String((msg as any)?.content || '')}</p>;
   }
 
   // Inline thinking indicator for assistant placeholder
@@ -112,22 +202,29 @@ export function MessageContent({
     message.content.length === 0 &&
     loading
   ) {
-    const lang = locale === 'zh' ? 'zh' : 'en'
-    const base = thinkingAgent ? `${UI_STRINGS[lang].thinking} (${thinkingAgent})` : UI_STRINGS[lang].thinking
-    const label = statusLabel ? `${base} — ${statusLabel}` : base
+    const lang = locale === 'zh' ? 'zh' : 'en';
+    const base = thinkingAgent
+      ? `${UI_STRINGS[lang].thinking} (${thinkingAgent})`
+      : UI_STRINGS[lang].thinking;
+    const label = statusLabel ? `${base} — ${statusLabel}` : base;
     return (
-      <div className="flex flex-col gap-2 text-muted-foreground">
+      <div className="text-muted-foreground flex flex-col gap-2">
         <div className="flex items-center gap-2">
           <Loader2 className="h-4 w-4 animate-spin" />
           <span>{label}</span>
           {inflightTools && inflightTools.length > 0 && (
-            <Button size="sm" variant="ghost" className="h-6 px-2" onClick={() => setShowDetails((v) => !v)}>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 px-2"
+              onClick={() => setShowDetails((v) => !v)}
+            >
               {showDetails ? UI_STRINGS[lang].details_hide : UI_STRINGS[lang].details_show}
             </Button>
           )}
         </div>
         {showDetails && (
-          <div className="mt-1 pl-3 border-l border-border/60 space-y-3">
+          <div className="border-border/60 mt-1 space-y-3 border-l pl-3">
             {inflightTools && inflightTools.length > 0 ? (
               inflightTools.map((t, i) => (
                 <div key={i} className="bg-background/60 rounded-lg border p-2">
@@ -140,7 +237,7 @@ export function MessageContent({
           </div>
         )}
       </div>
-    )
+    );
   }
 
   // Array content (image + text)
@@ -149,7 +246,7 @@ export function MessageContent({
       <div className="space-y-2">
         {message.content.map((content: MsgContent, i) => {
           if (content.type === 'image_url' && content.image_url?.url) {
-            const imageUrl = content.image_url.url
+            const imageUrl = content.image_url.url;
             return (
               <div key={i} className="relative">
                 <Image
@@ -157,31 +254,31 @@ export function MessageContent({
                   alt="User uploaded image"
                   width={512}
                   height={512}
-                  className="max-w-sm h-auto rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                  className="h-auto max-w-sm cursor-pointer rounded-lg transition-opacity hover:opacity-90"
                   onClick={() => onSelectImage(imageUrl)}
                 />
               </div>
-            )
+            );
           }
           if (content.type === 'text') {
             if (message.role === 'assistant' && ADMIN_AI_RICH_ASSISTANT_TEXT) {
-              return <RichTextAuto key={i} text={content.text || ''} />
+              return <RichTextAuto key={i} text={content.text || ''} />;
             }
-            return <p key={i}>{content.text}</p>
+            return <p key={i}>{content.text}</p>;
           }
-          return null
+          return null;
         })}
       </div>
-    )
+    );
   }
 
   // Tool results: use shared renderer
   if (message.role === 'tool') {
-    return renderToolCard(message)
+    return renderToolCard(message);
   }
 
   if (message.role === 'assistant' && ADMIN_AI_RICH_ASSISTANT_TEXT) {
-    return <RichTextAuto text={String(message.content)} />
+    return <RichTextAuto text={String(message.content)} />;
   }
-  return <p>{String(message.content)}</p>
+  return <p>{String(message.content)}</p>;
 }

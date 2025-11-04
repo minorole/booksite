@@ -1,35 +1,40 @@
-"use client";
+'use client';
 
-import { Check, Loader2, TriangleAlert } from 'lucide-react'
-import { useLocale } from '@/contexts/LocaleContext'
-import { STEP_LABELS } from '@/lib/admin/i18n'
+import { Check, Loader2, TriangleAlert } from 'lucide-react';
+import { useLocale } from '@/contexts/LocaleContext';
+import { STEP_LABELS } from '@/lib/admin/i18n';
 
 type Step = {
-  id: string
-  name: string
-  status: 'running' | 'done' | 'error'
-  summary?: string
-}
+  id: string;
+  name: string;
+  status: 'running' | 'done' | 'error';
+  summary?: string;
+};
 
 export function StepList({ steps }: { steps: Step[] }) {
-  const { locale } = useLocale()
-  if (!steps.length) return null
+  const { locale } = useLocale();
+  if (!steps.length) return null;
   return (
-    <div className="px-4 pb-2 flex flex-wrap gap-2">
+    <div className="flex flex-wrap gap-2 px-4 pb-2">
       {steps.map((s) => {
-        const labelMap = STEP_LABELS[locale === 'zh' ? 'zh' : 'en']
-        const label = labelMap[s.name as keyof typeof labelMap] || (s.name.startsWith('handoff:') ? `Handoff to ${s.name.slice(8)}` : s.name)
+        const labelMap = STEP_LABELS[locale === 'zh' ? 'zh' : 'en'];
+        const label =
+          labelMap[s.name as keyof typeof labelMap] ||
+          (s.name.startsWith('handoff:') ? `Handoff to ${s.name.slice(8)}` : s.name);
         return (
-          <div key={s.id} className="inline-flex items-center gap-2 px-3 py-1 rounded-full border text-sm bg-muted">
+          <div
+            key={s.id}
+            className="bg-muted inline-flex items-center gap-2 rounded-full border px-3 py-1 text-sm"
+          >
             {s.status === 'running' && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-            {s.status === 'done' && <Check className="h-3.5 w-3.5 text-success" />}
-            {s.status === 'error' && <TriangleAlert className="h-3.5 w-3.5 text-error" />}
+            {s.status === 'done' && <Check className="text-success h-3.5 w-3.5" />}
+            {s.status === 'error' && <TriangleAlert className="text-error h-3.5 w-3.5" />}
             <span>{label}</span>
           </div>
-        )
+        );
       })}
     </div>
-  )
+  );
 }
 
-export type { Step }
+export type { Step };

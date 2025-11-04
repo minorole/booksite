@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import { z } from 'zod';
 
 // Define environment variable schema (strings only; validate at access time)
 const RequiredKeys = [
@@ -7,7 +7,7 @@ const RequiredKeys = [
   'NEXT_PUBLIC_SUPABASE_ANON_KEY',
   'SUPER_ADMIN_EMAIL',
   'CLOUDINARY_URL',
-] as const
+] as const;
 
 const OptionalKeys = [
   'OPENAI_API_KEY_USER',
@@ -27,27 +27,27 @@ const OptionalKeys = [
   // Cloudinary temp uploads configuration (optional)
   'CLOUDINARY_TEMP_PREFIX',
   'CLOUDINARY_TEMP_RETENTION_DAYS',
-] as const
+] as const;
 
-export type RequiredEnvKey = typeof RequiredKeys[number]
-export type OptionalEnvKey = typeof OptionalKeys[number]
-export type AnyEnvKey = RequiredEnvKey | OptionalEnvKey
+export type RequiredEnvKey = (typeof RequiredKeys)[number];
+export type OptionalEnvKey = (typeof OptionalKeys)[number];
+export type AnyEnvKey = RequiredEnvKey | OptionalEnvKey;
 
-const nonEmptyString = z.string().min(1)
+const nonEmptyString = z.string().min(1);
 
 export function getEnv(key: RequiredEnvKey): string {
-  const value = process.env[key]
-  const parsed = nonEmptyString.safeParse(value)
+  const value = process.env[key];
+  const parsed = nonEmptyString.safeParse(value);
   if (!parsed.success) {
-    throw new Error(`Missing required environment variable: ${key}`)
+    throw new Error(`Missing required environment variable: ${key}`);
   }
-  return parsed.data
+  return parsed.data;
 }
 
 export function getOptionalEnv(key: OptionalEnvKey): string | undefined {
-  const value = process.env[key]
-  if (value === undefined || value === '') return undefined
-  return value
+  const value = process.env[key];
+  if (value === undefined || value === '') return undefined;
+  return value;
 }
 
 export const env = {
@@ -73,4 +73,4 @@ export const env = {
   // Cloudinary temp uploads (optional)
   cloudinaryTempPrefix: () => getOptionalEnv('CLOUDINARY_TEMP_PREFIX'),
   cloudinaryTempRetentionDays: () => getOptionalEnv('CLOUDINARY_TEMP_RETENTION_DAYS'),
-}
+};

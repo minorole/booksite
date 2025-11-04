@@ -1,16 +1,16 @@
-"use client"
+'use client';
 
-import React, { useMemo } from "react"
-import { Input } from "@/components/ui/input"
-import { cn } from "@/lib/utils"
-import { Bilingual } from "@/components/common/bilingual"
+import React, { useMemo } from 'react';
+import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
+import { Bilingual } from '@/components/common/bilingual';
 
 type BilingualInputProps = React.ComponentProps<typeof Input> & {
-  cnPlaceholder: React.ReactNode
-  enPlaceholder: React.ReactNode
-  wrapperClassName?: string
-  overlayClassName?: string
-}
+  cnPlaceholder: React.ReactNode;
+  enPlaceholder: React.ReactNode;
+  wrapperClassName?: string;
+  overlayClassName?: string;
+};
 
 export function BilingualInput({
   cnPlaceholder,
@@ -20,21 +20,21 @@ export function BilingualInput({
   overlayClassName,
   value,
   defaultValue,
-  type = "text",
+  type = 'text',
   ...rest
 }: BilingualInputProps) {
   const hasContent = useMemo(() => {
-    if (typeof value === "string") return value.length > 0
-    if (typeof defaultValue === "string") return defaultValue.length > 0
-    return false
-  }, [value, defaultValue])
+    if (typeof value === 'string') return value.length > 0;
+    if (typeof defaultValue === 'string') return defaultValue.length > 0;
+    return false;
+  }, [value, defaultValue]);
 
   return (
-    <div className={cn("relative", wrapperClassName)}>
+    <div className={cn('relative', wrapperClassName)}>
       <Input
         type={type}
         placeholder=""
-        className={cn("h-12 text-sm", className)}
+        className={cn('h-12 text-sm', className)}
         value={value as unknown as string | number | readonly string[] | undefined}
         defaultValue={defaultValue as unknown as string | number | readonly string[] | undefined}
         {...rest}
@@ -42,15 +42,15 @@ export function BilingualInput({
       {!hasContent && (
         <div
           className={cn(
-            "pointer-events-none absolute left-3 right-3 top-1/2 -translate-y-1/2 text-sm",
-            overlayClassName
+            'pointer-events-none absolute top-1/2 right-3 left-3 -translate-y-1/2 text-sm',
+            overlayClassName,
           )}
         >
           <Bilingual cnText={cnPlaceholder} enText={enPlaceholder} />
         </div>
       )}
     </div>
-  )
+  );
 }
 
-export default BilingualInput
+export default BilingualInput;

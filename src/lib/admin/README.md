@@ -3,6 +3,7 @@
 This is the single entry point for the Admin AI chat: what it is, how it works, how to run it, and how to troubleshoot it. It links directly to the code that lives under this folder.
 
 ## Quick Start
+
 - Requirements
   - Node 20.18+
   - Env: `OPENAI_API_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPER_ADMIN_EMAIL`, `CLOUDINARY_URL`
@@ -104,6 +105,7 @@ sequenceDiagram
 ```
 
 ## SSE Event Cheat‑Sheet
+
 UI consumes versioned events from `src/lib/admin/types/events.ts`. Examples below are abbreviated for clarity.
 
 ```json
@@ -116,9 +118,9 @@ UI consumes versioned events from `src/lib/admin/types/events.ts`. Examples belo
 ```
 
 ## Code Map
+
 - API entry (SSE)
   - `src/app/api/admin/ai-chat/stream/orchestrated/route.ts` — Admin‑only; adds `request_id`, rate limit + concurrency.
-  
 - Orchestrator
   - `src/lib/admin/chat/orchestrator-agentkit.ts` — Connects Agents SDK and streams normalized events.
 - Agents & Tools
@@ -139,6 +141,7 @@ UI consumes versioned events from `src/lib/admin/types/events.ts`. Examples belo
   - UI hook & components: `src/components/admin/ai-chat/hooks/useChatSession.ts`, `src/components/admin/ai-chat/*`
 
 ## Models & Configuration
+
 - OpenAI models
   - Default text: `gpt-5-mini`; override via `OPENAI_TEXT_MODEL`.
   - Default vision: `gpt-5-mini`; override via `OPENAI_VISION_MODEL`.
@@ -152,6 +155,7 @@ UI consumes versioned events from `src/lib/admin/types/events.ts`. Examples belo
   - Signed upload endpoint: `src/app/api/upload/sign/route.ts`
 
 ## Troubleshooting
+
 - “Handoff to Vision” then silence
   - Normalizer now handles nested message/delta shapes; if it ever occurs, ensure `DEBUG_LOGS` is not disabled (default ON). Set `DEBUG_LOGS=0` to suppress.
   - Code: `src/lib/admin/chat/normalize-agent-events.ts`, `src/lib/admin/chat/orchestrator-agentkit.ts`
@@ -166,16 +170,19 @@ UI consumes versioned events from `src/lib/admin/types/events.ts`. Examples belo
   - Ensure `OPENAI_API_KEY` for admin calls; `OPENAI_API_KEY_USER` for user-key flows if used.
 
 ### Known Pitfalls
+
 - Vision JSON must be valid JSON text; helpers expect model output to be strictly JSON and will throw on non‑JSON (see `src/lib/admin/services/vision/helpers.ts`).
 - Rate limiting/concurrency depends on a KV backend; without a configured KV, set `KV_USE_MEMORY=1` locally (dev only).
 - Tool results are unwrapped to `data` for `tool_result`, but the full envelope is sent via `tool_append` for transcript continuity.
 - Agents SDK updates can change event shapes; our normalizer is resilient, but if upgrading `@openai/agents*`, run tests and keep `DEBUG_LOGS` enabled (default ON) to see shapes.
 
 ## Validation
+
 - Manual E2E plan: `doc/admin-ai/e2e-manual-test.md`
 - Unit tests: `test/admin-ai/*`
 
 ## Related Docs
+
 - Features: `doc/admin-ai/features.md`
 - UI roadmap: `doc/admin-ai/admin-ai-ui-roadmap.md`
 - Client helpers README: `src/lib/admin/chat/client/README.md`
@@ -202,4 +209,5 @@ curl -N \
 ```
 
 ## Version Compatibility
+
 - Agents SDK / OpenAI provider pinned to `^0.1.9`. Our normalizer handles nested `output_text(.delta)` shapes. If upgrading these deps, re‑run `npm test` and keep `DEBUG_LOGS` enabled (default ON) during initial validation to inspect event shapes.

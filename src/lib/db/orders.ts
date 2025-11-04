@@ -1,47 +1,47 @@
-import { createRouteSupabaseClient } from '@/lib/supabase'
+import { createRouteSupabaseClient } from '@/lib/supabase';
 
 type OrderItemProjection = {
   book: {
-    title_en: string | null
-    title_zh: string | null
-  }
-  quantity: number
-}
+    title_en: string | null;
+    title_zh: string | null;
+  };
+  quantity: number;
+};
 
 export type UserOrderProjection = {
-  id: string
-  status: string
-  total_items: number
-  created_at: string
-  shipping_address: string
-  order_items: OrderItemProjection[]
-}
+  id: string;
+  status: string;
+  total_items: number;
+  created_at: string;
+  shipping_address: string;
+  order_items: OrderItemProjection[];
+};
 
 type ShippingAddress = {
-  address1?: string | null
-  address2?: string | null
-  city?: string | null
-  state?: string | null
-  zip?: string | null
-  country?: string | null
-  recipient_name?: string | null
-  phone?: string | null
-}
+  address1?: string | null;
+  address2?: string | null;
+  city?: string | null;
+  state?: string | null;
+  zip?: string | null;
+  country?: string | null;
+  recipient_name?: string | null;
+  phone?: string | null;
+};
 
 function formatAddress(addr: ShippingAddress | null | undefined): string {
-  if (!addr) return ''
-  const lines: string[] = []
-  if (addr.address1) lines.push(addr.address1)
-  if (addr.address2) lines.push(addr.address2)
-  const cityState = [addr.city, addr.state].filter(Boolean).join(', ')
-  if (cityState) lines.push(cityState)
-  const zipCountry = [addr.zip, addr.country].filter(Boolean).join(' ')
-  if (zipCountry) lines.push(zipCountry)
-  return lines.filter(Boolean).join('\n')
+  if (!addr) return '';
+  const lines: string[] = [];
+  if (addr.address1) lines.push(addr.address1);
+  if (addr.address2) lines.push(addr.address2);
+  const cityState = [addr.city, addr.state].filter(Boolean).join(', ');
+  if (cityState) lines.push(cityState);
+  const zipCountry = [addr.zip, addr.country].filter(Boolean).join(' ');
+  if (zipCountry) lines.push(zipCountry);
+  return lines.filter(Boolean).join('\n');
 }
 
 export async function getUserOrders(userId: string, db?: any): Promise<UserOrderProjection[]> {
-  const client = db ?? (await createRouteSupabaseClient())
+  const client = db ?? (await createRouteSupabaseClient());
 
   const sel = `
     id, status, total_items, created_at,
@@ -52,26 +52,29 @@ export async function getUserOrders(userId: string, db?: any): Promise<UserOrder
       quantity,
       books:books!order_items_book_id_fkey ( title_en, title_zh )
     )
-  `
+  `;
 
   const { data, error } = await client
     .from('orders')
     .select(sel)
     .eq('user_id', userId)
-    .order('created_at', { ascending: false })
+    .order('created_at', { ascending: false });
 
   if (error) {
-    throw new Error(`Failed to fetch user orders: ${error.message}`)
+    throw new Error(`Failed to fetch user orders: ${error.message}`);
   }
 
   type Row = {
-    id: string
-    status: string
-    total_items: number
-    created_at: string
-    order_shipping_addresses: ShippingAddress | null
-    order_items: Array<{ quantity: number; books: { title_en: string | null; title_zh: string | null } | null }>
-  }
+    id: string;
+    status: string;
+    total_items: number;
+    created_at: string;
+    order_shipping_addresses: ShippingAddress | null;
+    order_items: Array<{
+      quantity: number;
+      books: { title_en: string | null; title_zh: string | null } | null;
+    }>;
+  };
 
   const orders = ((data ?? []) as Row[]).map((o) => ({
     id: o.id,
@@ -89,7 +92,7 @@ export async function getUserOrders(userId: string, db?: any): Promise<UserOrder
           quantity: oi.quantity,
         }))
       : [],
-  })) satisfies UserOrderProjection[]
+  })) satisfies UserOrderProjection[];
 
-  return orders
+  return orders;
 }

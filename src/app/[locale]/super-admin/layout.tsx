@@ -1,17 +1,10 @@
-import { AdminNavbar } from "@/components/admin/admin-navbar"
+import { AdminNavbar } from '@/components/admin/admin-navbar';
 
-export default function SuperAdminLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function SuperAdminLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="bg-background flex min-h-screen flex-col">
       <AdminNavbar />
-      <main className="flex-1 container mx-auto py-8 px-4">
-        {children}
-      </main>
+      <main className="container mx-auto flex-1 px-4 py-8">{children}</main>
     </div>
-  )
+  );
 }
-
