@@ -20,6 +20,7 @@ const config = [
       'next/core-web-vitals',
       'eslint:recommended',
       'plugin:promise/recommended',
+      'prettier',
     ],
     plugins: ['promise'],
     rules: {

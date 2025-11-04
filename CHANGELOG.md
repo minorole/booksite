@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+### Tooling — Prettier & ESLint integration
+- Add Prettier config with long-term defaults and Tailwind class sorting. Files: `.prettierrc`.
+  - singleQuote=true, semi=true, trailingComma=all, printWidth=100, endOfLine=lf.
+- Exclude non-code and generated artifacts from formatting. Files: `.prettierignore` (excludes `doc/`, `public/`, `supabase/`, caches, and `src/types/supabase.generated.ts`).
+- Add formatting scripts and CI check-only gate. File: `package.json` (adds `format`, `format:check`; `check:ci` now runs `format:check` first).
+- Prevent ESLint conflicts by extending `eslint-config-prettier`. File: `eslint.config.mjs` (adds `prettier` to `extends`).
+- Note: No source files reformatted in this change; `format:check` reports current drift for a follow-up write pass.
+
 ### Admin AI — Structured‑Only Vision, Deterministic Duplicates, Orchestrator Observability
 - Vision flows simplified to one-shot structured analysis; removed the legacy “initial” stage. Adds `cover_url` to structured results. Files: `src/lib/admin/services/vision/cover-analysis.ts`, `src/lib/admin/services/vision/schemas.ts`.
 - Duplicates: embeddings-first shortlist with fused scoring (0.6 text + 0.4 image). Select top‑3 candidates: 1 from image-KNN (best) + 2 from text-KNN (best excluding image-top). Confidence gate: skip visual comparison if best fused < 0.6; otherwise visually compare only selected candidates. Files: `src/lib/admin/services/duplicates.ts`.

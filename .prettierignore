@@ -1,0 +1,10 @@
+.next/
+node_modules/
+public/
+doc/
+supabase/
+coverage/
+playwright-report/
+test-results/
+.vitest/
+src/types/supabase.generated.ts
