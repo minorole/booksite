@@ -50,8 +50,8 @@ export function MessageList({
   messages: Message[];
   loading: boolean;
   onSelectImage: (url: string) => void;
-  endRef: React.RefObject<HTMLDivElement>;
-  containerRef?: React.RefObject<HTMLDivElement>;
+  endRef: React.RefObject<HTMLDivElement | null>;
+  containerRef?: React.RefObject<HTMLDivElement | null>;
   onScroll?: React.UIEventHandler<HTMLDivElement>;
   thinkingAgent?: string | null;
   inflightTools?: Message[];
