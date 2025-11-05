@@ -58,7 +58,6 @@ export function useChatSession(
       const saved = localStorage.getItem(key);
       if (saved && messages.length === 0) setInput(saved);
     } catch {}
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [language]);
 
   useEffect(() => {

@@ -1,9 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  eslint: {
-    // Lint the entire source tree during build for broader coverage
-    dirs: ['src'],
-  },
   images: {
     remotePatterns: [
       {

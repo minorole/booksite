@@ -15,7 +15,15 @@ const compat = new FlatCompat({
 
 const config = [
   ...compat.config({
-    ignorePatterns: ['src/types/supabase.generated.ts', '.next/**', 'node_modules/**', 'public/**', 'scripts/**', 'doc/**'],
+    ignorePatterns: [
+      'src/types/supabase.generated.ts',
+      '.next/**',
+      'node_modules/**',
+      'public/**',
+      'scripts/**',
+      'doc/**',
+      'test/**',
+    ],
     extends: [
       // Temporarily omit Next's legacy config to avoid circular validation issues on v16.
       // Reintroduce with flat-compatible preset when available.
@@ -72,12 +80,28 @@ const config = [
   }),
   // Local custom rules
   {
-    files: ['src/**/*.tsx'],
+    files: ['src/**/*.{ts,tsx}'],
     plugins: {
       'local-a11y': localA11y,
+      'react-hooks': (await import('eslint-plugin-react-hooks')).default,
+      '@next/next': (await import('@next/eslint-plugin-next')).default,
     },
     rules: {
       'local-a11y/dialog-needs-title-and-description': 'error',
+      // Only reference plugins so inline disable comments resolve; keep actual rule enforcement minimal here.
+      'react-hooks/exhaustive-deps': 'off',
+    },
+  },
+  // Node-based config files: allow process/module globals
+  {
+    files: ['next.config.js', 'postcss.config.js', 'vitest.config.ts', 'eslint.config.mjs'],
+    languageOptions: {
+      globals: {
+        process: 'readonly',
+        module: 'readonly',
+        __dirname: 'readonly',
+        require: 'readonly',
+      },
     },
   },
 ]
