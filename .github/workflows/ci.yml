@@ -16,6 +16,12 @@ on:
         description: "Why are you running CI? (optional)"
         required: false
         default: "manual"
+  # One-time PR safety net: attach required checks for THIS PR only.
+  # After merge, this match no longer targets any branch.
+  pull_request:
+    branches: [ chore/manual-ci-only ]
+  push:
+    branches: [ chore/manual-ci-only ]
 
 jobs:
   build-and-test:
