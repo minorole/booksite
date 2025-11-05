@@ -21,7 +21,15 @@ export const mashanzheng = localFont({
   fallback: [],
   adjustFontFallback: false,
   src: [
-    { path: '../../public/fonts/ma-shan-zheng/MaShanZheng-Regular.woff2', weight: '400', style: 'normal' },
-    { path: '../../public/fonts/ma-shan-zheng/MaShanZheng-Regular.ttf', weight: '400', style: 'normal' },
+    {
+      path: '../../public/fonts/ma-shan-zheng/MaShanZheng-Regular.woff2',
+      weight: '400',
+      style: 'normal',
+    },
+    {
+      path: '../../public/fonts/ma-shan-zheng/MaShanZheng-Regular.ttf',
+      weight: '400',
+      style: 'normal',
+    },
   ],
 });

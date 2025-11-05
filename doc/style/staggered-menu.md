@@ -353,6 +353,7 @@ setOpen(target);
 }, [playOpen, playClose, animateIcon, animateColor, animateText, onMenuOpen, onMenuClose]);
 
 return (
+
 <div
 className={`sm-scope z-40 ${isFixed ? 'fixed top-0 left-0 w-screen h-screen overflow-hidden' : 'w-full h-full'}`} >
 <div
@@ -547,6 +548,7 @@ sition: absolute; top: 0; right: 0; width: clamp(260px, 38vw, 420px); height: 10
 @media (max-width: 1024px) { .sm-scope .staggered-menu-panel { width: 100%; left: 0; right: 0; } .sm-scope .staggered-menu-wrapper[data-open] .sm-logo-img { filter: invert(100%); } }
 @media (max-width: 640px) { .sm-scope .staggered-menu-panel { width: 100%; left: 0; right: 0; } .sm-scope .staggered-menu-wrapper[data-open] .sm-logo-img { filter: invert(100%); } }
 `}</style>
+
 </div>
 );
 };

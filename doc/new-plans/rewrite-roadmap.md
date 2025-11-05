@@ -130,7 +130,7 @@ src/
 ## Environment
 
 - Required: `DATABASE_URL`, `DIRECT_URL`, `OPENAI_API_KEY`, `OPENAI_API_KEY_USER`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SUPER_ADMIN_EMAIL`, `CLOUDINARY_URL`.
-- Node >= 20 for Next 15; see `.env.example` for locations.
+- Node >= 24.4 for Next 16; see `.env.example` for locations.
 
 ## Migration Plan (Strangler)
 

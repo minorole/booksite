@@ -72,7 +72,7 @@
 
 ## Build, Test, and Development Commands
 
-- Install: `pnpm install` (Node >= 20 required).
+- Install: `pnpm install` (Node >= 24 required).
 - Dev (core + web): `pnpm dev` (concurrently runs `packages/core` watch and Next dev server).
 - Build all: `pnpm build` (recursive). Web-only: `pnpm build:web` or `pnpm --dir apps/web build`.
 - Test (workspace): `pnpm test` (Vitest across core, ui-background, web). Package-only: `pnpm --dir packages/core test`.

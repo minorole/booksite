@@ -102,12 +102,9 @@ export function RichTextAuto({ text, className }: { text: string; className?: st
               const el = renderLine(l, li) as React.ReactElement<any>;
               if (isLead) {
                 firstParaRendered = true;
-                return React.cloneElement(
-                  el,
-                  {
-                    className: cn((el.props as any).className, 'text-ctp-mauve font-medium'),
-                  } as any,
-                );
+                return React.cloneElement(el, {
+                  className: cn((el.props as any).className, 'text-ctp-mauve font-medium'),
+                } as any);
               }
               return el;
             })}

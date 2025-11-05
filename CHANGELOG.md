@@ -26,6 +26,7 @@ All notable changes to this project will be documented in this file.
 - Formatting: Prettier + ESLint integration; use `npm run format` / `format:check`.
 - Rate limiting: Vercel KV replaces Upstash; local dev via `KV_*` or `KV_USE_MEMORY=1`.
 - Fonts: Archivo self‑hosted via `src/styles/fonts.ts` and `src/app/layout.tsx`.
+ - Platform: Raise minimum Node to 24.4 due to `@react-three/drei` pulling `camera-controls@^3` (engines: Node >=24.4, npm >=11.4). CI reads `.nvmrc` (now `25.1.0`). Files: `.nvmrc`, `package.json (engines)`, `README.md`, `AGENTS.md`.
 
 <details><summary>Full Unreleased Notes</summary>
 

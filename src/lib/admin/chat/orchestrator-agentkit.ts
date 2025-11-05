@@ -1,6 +1,3 @@
-import { Runner } from '@openai/agents-core';
-import { setDefaultOpenAIClient, setOpenAIAPI } from '@openai/agents';
-import { OpenAIProvider } from '@openai/agents-openai';
 import type { Message } from '@/lib/admin/types';
 import { createAgentRegistry } from '@/lib/admin/agents';
 import {
@@ -18,16 +15,9 @@ import {
   debugLogsEnabled,
 } from '@/lib/observability/toggle';
 import { log } from '@/lib/logging';
-import { getAdminClient } from '@/lib/openai/client';
 import { toAgentInput } from '@/lib/admin/chat/to-agent-input';
 import { logRawModelEventCompact, type RawModelLogState } from '@/lib/admin/chat/logging';
-
-// Configure Agents SDK to use our OpenAI client and Responses API mode
-try {
-  setDefaultOpenAIClient(getAdminClient('text') as unknown as any);
-  // Use Responses API for Agents
-  setOpenAIAPI('responses');
-} catch {}
+import { getOrchestratorEngine } from '@/lib/admin/chat/orchestrator-engine';
 
 type SSEWriter = (event: Record<string, unknown>) => void;
 
@@ -48,26 +38,13 @@ export async function runChatWithAgentsStream(params: {
       ? envMax
       : (params.maxTurns ?? ADMIN_AGENT_MAX_TURNS_DEFAULT);
 
-  const provider = new OpenAIProvider();
   const registry = createAgentRegistry();
   const startAgent = registry.router;
 
   const context: AgentContext = { userEmail, uiLanguage: params.uiLanguage };
 
   // Detect if the user provided any image input in this conversation turn
-  const hasImage =
-    Array.isArray(messages) &&
-    messages.some(
-      (m) =>
-        Array.isArray(m.content) &&
-        (m.content as any[]).some(
-          (c) =>
-            c &&
-            typeof c === 'object' &&
-            (c as any).type === 'image_url' &&
-            (c as any).image_url?.url,
-        ),
-    );
+  // (no-op for now; image presence is handled within tools when relevant)
 
   const model = getModel('text');
   // Aggregate run metrics (approximate): number of processed items, tool calls, and handoffs
@@ -87,24 +64,16 @@ export async function runChatWithAgentsStream(params: {
   if (params.requestId) traceMeta.request_id = params.requestId;
   // Helper to run the agent once, with an optional stricter prelude
   const runOnce = async (extraPrelude?: string): Promise<{ ranDomainTool: boolean }> => {
-    const runner = new Runner({
-      modelProvider: provider,
-      model,
-      workflowName: 'Admin AI Chat',
-      traceMetadata: traceMeta,
-      // Include sensitive data in traces by default; can be disabled via env
-      traceIncludeSensitiveData: adminAiSensitiveEnabled(),
-    });
     const input = toAgentInput(messages, params.uiLanguage, extraPrelude);
-    const stream = await runner.run(
-      startAgent as unknown as Parameters<typeof runner.run>[0],
+    const engine = getOrchestratorEngine();
+    const stream = await engine.run({
+      startAgent,
       input,
-      {
-        stream: true,
-        context,
-        maxTurns,
-      },
-    );
+      context,
+      maxTurns,
+      model,
+      traceMetadata: traceMeta,
+    });
 
     // Local state to suppress duplicate handoff events if the Agents SDK
     // emits multiple agent_updated events for the same target agent.
@@ -127,7 +96,9 @@ export async function runChatWithAgentsStream(params: {
       const e = evt as { type?: string; agent?: { name?: string } };
       if (e.type === 'agent_updated_stream_event') {
         if (adminAiLogsEnabled()) {
-          try { log.info('admin_ai_orchestrator', 'agent_updated', { to: e.agent?.name }) } catch {}
+          try {
+            log.info('admin_ai_orchestrator', 'agent_updated', { to: e.agent?.name });
+          } catch {}
         }
         const current = e.agent?.name;
         // Deduplicate: skip emitting a handoff if the target agent did not change
@@ -152,7 +123,9 @@ export async function runChatWithAgentsStream(params: {
         const item = ev.item;
         const raw = (item as { rawItem?: unknown } | undefined)?.rawItem;
         if (adminAiLogsEnabled()) {
-          try { log.info('admin_ai_orchestrator', 'run_item', { name }) } catch {}
+          try {
+            log.info('admin_ai_orchestrator', 'run_item', { name });
+          } catch {}
         }
         const events = normalizeRunItemToSSEEvents({ name, raw });
         // Optional diagnostics: if the SDK reports a message_* event but
@@ -209,7 +182,13 @@ export async function runChatWithAgentsStream(params: {
               toolStartAt.set(ne.id, Date.now());
             } catch {}
             if (adminAiLogsEnabled()) {
-              try { log.info('admin_ai_orchestrator', 'tool_start', { name: ne.name, id: ne.id, argsBytes }) } catch {}
+              try {
+                log.info('admin_ai_orchestrator', 'tool_start', {
+                  name: ne.name,
+                  id: ne.id,
+                  argsBytes,
+                });
+              } catch {}
             }
             try {
               await logAdminAction({
@@ -221,7 +200,7 @@ export async function runChatWithAgentsStream(params: {
               log.warn('admin_ai_orchestrator', 'log_admin_action_failed', {
                 phase: 'FUNCTION_CALL',
                 error: (e as Error)?.message || String(e),
-              })
+              });
             }
           } else if (ne.type === 'tool_result') {
             ranDomainTool = true;
@@ -229,7 +208,14 @@ export async function runChatWithAgentsStream(params: {
             const durationMs =
               typeof started === 'number' ? Math.max(0, Date.now() - started) : undefined;
             if (adminAiLogsEnabled()) {
-              try { log.info('admin_ai_orchestrator', 'tool_result', { name: ne.name, id: ne.id, success: ne.success, durationMs }) } catch {}
+              try {
+                log.info('admin_ai_orchestrator', 'tool_result', {
+                  name: ne.name,
+                  id: ne.id,
+                  success: ne.success,
+                  durationMs,
+                });
+              } catch {}
             }
             try {
               await logAdminAction({
@@ -245,7 +231,7 @@ export async function runChatWithAgentsStream(params: {
               log.warn('admin_ai_orchestrator', 'log_admin_action_failed', {
                 phase: 'FUNCTION_SUCCESS',
                 error: (e as Error)?.message || String(e),
-              })
+              });
             }
           } else if (ne.type === 'assistant_delta') {
             if (adminAiLogsEnabled()) {
@@ -254,7 +240,10 @@ export async function runChatWithAgentsStream(params: {
                 // Aggregate chars and log a single early preview
                 if (!assistantLoggedFirstPreview && txt) {
                   assistantFirstPreview = txt.slice(0, 80);
-                  log.info('admin_ai_orchestrator', 'assistant_preview', { len: txt.length, preview: assistantFirstPreview });
+                  log.info('admin_ai_orchestrator', 'assistant_preview', {
+                    len: txt.length,
+                    preview: assistantFirstPreview,
+                  });
                   assistantLoggedFirstPreview = true;
                 }
                 assistantChars += txt.length;

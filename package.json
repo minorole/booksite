@@ -22,7 +22,7 @@
     "cloudinary:purge-temp": "node scripts/cloudinary-purge-temp.mjs"
   },
   "engines": {
-    "node": ">=20.18.0"
+    "node": ">=24.4.0"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

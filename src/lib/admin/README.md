@@ -5,7 +5,7 @@ This is the single entry point for the Admin AI chat: what it is, how it works, 
 ## Quick Start
 
 - Requirements
-  - Node 20.18+
+  - Node 24.4+
   - Env: `OPENAI_API_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPER_ADMIN_EMAIL`, `CLOUDINARY_URL`
 - Run
   - `npm run dev`
