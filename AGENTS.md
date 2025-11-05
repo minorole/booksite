@@ -70,7 +70,7 @@
 - OpenAI changes: update `OPENAI_CONFIG`; override with `OPENAI_TEXT_MODEL` / `OPENAI_VISION_MODEL` as needed.
 
 ## Build, Test, and Development Commands
-- Environment: Node >= 20.18 (Next.js 15).
+- Environment: Node >= 24.4 (Next.js 16).
 - `npm run dev` — start dev server at http://localhost:3000.
 - `npm run build` — production build; `npm start` — run build.
 - `npm run lint` — ESLint with Next rules.

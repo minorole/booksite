@@ -26,7 +26,7 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 
 ## Development
 
-- Node.js >= 20.18 (Next.js 16)
+- Node.js >= 24.4 (Next.js 16)
 - Commands:
   - `npm run dev` — start dev server at http://localhost:3000
   - `npm run check:ci` — lint, typecheck, tests, build

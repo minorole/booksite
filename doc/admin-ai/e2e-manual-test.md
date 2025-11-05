@@ -21,7 +21,7 @@ References to code include exact file paths and important line anchors to help v
 
 ## Environment & Setup
 
-- Node 20.18+ (Next.js 15). Start dev with `npm run dev`.
+- Node 24.4+ (Next.js 16). Start dev with `npm run dev`.
 - Required envs (see src/lib/config/env.ts:1): `OPENAI_API_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPER_ADMIN_EMAIL`, `CLOUDINARY_URL`.
 - Optional envs for limits (local dev): `KV_REST_API_URL`, `KV_REST_API_TOKEN` (Vercel injects these in production). Toggle logs with `ADMIN_AI_TRACE_DISABLED`, `ADMIN_AI_TRACE_SENSITIVE` (src/lib/observability/toggle.ts:1).
 - Visit the chat UI as an admin: `http://localhost:3000/zh/admin/ai-chat` (page: src/app/[locale]/admin/ai-chat/page.tsx:1).
