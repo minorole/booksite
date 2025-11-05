@@ -13,7 +13,7 @@ import { adminAiLogsEnabled, debugLogsEnabled } from '@/lib/observability/toggle
 import { log } from '@/lib/logging';
 import { maybeSendAlert } from '@/lib/alerts';
 import { ADMIN_AGENT_MAX_TURNS_DEFAULT } from '@/lib/admin/constants';
-import { SSEEvent, RouteErrorEvent } from '@/lib/admin/chat/contracts';
+import { SSEEvent, RouteErrorEvent, SSE_VERSION } from '@/lib/admin/chat/contracts';
 
 export async function POST(request: Request) {
   try {
@@ -95,26 +95,26 @@ export async function POST(request: Request) {
         const encoder = new TextEncoder();
         let metrics = { turns: 0, toolCalls: 0, handoffs: 0 };
         const write = (event: Record<string, unknown>) => {
-          const enriched = { version: '1', request_id: requestId, ...event } as Record<
+          const enriched = { version: SSE_VERSION, request_id: requestId, ...event } as Record<
             string,
             unknown
           >;
           // Validate shape at the write boundary. Drop invalid events.
-          try {
+          {
             const t = (enriched as any)?.type;
-            if (t === 'error') {
-              RouteErrorEvent.parse(enriched);
-            } else {
-              SSEEvent.parse(enriched as any);
+            const result =
+              t === 'error'
+                ? RouteErrorEvent.safeParse(enriched)
+                : SSEEvent.safeParse(enriched as any);
+            if (!result.success) {
+              try {
+                log.warn('admin_ai_route', 'invalid_sse_event_dropped', {
+                  request_id: requestId,
+                  error: result.error?.message || 'validation_failed',
+                });
+              } catch {}
+              return;
             }
-          } catch (e) {
-            try {
-              log.warn('admin_ai_route', 'invalid_sse_event_dropped', {
-                request_id: requestId,
-                error: (e as Error)?.message || String(e),
-              });
-            } catch {}
-            return;
           }
           if (adminAiLogsEnabled() && debugLogsEnabled()) {
             try {
@@ -200,7 +200,7 @@ export async function POST(request: Request) {
               void maybeSendAlert('admin_ai_route', 'orchestrator_error', alertFields);
             } catch {}
             const payload = {
-              version: '1',
+              version: SSE_VERSION,
               request_id: requestId,
               type: 'error',
               message: msg,

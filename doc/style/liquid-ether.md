@@ -350,7 +350,7 @@ uv = 0.5 + pos.xy _ 0.5;
 vec2 n = sign(pos.xy);
 pos.xy = abs(pos.xy) - px _ 1.0;
 pos.xy _= n;
-gl_Position = vec4(pos, 1.0);
+gl*Position = vec4(pos, 1.0);
 }
 `;
     const mouse_vert = `
@@ -362,9 +362,9 @@ uniform vec2 scale;
 uniform vec2 px;
 varying vec2 vUv;
 void main(){
-vec2 pos = position.xy _ scale _ 2.0 _ px + center;
+vec2 pos = position.xy * scale _ 2.0 _ px + center;
 vUv = uv;
-gl_Position = vec4(pos, 0.0, 1.0);
+gl*Position = vec4(pos, 0.0, 1.0);
 }
 `;
     const advection_frag = `
@@ -379,7 +379,7 @@ void main(){
 vec2 ratio = max(fboSize.x, fboSize.y) / fboSize;
 if(isBFECC == false){
 vec2 vel = texture2D(velocity, uv).xy;
-vec2 uv2 = uv - vel _ dt _ ratio;
+vec2 uv2 = uv - vel * dt _ ratio;
 vec2 newVel = texture2D(velocity, uv2).xy;
 gl_FragColor = vec4(newVel, 0.0, 0.0);
 } else {
@@ -454,7 +454,7 @@ float p2 = texture2D(pressure, uv + vec2(0.0, px.y _ 2.0)).r;
 float p3 = texture2D(pressure, uv - vec2(0.0, px.y _ 2.0)).r;
 float div = texture2D(divergence, uv).r;
 float newP = (p0 + p1 + p2 + p3) / 4.0 - div;
-gl_FragColor = vec4(newP);
+gl*FragColor = vec4(newP);
 }
 `;
     const pressure_frag = `
@@ -466,7 +466,7 @@ uniform float dt;
 varying vec2 uv;
 void main(){
 float step = 1.0;
-float p0 = texture2D(pressure, uv + vec2(px.x _ step, 0.0)).r;
+float p0 = texture2D(pressure, uv + vec2(px.x * step, 0.0)).r;
 float p1 = texture2D(pressure, uv - vec2(px.x _ step, 0.0)).r;
 float p2 = texture2D(pressure, uv + vec2(0.0, px.y _ step)).r;
 float p3 = texture2D(pressure, uv - vec2(0.0, px.y _ step)).r;
@@ -487,9 +487,9 @@ varying vec2 uv;
 void main(){
 vec2 old = texture2D(velocity, uv).xy;
 vec2 new0 = texture2D(velocity_new, uv + vec2(px.x _ 2.0, 0.0)).xy;
-vec2 new1 = texture2D(velocity_new, uv - vec2(px.x _ 2.0, 0.0)).xy;
-vec2 new2 = texture2D(velocity_new, uv + vec2(0.0, px.y _ 2.0)).xy;
-vec2 new3 = texture2D(velocity_new, uv - vec2(0.0, px.y _ 2.0)).xy;
+vec2 new1 = texture2D(velocity*new, uv - vec2(px.x * 2.0, 0.0)).xy;
+vec2 new2 = texture2D(velocity*new, uv + vec2(0.0, px.y * 2.0)).xy;
+vec2 new3 = texture2D(velocity*new, uv - vec2(0.0, px.y * 2.0)).xy;
 vec2 newv = 4.0 _ old + v _ dt _ (new0 + new1 + new2 + new3);
 newv /= 4.0 _ (1.0 + v \* dt);
 gl_FragColor = vec4(newv, 0.0, 0.0);
@@ -1166,6 +1166,7 @@ autoRampDuration
 ]);
 
 return (
+
 <div
 ref={mountRef}
 className={`w-full h-full relative overflow-hidden pointer-events-none touch-none ${className || ''}`}

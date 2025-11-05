@@ -19,11 +19,13 @@ describe('Orchestrator DI engine', () => {
     const fakeEngine = {
       async run() {
         async function* gen() {
+          await Promise.resolve();
           yield {
             type: 'run_item_stream_event',
             name: 'message_delta',
             item: { rawItem: { type: 'output_text.delta', delta: 'A' } },
           };
+          await Promise.resolve();
           yield {
             type: 'run_item_stream_event',
             name: 'tool_called',
@@ -36,6 +38,7 @@ describe('Orchestrator DI engine', () => {
               },
             },
           };
+          await Promise.resolve();
           yield {
             type: 'run_item_stream_event',
             name: 'tool_output',
@@ -49,6 +52,7 @@ describe('Orchestrator DI engine', () => {
             },
           };
         }
+        await Promise.resolve();
         return gen();
       },
     };

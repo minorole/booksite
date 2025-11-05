@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { log } from '@/lib/logging'
 import { SSEEvent, RouteErrorEvent } from '@/lib/admin/chat/contracts'
 
 // Mocks for auth + rate limit to let the route proceed
@@ -85,6 +86,7 @@ describe('POST /api/admin/ai-chat/stream/orchestrated (SSE)', () => {
   })
 
   it('drops invalid events at write boundary', async () => {
+    const warnSpy = vi.spyOn(log, 'warn').mockImplementation(() => {})
     vi.doMock('@/lib/admin/chat/orchestrator-agentkit', () => ({
       runChatWithAgentsStream: vi.fn(async ({ write }: { write: (e: any) => void }) => {
         write({ type: 'weird', foo: 1 })
@@ -106,5 +108,9 @@ describe('POST /api/admin/ai-chat/stream/orchestrated (SSE)', () => {
     expect(types).toContain('assistant_delta')
     expect(types).toContain('assistant_done')
     expect(types).not.toContain('weird')
+    // Asserts a warning was logged about dropping the invalid event
+    const calls = warnSpy.mock.calls
+    expect(calls.some((args) => args[1] === 'invalid_sse_event_dropped')).toBe(true)
+    warnSpy.mockRestore()
   })
 })

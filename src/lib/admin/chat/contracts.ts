@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+export const SSE_VERSION = '1' as const;
+
 // Canonical SSE event contract consumed by the Admin UI
 // Mirrors NormalizedEvent union in normalize-agent-events.ts
 export const AssistantDelta = z.object({
@@ -56,7 +58,7 @@ export type SSEEvent = z.infer<typeof SSEEvent>;
 
 // Route-level error envelope used by SSE stream on failure
 export const RouteErrorEvent = z.object({
-  version: z.literal('1'),
+  version: z.literal(SSE_VERSION),
   request_id: z.string(),
   type: z.literal('error'),
   message: z.string(),

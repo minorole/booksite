@@ -44,19 +44,7 @@ export async function runChatWithAgentsStream(params: {
   const context: AgentContext = { userEmail, uiLanguage: params.uiLanguage };
 
   // Detect if the user provided any image input in this conversation turn
-  const hasImage =
-    Array.isArray(messages) &&
-    messages.some(
-      (m) =>
-        Array.isArray(m.content) &&
-        (m.content as any[]).some(
-          (c) =>
-            c &&
-            typeof c === 'object' &&
-            (c as any).type === 'image_url' &&
-            (c as any).image_url?.url,
-        ),
-    );
+  // (no-op for now; image presence is handled within tools when relevant)
 
   const model = getModel('text');
   // Aggregate run metrics (approximate): number of processed items, tool calls, and handoffs
