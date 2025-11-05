@@ -83,4 +83,28 @@ describe('POST /api/admin/ai-chat/stream/orchestrated (SSE)', () => {
       }
     }
   })
+
+  it('drops invalid events at write boundary', async () => {
+    vi.doMock('@/lib/admin/chat/orchestrator-agentkit', () => ({
+      runChatWithAgentsStream: vi.fn(async ({ write }: { write: (e: any) => void }) => {
+        write({ type: 'weird', foo: 1 })
+        write({ type: 'assistant_delta', content: 'ok' })
+        write({ type: 'assistant_done' })
+      }),
+    }))
+    const mod = await import('@/app/api/admin/ai-chat/stream/orchestrated/route')
+    const body = JSON.stringify({ messages: [{ role: 'user', content: 'hi' }] })
+    const req = new Request('http://localhost/api/admin/ai-chat/stream/orchestrated', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body,
+    })
+    const rsp = await mod.POST(req)
+    expect(rsp.status).toBe(200)
+    const events = await readSSE(rsp, 10)
+    const types = events.map((e) => e.type)
+    expect(types).toContain('assistant_delta')
+    expect(types).toContain('assistant_done')
+    expect(types).not.toContain('weird')
+  })
 })
