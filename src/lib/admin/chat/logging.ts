@@ -1,6 +1,10 @@
-import { log } from '@/lib/logging'
+import { log } from '@/lib/logging';
 
-export type RawModelLogState = { argBytes: Map<string, number>; seen: Set<string>; toolNames: Map<string, string> }
+export type RawModelLogState = {
+  argBytes: Map<string, number>;
+  seen: Set<string>;
+  toolNames: Map<string, string>;
+};
 
 export function logRawModelEventCompact(evt: unknown, reqId?: string, state?: RawModelLogState) {
   const req = (reqId as any)?.slice?.(0, 8);
@@ -11,7 +15,10 @@ export function logRawModelEventCompact(evt: unknown, reqId?: string, state?: Ra
       const key = `${data.type}:${rid}`;
       if (state?.seen?.has(key)) return;
       state?.seen?.add(key);
-      log.debug('admin_ai_orchestrator', `model_${data.type}`, { id: rid, ...(req ? { req } : {}) });
+      log.debug('admin_ai_orchestrator', `model_${data.type}`, {
+        id: rid,
+        ...(req ? { req } : {}),
+      });
       return;
     }
 
@@ -77,7 +84,10 @@ export function logRawModelEventCompact(evt: unknown, reqId?: string, state?: Ra
     log.debug('admin_ai_orchestrator', 'event', { ...(req ? { req } : {}), type: t });
   } catch {
     try {
-      log.debug('admin_ai_orchestrator', 'event', { req: (reqId as any)?.slice?.(0, 8), type: (evt as any)?.type ?? '(unknown)' });
+      log.debug('admin_ai_orchestrator', 'event', {
+        req: (reqId as any)?.slice?.(0, 8),
+        type: (evt as any)?.type ?? '(unknown)',
+      });
     } catch {}
   }
 }

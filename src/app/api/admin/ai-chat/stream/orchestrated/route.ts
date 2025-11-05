@@ -95,7 +95,10 @@ export async function POST(request: Request) {
         const encoder = new TextEncoder();
         let metrics = { turns: 0, toolCalls: 0, handoffs: 0 };
         const write = (event: Record<string, unknown>) => {
-          const enriched = { version: '1', request_id: requestId, ...event } as Record<string, unknown>;
+          const enriched = { version: '1', request_id: requestId, ...event } as Record<
+            string,
+            unknown
+          >;
           // Validate shape at the write boundary. Drop invalid events.
           try {
             const t = (enriched as any)?.type;
@@ -225,9 +228,10 @@ export async function POST(request: Request) {
     if (adminAiLogsEnabled()) {
       try {
         const err = error as any;
-        const routeErrorFields = (err instanceof Error)
-          ? { message: err.message, stack: err.stack }
-          : { error: String(err) };
+        const routeErrorFields =
+          err instanceof Error
+            ? { message: err.message, stack: err.stack }
+            : { error: String(err) };
         log.error('admin_ai_route', 'route_error', routeErrorFields);
         void maybeSendAlert('admin_ai_route', 'route_error', routeErrorFields);
       } catch {}

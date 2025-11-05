@@ -108,7 +108,9 @@ export async function runChatWithAgentsStream(params: {
       const e = evt as { type?: string; agent?: { name?: string } };
       if (e.type === 'agent_updated_stream_event') {
         if (adminAiLogsEnabled()) {
-          try { log.info('admin_ai_orchestrator', 'agent_updated', { to: e.agent?.name }) } catch {}
+          try {
+            log.info('admin_ai_orchestrator', 'agent_updated', { to: e.agent?.name });
+          } catch {}
         }
         const current = e.agent?.name;
         // Deduplicate: skip emitting a handoff if the target agent did not change
@@ -133,7 +135,9 @@ export async function runChatWithAgentsStream(params: {
         const item = ev.item;
         const raw = (item as { rawItem?: unknown } | undefined)?.rawItem;
         if (adminAiLogsEnabled()) {
-          try { log.info('admin_ai_orchestrator', 'run_item', { name }) } catch {}
+          try {
+            log.info('admin_ai_orchestrator', 'run_item', { name });
+          } catch {}
         }
         const events = normalizeRunItemToSSEEvents({ name, raw });
         // Optional diagnostics: if the SDK reports a message_* event but
@@ -190,7 +194,13 @@ export async function runChatWithAgentsStream(params: {
               toolStartAt.set(ne.id, Date.now());
             } catch {}
             if (adminAiLogsEnabled()) {
-              try { log.info('admin_ai_orchestrator', 'tool_start', { name: ne.name, id: ne.id, argsBytes }) } catch {}
+              try {
+                log.info('admin_ai_orchestrator', 'tool_start', {
+                  name: ne.name,
+                  id: ne.id,
+                  argsBytes,
+                });
+              } catch {}
             }
             try {
               await logAdminAction({
@@ -202,7 +212,7 @@ export async function runChatWithAgentsStream(params: {
               log.warn('admin_ai_orchestrator', 'log_admin_action_failed', {
                 phase: 'FUNCTION_CALL',
                 error: (e as Error)?.message || String(e),
-              })
+              });
             }
           } else if (ne.type === 'tool_result') {
             ranDomainTool = true;
@@ -210,7 +220,14 @@ export async function runChatWithAgentsStream(params: {
             const durationMs =
               typeof started === 'number' ? Math.max(0, Date.now() - started) : undefined;
             if (adminAiLogsEnabled()) {
-              try { log.info('admin_ai_orchestrator', 'tool_result', { name: ne.name, id: ne.id, success: ne.success, durationMs }) } catch {}
+              try {
+                log.info('admin_ai_orchestrator', 'tool_result', {
+                  name: ne.name,
+                  id: ne.id,
+                  success: ne.success,
+                  durationMs,
+                });
+              } catch {}
             }
             try {
               await logAdminAction({
@@ -226,7 +243,7 @@ export async function runChatWithAgentsStream(params: {
               log.warn('admin_ai_orchestrator', 'log_admin_action_failed', {
                 phase: 'FUNCTION_SUCCESS',
                 error: (e as Error)?.message || String(e),
-              })
+              });
             }
           } else if (ne.type === 'assistant_delta') {
             if (adminAiLogsEnabled()) {
@@ -235,7 +252,10 @@ export async function runChatWithAgentsStream(params: {
                 // Aggregate chars and log a single early preview
                 if (!assistantLoggedFirstPreview && txt) {
                   assistantFirstPreview = txt.slice(0, 80);
-                  log.info('admin_ai_orchestrator', 'assistant_preview', { len: txt.length, preview: assistantFirstPreview });
+                  log.info('admin_ai_orchestrator', 'assistant_preview', {
+                    len: txt.length,
+                    preview: assistantFirstPreview,
+                  });
                   assistantLoggedFirstPreview = true;
                 }
                 assistantChars += txt.length;

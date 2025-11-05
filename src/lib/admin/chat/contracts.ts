@@ -65,4 +65,3 @@ export const RouteErrorEvent = z.object({
 });
 
 export type RouteErrorEvent = z.infer<typeof RouteErrorEvent>;
-
