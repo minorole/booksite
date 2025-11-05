@@ -17,7 +17,8 @@ const config = [
   ...compat.config({
     ignorePatterns: ['src/types/supabase.generated.ts', '.next/**', 'node_modules/**', 'public/**', 'scripts/**', 'doc/**'],
     extends: [
-      'next/core-web-vitals',
+      // Temporarily omit Next's legacy config to avoid circular validation issues on v16.
+      // Reintroduce with flat-compatible preset when available.
       'eslint:recommended',
       'plugin:promise/recommended',
       'prettier',
