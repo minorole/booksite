@@ -1,5 +1,9 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Changelog
+
+- See `CHANGELOG.md` for developer- and user-facing release notes. Unreleased changes are recorded there with audience tags and exact file paths.
+
 ## Getting Started
 
 First, run the development server:

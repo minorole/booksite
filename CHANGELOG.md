@@ -2,7 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## Audience & Conventions
+
+- Audience tags used in entries: [Users], [Admin], [Super Admin], [DB], [OpenAI], [Security], [Ops], [Performance].
+- Sections follow: Added, Changed, Fixed, Removed, Docs, Ops, Performance.
+- Paths and env keys reference workspace‑relative code (for example: `src/app/api/admin/health/route.ts`, `.env.example`).
+- For each dated release, prefer adding two quick sub-bullets when relevant:
+  - Highlights (user-facing)
+  - Upgrade Notes (dev-facing)
+
 ## Unreleased
+
+### Highlights (user-facing)
+- [Users] Faster search and navigation: abort in‑flight fetches on filter/page changes to avoid race conditions and wasted work.
+- [Home] Smoother 3D lotus: drag‑to‑spin with inertia; respects reduced motion; pauses when off‑screen or tab hidden.
+- [Admin] User management: new page to browse users and view per‑user order history via a reusable dialog.
+
+### Upgrade Notes (dev)
+- Next.js 16; Middleware → Proxy (`src/proxy.ts`).
+- OpenAI SDK v6 + Agents 0.2; Responses API is default.
+- Observability: central logger + Slack alerts; envs `LOG_LEVEL`, `LOG_FORMAT`, `LOG_ALERTS_ENABLED`, `OPS_SLACK_WEBHOOK_URL`.
+- Health check: `GET /api/admin/health?token=…` with `ADMIN_TASK_TOKEN`.
+- Formatting: Prettier + ESLint integration; use `npm run format` / `format:check`.
+- Rate limiting: Vercel KV replaces Upstash; local dev via `KV_*` or `KV_USE_MEMORY=1`.
+- Fonts: Archivo self‑hosted via `src/styles/fonts.ts` and `src/app/layout.tsx`.
+
+<details><summary>Full Unreleased Notes</summary>
 
 ### Platform & Dependencies — Upgrades and Migrations
 - Next.js: upgrade to v16 and migrate Middleware → Proxy. File rename: `src/middleware.ts` → `src/proxy.ts` and `export function proxy(...)`. Build succeeds; deprecation warning removed.
@@ -379,6 +404,8 @@ All notable changes to this project will be documented in this file.
 ### Performance
 - [Uploads] Skip base64 encoding when an existing Cloudinary asset is reused by content hash (small CPU/memory win on cache hits).
 
+</details>
+
 ## 2025-10-20
 ### Changed
 - [Admin UI] Apply Catppuccin text tokens to Admin AI chat so message and UI text auto-inherit Catppuccin colors without component changes; added dark-mode (Mocha) variant. Scoped to the chat container to avoid side effects elsewhere.
@@ -398,7 +425,6 @@ All notable changes to this project will be documented in this file.
 ### Removed
 - [Cleanup] Removed locale-less admin wrappers in favor of middleware + localized routes.
  
-
 ## 2025-10-18
 ### Added
 - [Admin] Request-scoped tracing and logs across the Admin AI flow; server logs include request lifecycle breadcrumbs and client logs trace SSE events (default ON; disable via env).
