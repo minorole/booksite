@@ -1,22 +1,12 @@
 import type { Metadata } from 'next';
-import { Archivo } from 'next/font/google';
+import { archivo, mashanzheng } from '@/styles/fonts';
 import './globals.css';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { cookies, headers } from 'next/headers';
 import type { Locale } from '@/lib/i18n/config';
 import { detectLocaleFromHeader } from '@/lib/i18n/config';
 
-const archivo = Archivo({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800'],
-  variable: '--font-archivo',
-  // Do not render a fallback; wait for Archivo to load
-  display: 'block',
-  adjustFontFallback: false,
-  fallback: [],
-  // Ensure Archivo is available at first paint
-  preload: true,
-});
+// Archivo is self-hosted via next/font/local in src/styles/fonts.ts
 
 export const metadata: Metadata = {
   title: 'AMTBCF - Amitabha Buddhist Society of Central Florida',
@@ -44,7 +34,7 @@ export default async function RootLayout({
   return (
     <html
       lang={effectiveLocale}
-      className={`${archivo.className} ${archivo.variable}`}
+      className={`${archivo.variable} ${mashanzheng.variable}`}
       suppressHydrationWarning
     >
       <body className={`font-sans antialiased`}>

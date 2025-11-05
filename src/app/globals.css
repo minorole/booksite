@@ -28,9 +28,7 @@
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
-    /* Font variables (Archivo via next/font, MaShanZheng via manual @font-face) */
-    --font-archivo: 'Archivo';
-    --font-mashanzheng: 'MaShanZhengZh';
+    /* Font variables are provided by next/font/local (see src/styles/fonts.ts) */
   }
   .dark {
     --background: 222.2 84% 4.9%;
@@ -197,19 +195,7 @@
   }
 }
 
-/* Self-hosted Chinese font with unicode-range so it only loads when needed */
-@font-face {
-  font-family: 'MaShanZhengZh';
-  src:
-    url('/fonts/ma-shan-zheng/MaShanZheng-Regular.woff2') format('woff2'),
-    url('/fonts/ma-shan-zheng/MaShanZheng-Regular.ttf') format('truetype');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-  size-adjust: 118%;
-  /* Core CJK ranges + fullwidth forms */
-  unicode-range: U+3000-303F, U+3400-4DBF, U+4E00-9FFF, U+FF00-FFEF;
-}
+/* Chinese font (MaShanZheng) is provided via next/font/local; see src/styles/fonts.ts */
 
 @layer utilities {
   /* Catppuccin color utilities (light/dark resolve via variables) */

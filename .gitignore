@@ -41,6 +41,9 @@ next-env.d.ts
 .cursor/
 Thumbs.db
 
+# local raw font downloads directory (do not commit)
+/Archivo/
+
 # node package managers & logs
 pnpm-debug.log*
 .pnpm-store

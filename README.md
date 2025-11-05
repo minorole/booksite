@@ -41,6 +41,18 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 - OpenAI SDK v6: Responses API used throughout (`src/lib/openai/responses.ts`). Override models with env vars.
 - Zod v4 + @hookform/resolvers v5: forms and schemas updated.
 
+### Fonts
+
+- Archivo (Latin) is fully self‑hosted using `next/font/local`.
+  - Files: `public/fonts/archivo/Archivo-Regular.ttf` (400), `Archivo-Medium.ttf` (500),
+    `Archivo-SemiBold.ttf` (600), `Archivo-Bold.ttf` (700)
+  - Loader: `src/styles/fonts.ts` exports `archivo` (no fallbacks, `display: 'block'`, `preload: true`).
+  - Usage: `src/app/layout.tsx` imports `archivo` and sets its `className`/`variable` on `<html>`.
+- Ma Shan Zheng (Chinese) is fully self‑hosted via `@font-face`.
+  - Files: `public/fonts/ma-shan-zheng/*.woff2|*.ttf`
+  - Definition: `src/app/globals.css` (`@font-face` and CSS variables `--font-mashanzheng`).
+- CSP blocks remote fonts: `next.config.js` sets `font-src 'self' data:` so no external font can load.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

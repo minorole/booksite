@@ -4,6 +4,33 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+### Platform & Dependencies — Upgrades and Migrations
+- Next.js: upgrade to v16 and migrate Middleware → Proxy. File rename: `src/middleware.ts` → `src/proxy.ts` and `export function proxy(...)`. Build succeeds; deprecation warning removed.
+- ESLint (flat config): align with Next 16. Load `@next/eslint-plugin-next` and `eslint-plugin-react-hooks` for rule resolution; add Node globals for config files; remove deprecated `nextConfig.eslint`. File: `eslint.config.mjs`.
+- OpenAI SDK: upgrade to `openai@^6` and `@openai/agents@^0.2.x` (with `@openai/agents-core`). Responses API wrappers/streaming unchanged. Files: `src/lib/openai/**`, `src/lib/admin/chat/orchestrator-agentkit.ts`.
+- Vercel KV: upgrade to `@vercel/kv@^3`. Our rate limiter uses `incr/expire/ttl/decr/del` and remains compatible. File: `src/lib/security/ratelimit.ts`.
+- Zod & Resolvers: upgrade to `zod@^4` and `@hookform/resolvers@^5`. Forms and schemas validated without code changes. Files importing `zod` continue to typecheck.
+- Vitest: upgrade to `vitest@^4` and `@vitest/coverage-v8@^4`; update config to remove `environmentMatchGlobs`. File: `vitest.config.ts`.
+- Tailwind v4: remove redundant `autoprefixer` from PostCSS. File: `postcss.config.js`.
+
+### Tooling — CI
+- Add GitHub Actions workflow to run lint, typecheck, tests, and build on PRs. File: `.github/workflows/ci.yml`.
+- Remove Renovate configuration; package updates will be managed manually going forward.
+
+### Config & Docs
+- Remove unused `pg` dependency. File: `package.json`.
+- Add `OPENAI_EMBEDDINGS_MODEL` to `.env.example` for visibility.
+- Update README with current stack (Next 16), commands, envs, and upgrade notes (Proxy, Tailwind v4, OpenAI v6, Zod v4).
+- Fonts: switch Archivo (Latin) from Google to self‑hosted local files via `next/font/local`.
+  - Files added: `public/fonts/archivo/Archivo-*.ttf`, loader `src/styles/fonts.ts`, update `src/app/layout.tsx` to use local loader.
+  - Ma Shan Zheng (Chinese) remains self‑hosted via `@font-face` in `src/app/globals.css`.
+
+### Minor Code Quality Fixes
+- TS type safety adjustments in UI to keep strict typecheck passing:
+  - `MessageList` ref types widened to include `null`. File: `src/components/admin/ai-chat/MessageList.tsx`.
+  - `RichTextAuto` safe `cloneElement` props typing. File: `src/components/admin/ai-chat/RichTextAuto.tsx`.
+  - Removed unused inline ESLint disables and configured plugins so rule references resolve.
+
 ### Observability — Central Logger (Phase 1)
 - Add central structured logger. File: `src/lib/logging.ts`.
   - JSON lines by default; pretty in dev via `LOG_FORMAT=pretty`.

@@ -9,6 +9,9 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    concurrency:
+      group: ci-${{ github.ref }}
+      cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -53,4 +56,3 @@ jobs:
           CLOUDINARY_URL: cloudinary://key:secret@cloud
           OPENAI_API_KEY: sk-test-123
           KV_USE_MEMORY: '1'
-
