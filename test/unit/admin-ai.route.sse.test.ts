@@ -86,7 +86,10 @@ describe('POST /api/admin/ai-chat/stream/orchestrated (SSE)', () => {
   })
 
   it('drops invalid events at write boundary', async () => {
-    const warnSpy = vi.spyOn(log, 'warn').mockImplementation(() => {})
+    // Spy on the exact logging module instance that the route will import after resetModules.
+    // Dynamic import ensures both the test spy and the route share the same module instance.
+    const { log: routeLog } = await import('@/lib/logging')
+    const warnSpy = vi.spyOn(routeLog, 'warn').mockImplementation(() => {})
     vi.doMock('@/lib/admin/chat/orchestrator-agentkit', () => ({
       runChatWithAgentsStream: vi.fn(async ({ write }: { write: (e: any) => void }) => {
         write({ type: 'weird', foo: 1 })
