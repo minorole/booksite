@@ -1,10 +1,21 @@
 name: CI
 
+# IMPORTANT: Manual-only CI
+# ---------------------------------------------
+# This workflow is intentionally restricted to manual runs.
+# - Do NOT re-add push/pull_request triggers without repo owner approval.
+# - Branch protection may still require this check (build-and-test).
+#   To satisfy it, run the workflow manually from the Actions tab
+#   (Actions → CI → Run workflow) against the PR branch or commit.
+# - Rationale: avoid noisy/expensive runs; owners prefer explicit checks.
+# ---------------------------------------------
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "Why are you running CI? (optional)"
+        required: false
+        default: "manual"
 
 jobs:
   build-and-test:
