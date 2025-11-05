@@ -2,53 +2,55 @@ name: CI
 
 on:
   push:
-    branches:
-      - main
-      - master
+    branches: [ main ]
   pull_request:
-
-concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+    branches: [ main ]
 
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [20.18.x]
-    env:
-      NEXT_TELEMETRY_DISABLED: '1'
-      # Minimal values to satisfy required env lookups during build
-      OPENAI_API_KEY: 'test'
-      NEXT_PUBLIC_SUPABASE_URL: 'http://localhost'
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: 'test'
-      SUPER_ADMIN_EMAIL: 'admin@example.com'
-      CLOUDINARY_URL: 'cloudinary://key:secret@name'
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix['node-version'] }}
+          node-version: '20'
           cache: 'npm'
-
       - name: Install dependencies
         run: npm ci
-
-      - name: Lint (ESLint CLI, strict)
+      - name: Lint
         run: npm run lint:ci
-
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: anon
+          SUPER_ADMIN_EMAIL: admin@example.com
+          CLOUDINARY_URL: cloudinary://key:secret@cloud
+          OPENAI_API_KEY: sk-test-123
+          KV_USE_MEMORY: '1'
       - name: Typecheck
         run: npm run typecheck
-
-      - name: File length check (warn > 300 lines)
-        run: npm run lint:filesize
-
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: anon
+          SUPER_ADMIN_EMAIL: admin@example.com
+          CLOUDINARY_URL: cloudinary://key:secret@cloud
+          OPENAI_API_KEY: sk-test-123
+          KV_USE_MEMORY: '1'
       - name: Test
         run: npm run test
-
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: anon
+          SUPER_ADMIN_EMAIL: admin@example.com
+          CLOUDINARY_URL: cloudinary://key:secret@cloud
+          OPENAI_API_KEY: sk-test-123
+          KV_USE_MEMORY: '1'
       - name: Build
         run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: anon
+          SUPER_ADMIN_EMAIL: admin@example.com
+          CLOUDINARY_URL: cloudinary://key:secret@cloud
+          OPENAI_API_KEY: sk-test-123
+          KV_USE_MEMORY: '1'
+

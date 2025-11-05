@@ -20,6 +20,27 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Development
+
+- Node.js >= 20.18 (Next.js 16)
+- Commands:
+  - `npm run dev` — start dev server at http://localhost:3000
+  - `npm run check:ci` — lint, typecheck, tests, build
+  - `npm run db:types` — regenerate Supabase types (requires Supabase CLI link)
+
+### Environment
+
+- Required: `OPENAI_API_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPER_ADMIN_EMAIL`, `CLOUDINARY_URL`
+- Optional: `OPENAI_API_KEY_USER`, `OPENAI_TEXT_MODEL`, `OPENAI_VISION_MODEL`, `OPENAI_EMBEDDINGS_MODEL`, `CLOUDINARY_TEMP_PREFIX`, `CLOUDINARY_TEMP_RETENTION_DAYS`
+- Local rate limiting: set `KV_USE_MEMORY=1` (dev only) or configure Vercel KV (`KV_REST_API_URL`, `KV_REST_API_TOKEN`).
+
+### Notes on upgrades
+
+- Next.js 16: middleware moved to `src/proxy.ts` (Proxy convention). If you previously used `skipMiddlewareUrlNormalize`, use `skipProxyUrlNormalize` instead.
+- Tailwind CSS v4: PostCSS uses `@tailwindcss/postcss` — do not add `autoprefixer`.
+- OpenAI SDK v6: Responses API used throughout (`src/lib/openai/responses.ts`). Override models with env vars.
+- Zod v4 + @hookform/resolvers v5: forms and schemas updated.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

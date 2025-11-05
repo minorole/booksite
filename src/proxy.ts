@@ -15,7 +15,7 @@ import {
 } from '@/lib/i18n/middleware-helpers';
 import { env } from '@/lib/config/env';
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
   const { locale, path: normalizedPath } = stripLocalePrefixDynamic(pathname, SUPPORTED_LOCALES);
   // Compute best locale for this request (used for SSR hints and fallbacks)
