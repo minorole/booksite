@@ -1,6 +1,3 @@
-import { Runner } from '@openai/agents-core';
-import { setDefaultOpenAIClient, setOpenAIAPI } from '@openai/agents';
-import { OpenAIProvider } from '@openai/agents-openai';
 import type { Message } from '@/lib/admin/types';
 import { createAgentRegistry } from '@/lib/admin/agents';
 import {
@@ -18,16 +15,9 @@ import {
   debugLogsEnabled,
 } from '@/lib/observability/toggle';
 import { log } from '@/lib/logging';
-import { getAdminClient } from '@/lib/openai/client';
 import { toAgentInput } from '@/lib/admin/chat/to-agent-input';
 import { logRawModelEventCompact, type RawModelLogState } from '@/lib/admin/chat/logging';
-
-// Configure Agents SDK to use our OpenAI client and Responses API mode
-try {
-  setDefaultOpenAIClient(getAdminClient('text') as unknown as any);
-  // Use Responses API for Agents
-  setOpenAIAPI('responses');
-} catch {}
+import { getOrchestratorEngine } from '@/lib/admin/chat/orchestrator-engine';
 
 type SSEWriter = (event: Record<string, unknown>) => void;
 
@@ -48,7 +38,6 @@ export async function runChatWithAgentsStream(params: {
       ? envMax
       : (params.maxTurns ?? ADMIN_AGENT_MAX_TURNS_DEFAULT);
 
-  const provider = new OpenAIProvider();
   const registry = createAgentRegistry();
   const startAgent = registry.router;
 
@@ -87,24 +76,16 @@ export async function runChatWithAgentsStream(params: {
   if (params.requestId) traceMeta.request_id = params.requestId;
   // Helper to run the agent once, with an optional stricter prelude
   const runOnce = async (extraPrelude?: string): Promise<{ ranDomainTool: boolean }> => {
-    const runner = new Runner({
-      modelProvider: provider,
-      model,
-      workflowName: 'Admin AI Chat',
-      traceMetadata: traceMeta,
-      // Include sensitive data in traces by default; can be disabled via env
-      traceIncludeSensitiveData: adminAiSensitiveEnabled(),
-    });
     const input = toAgentInput(messages, params.uiLanguage, extraPrelude);
-    const stream = await runner.run(
-      startAgent as unknown as Parameters<typeof runner.run>[0],
+    const engine = getOrchestratorEngine();
+    const stream = await engine.run({
+      startAgent,
       input,
-      {
-        stream: true,
-        context,
-        maxTurns,
-      },
-    );
+      context,
+      maxTurns,
+      model,
+      traceMetadata: traceMeta,
+    });
 
     // Local state to suppress duplicate handoff events if the Agents SDK
     // emits multiple agent_updated events for the same target agent.
